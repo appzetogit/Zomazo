@@ -1,4 +1,5 @@
 import { Outlet, useLocation, useNavigate } from "@shop/router"
+import { SHOP_FEATURES } from "@shop/platform/config/shopFeatures"
 import { useEffect, useState, createContext, useContext, useRef, useCallback } from "react"
 import { ProfileProvider } from "@shop/context/ProfileContext"
 import { DeliveryLocationProvider } from "@shop/context/DeliveryLocationContext"
@@ -279,18 +280,18 @@ export default function UserLayout() {
                 {/* Floating Daily Spin trigger: bottom-left with rich animations (desktop & mobile) */}
                 {/* On Quick phones the cart bar owns the bottom of the screen; the
                     rewards banner leads to Spin & Win instead. */}
-                {showDesktopShell && (
+                {SHOP_FEATURES.spin && showDesktopShell && (
                   <div className={hideFloatingOnPhone ? "hidden lg:block" : ""}>
                     <FloatingSpinWidget onOpenSpin={() => setIsSpinWheelOpen(true)} />
                   </div>
                 )}
 
                 {/* Engagement Modals & Widgets */}
-                <SpinWheelModal
+                {SHOP_FEATURES.spin && <SpinWheelModal
                   isOpen={isSpinWheelOpen}
                   onClose={() => setIsSpinWheelOpen(false)}
-                />
-                {showDesktopShell && (
+                />}
+                {SHOP_FEATURES.aiAssistant && showDesktopShell && (
                   <div className={hideFloatingOnPhone ? "hidden lg:block" : ""}>
                     <GeminiAssistantWidget />
                   </div>

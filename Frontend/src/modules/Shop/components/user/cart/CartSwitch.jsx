@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "@shop/router"
 import { Zap } from "lucide-react"
 import { useCart } from "@shop/context/CartContext"
-import { cartStorageKeyFor, storePathFor, useStoreMode } from "@shop/context/StoreModeContext"
+import { QUICK_MODE_ENABLED, cartStorageKeyFor, storePathFor, useStoreMode } from "@shop/context/StoreModeContext"
 
 /**
  * Shop and Quick keep separate carts and check out separately: a Quick order
@@ -20,7 +20,12 @@ function countStored(mode) {
   }
 }
 
-export default function CartSwitch({ className = "" }) {
+// Only one cart exists when Quick mode is off, so there is nothing to switch.
+export default function CartSwitch(props) {
+  return QUICK_MODE_ENABLED ? <CartSwitchTabs {...props} /> : null
+}
+
+function CartSwitchTabs({ className = "" }) {
   const navigate = useNavigate()
   const { isQuick } = useStoreMode()
   const { getCartCount } = useCart()

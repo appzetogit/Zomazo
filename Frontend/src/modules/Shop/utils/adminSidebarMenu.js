@@ -1,3 +1,5 @@
+import { SHOP_FEATURES } from "@shop/platform/config/shopFeatures"
+
 const BOTH = ["quick", "shop"]
 const QUICK = ["quick"]
 const SHOP = ["shop"]
@@ -288,7 +290,23 @@ const adminSidebarMenuTemplate = [
   },
 ];
 
-const isInPanel = (entry, panel, inherited = BOTH) => (entry.panels || inherited).includes(panel)
+/**
+ * Entries hidden inside the platform, by path (relative to the panel base).
+ *
+ * The deferred extras (see platform/config/shopFeatures.js), push campaigns
+ * (later too), and the Shop's own sub-admin list -- admins and their access are
+ * managed by the platform's admin screens, not this module.
+ */
+const HIDDEN_PATHS = new Set([
+  ...(SHOP_FEATURES.coins ? [] : ["/coins", "/reports/coin-liability"]),
+  ...(SHOP_FEATURES.spin ? [] : ["/spin-campaigns"]),
+  ...(SHOP_FEATURES.aiAssistant ? [] : ["/ai/settings", "/ai/conversations", "/ai/usage"]),
+  "/push-campaigns",
+  "/employees",
+])
+
+const isInPanel = (entry, panel, inherited = BOTH) =>
+  (entry.panels || inherited).includes(panel) && !HIDDEN_PATHS.has(entry.path)
 
 const withBase = (path, base) => (typeof path === "string" ? `${base}${path}` : path)
 

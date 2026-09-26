@@ -22,7 +22,10 @@ export const config = {
      * from here: share pages, emails, default business settings.
      */
     brand: {
-        name: String(process.env.BRAND_NAME || 'The Warehouses').trim(),
+        // The platform's name (Frontend/src/config/constants.js APP_CONFIG.NAME)
+        // unless the deployment sets its own; the Shop is part of it, not a
+        // separate brand.
+        name: String(process.env.BRAND_NAME || 'Quick Drop').trim(),
         supportEmail: String(process.env.BRAND_SUPPORT_EMAIL || '').trim(),
         // Shown as the picture on push notifications; unset sends none.
         notificationImage: String(process.env.BRAND_NOTIFICATION_IMAGE || '').trim(),

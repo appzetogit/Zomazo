@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react"
+import { SHOP_FEATURES } from "@shop/platform/config/shopFeatures"
+import { QUICK_MODE_ENABLED } from "@shop/context/StoreModeContext"
 import { Link, useLocation, useNavigate } from "@shop/router"
 import { ChevronDown, MapPin, Menu, Search, ShoppingCart, User, X, ChevronRight } from "lucide-react"
 import { useDeliveryLocation } from "@shop/context/DeliveryLocationContext"
@@ -46,7 +48,7 @@ function AccountMenu({ firstName, signedIn, storePath }) {
     ? [
         ["Your profile", "/profile"],
         ["Your orders", "/orders"],
-        ["Coins", "/coins"],
+        ...(SHOP_FEATURES.coins ? [["Coins", "/coins"]] : []),
         ["Wallet", "/wallet"],
         ["Wishlist", "/profile/favorites"],
         ["Sign out", "/profile/logout"],
@@ -411,27 +413,29 @@ export default function DesktopHeader({ onOpenSpin, desktopOnly = false }) {
             )}
           </form>
 
-          <div role="group" aria-label="Choose store" className="ml-auto flex shrink-0 items-center lg:mx-1 lg:ml-0">
-            <div className="flex rounded-full bg-black/20 backdrop-blur-md p-0.5 border border-white/20">
-              <button
-                type="button"
-                aria-pressed={!isQuick}
-                onClick={() => setCommerceMode("standard")}
-                className={`rounded-full px-2 py-0.5 text-[11px] font-bold transition-all lg:px-3.5 lg:py-1 lg:text-[13px] ${!isQuick ? "bg-white text-gray-950 shadow-sm" : "text-white hover:bg-white/10"}`}
-              >
-                Shop
-              </button>
-              <button
-                type="button"
-                aria-pressed={isQuick}
-                onClick={() => setCommerceMode("quick")}
-                className={`rounded-full px-2 py-0.5 text-[11px] font-bold transition-all lg:px-3.5 lg:py-1 lg:text-[13px] ${isQuick ? "bg-white text-gray-950 shadow-sm" : "text-white hover:bg-white/10"}`}
-              >
-                <span className="lg:hidden">Quick</span>
-                <span className="hidden lg:inline">Quick - 10 min</span>
-              </button>
+          {QUICK_MODE_ENABLED && (
+            <div role="group" aria-label="Choose store" className="ml-auto flex shrink-0 items-center lg:mx-1 lg:ml-0">
+              <div className="flex rounded-full bg-black/20 backdrop-blur-md p-0.5 border border-white/20">
+                <button
+                  type="button"
+                  aria-pressed={!isQuick}
+                  onClick={() => setCommerceMode("standard")}
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-bold transition-all lg:px-3.5 lg:py-1 lg:text-[13px] ${!isQuick ? "bg-white text-gray-950 shadow-sm" : "text-white hover:bg-white/10"}`}
+                >
+                  Shop
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={isQuick}
+                  onClick={() => setCommerceMode("quick")}
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-bold transition-all lg:px-3.5 lg:py-1 lg:text-[13px] ${isQuick ? "bg-white text-gray-950 shadow-sm" : "text-white hover:bg-white/10"}`}
+                >
+                  <span className="lg:hidden">Quick</span>
+                  <span className="hidden lg:inline">Quick - 10 min</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="hidden lg:block">
             <AccountMenu firstName={firstName} signedIn={signedIn} storePath={storePath} />
@@ -482,12 +486,12 @@ export default function DesktopHeader({ onOpenSpin, desktopOnly = false }) {
             </Link>
           ))}
           <Link to="/offers" className={subnavLink}>Today&apos;s Deals</Link>
-          <Link to="/coins" className={subnavLink}>Coins</Link>
-          {onOpenSpin ? (
+          {SHOP_FEATURES.coins && <Link to="/coins" className={subnavLink}>Coins</Link>}
+          {SHOP_FEATURES.spin && (onOpenSpin ? (
             <button type="button" onClick={onOpenSpin} className={subnavLink}>Spin &amp; Win</button>
           ) : (
             <Link to="/spin" className={subnavLink}>Spin &amp; Win</Link>
-          )}
+          ))}
           <Link to="/seller/signup" className={subnavLink}>Sell on {brandName}</Link>
           <Link to="/help" className={subnavLink}>Help</Link>
         </div>

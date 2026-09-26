@@ -7,6 +7,13 @@ import { useLocation } from "@shop/router"
 // A checkout is always all-quick or all-standard, never mixed.
 export const QUICK_BASE = "/quick"
 
+// Quick (rider, minutes) is not part of the Shop inside the platform: quick
+// delivery is the quick-commerce vertical's. The /quick pages are unreachable
+// (the router maps /quick to the Shop page of the same name), and every
+// Shop | Quick switch is hidden behind this flag rather than deleted, so the
+// code stays close to the upstream app.
+export const QUICK_MODE_ENABLED = false
+
 export function getStoreModeFromPath(pathname = "") {
   return pathname === QUICK_BASE || pathname.startsWith(`${QUICK_BASE}/`) ? "quick" : "shop"
 }

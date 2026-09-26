@@ -1,6 +1,9 @@
+import { APP_CONFIG as PLATFORM_APP_CONFIG } from '@/config/constants';
+
 export const APP_CONFIG = {
   // Shown only until business settings load; the admin-set company name wins.
-  NAME: String(import.meta.env.VITE_BRAND_NAME || 'The Warehouses').trim(),
+  // The Shop is part of the platform, so it wears the platform's name.
+  NAME: String(import.meta.env.VITE_BRAND_NAME || PLATFORM_APP_CONFIG.NAME).trim(),
   VERSION: '1.0.0',
 };
 

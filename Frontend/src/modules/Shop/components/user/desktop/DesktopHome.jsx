@@ -17,6 +17,7 @@ import {
 import { useDesktopAddToCart } from "./desktopCart"
 import { percentOff } from "./ui"
 import useIsDesktop from "./useIsDesktop"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 import MobileHome from "../mobile/MobileHome"
 
 const PRODUCT_LIMIT = 50
@@ -37,6 +38,7 @@ const toTile = (p) => ({
 const slugify = (s) => String(s || "").toLowerCase().trim().replace(/\s+/g, "-")
 
 export default function DesktopHome({ heroBanners = [], categories = [], zoneId, onOpenBanner, etaMinutes }) {
+  const companyName = useCompanyName()
   const isDesktop = useIsDesktop()
   const { storePath, fulfilmentMode, isQuick } = useStoreMode()
   const [products, setProducts] = useState([])
@@ -159,7 +161,7 @@ export default function DesktopHome({ heroBanners = [], categories = [], zoneId,
   const marqueeItems = [
     isQuick ? `Quick delivery in ${etaMinutes || 10} minutes` : "Free express delivery on orders over ₹799",
     "100% Verified Boutique Apparel & Premium Fabrics",
-    "Flat 10% Warehouses Coins on Every Order",
+    "Secure payments and easy returns on every order",
     "Hassle-free 7-day size exchanges & doorstep returns",
   ]
 
@@ -251,7 +253,7 @@ export default function DesktopHome({ heroBanners = [], categories = [], zoneId,
         ) : null}
 
         <FeatureBand
-          title="Sell on The Warehouses"
+          title={`Sell on ${companyName}`}
           subtitle="Showcase your designer apparel and boutique collections to millions across India."
           ctaLabel="Start selling"
           ctaTo="/seller/signup"

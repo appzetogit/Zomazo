@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SHOP_FEATURES } from "@shop/platform/config/shopFeatures"
 import { Link, useNavigate } from "@shop/router";
 import { motion } from "framer-motion";
 import {
@@ -482,18 +483,20 @@ export default function Profile() {
             <ChevronRight className="h-4 w-4 text-gray-400" />
           </Link>
 
-          <Link
-            to="/coins"
-            className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-[#202020] transition-colors text-left"
-          >
-            <div className="flex items-center gap-3.5">
-              <Coins className="h-5 w-5 text-amber-500" />
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                Coins &amp; Rewards
-              </span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-gray-400" />
-          </Link>
+          {SHOP_FEATURES.coins && (
+            <Link
+              to="/coins"
+              className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-[#202020] transition-colors text-left"
+            >
+              <div className="flex items-center gap-3.5">
+                <Coins className="h-5 w-5 text-amber-500" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Coins &amp; Rewards
+                </span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+            </Link>
+          )}
 
           <Link
             to="/user/profile/activity"

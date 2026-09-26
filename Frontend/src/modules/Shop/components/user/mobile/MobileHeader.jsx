@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { QUICK_MODE_ENABLED } from "@shop/context/StoreModeContext"
 import { Link, useLocation, useNavigate } from "@shop/router"
 import { ArrowLeft, ChevronDown, MapPin, Menu, Mic, Search, ShoppingCart } from "lucide-react"
 import { useCart } from "@shop/context/CartContext"
@@ -118,7 +119,7 @@ export default function MobileHeader() {
           </button>
         )}
 
-        <Link to={storePath("/")} className="flex shrink-0 items-center pr-1" aria-label="The Warehouses home">
+        <Link to={storePath("/")} className="flex shrink-0 items-center pr-1" aria-label="Shop home">
           <img src={BRAND_LOGO_ON_DARK} alt="" className="h-[28px] w-auto max-w-[80px] object-contain drop-shadow-sm" />
         </Link>
 
@@ -137,27 +138,29 @@ export default function MobileHeader() {
           </span>
         </button>
 
-        <div role="group" aria-label="Choose store" className="ml-auto flex shrink-0 items-center rounded-full border border-white/25 bg-black/20 p-0.5">
-          <button
-            type="button"
-            aria-pressed={!isQuick}
-            onClick={() => setCommerceMode("standard")}
-            className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold transition-all ${!isQuick ? "bg-white text-gray-950 shadow-xs" : "text-white/90"}`}
-          >
-            Shop
-          </button>
-          <button
-            type="button"
-            aria-pressed={isQuick}
-            onClick={() => setCommerceMode("quick")}
-            className={`flex items-center gap-0.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold transition-all ${isQuick ? "bg-white text-gray-950 shadow-xs" : "text-white/90"}`}
-          >
-            <span className="text-amber-500" aria-hidden="true">
-              ⚡
-            </span>
-            Quick
-          </button>
-        </div>
+        {QUICK_MODE_ENABLED && (
+          <div role="group" aria-label="Choose store" className="ml-auto flex shrink-0 items-center rounded-full border border-white/25 bg-black/20 p-0.5">
+            <button
+              type="button"
+              aria-pressed={!isQuick}
+              onClick={() => setCommerceMode("standard")}
+              className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold transition-all ${!isQuick ? "bg-white text-gray-950 shadow-xs" : "text-white/90"}`}
+            >
+              Shop
+            </button>
+            <button
+              type="button"
+              aria-pressed={isQuick}
+              onClick={() => setCommerceMode("quick")}
+              className={`flex items-center gap-0.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold transition-all ${isQuick ? "bg-white text-gray-950 shadow-xs" : "text-white/90"}`}
+            >
+              <span className="text-amber-500" aria-hidden="true">
+                ⚡
+              </span>
+              Quick
+            </button>
+          </div>
+        )}
 
         <Link
           to={storePath("/cart")}

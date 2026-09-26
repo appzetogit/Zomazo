@@ -351,32 +351,19 @@ export default function AdminNavbar({ onMenuClick }) {
             </button>
           </div>
 
-          {/* Panel switcher: Quick commerce vs Shop (courier e-commerce) */}
-          <div
-            className="flex items-center p-1 mr-3 rounded-xl border border-neutral-200 bg-neutral-100"
-            role="tablist"
-            aria-label="Admin panel"
+          {/* Back to the platform's admin (food, quick commerce, taxi...). The
+              standalone app switched between its Quick and Shop panels here;
+              inside the platform only the Shop panel exists. A plain link, not
+              the Shop router: /admin/* outside /admin/shop is the platform's. */}
+          <a
+            href="/admin"
+            className="flex items-center gap-1.5 px-3 py-1.5 mr-3 rounded-xl border border-neutral-200 bg-neutral-100 text-xs font-semibold text-neutral-700 hover:bg-neutral-200/60"
           >
-            {Object.values(ADMIN_PANELS).map((option) => {
-              const active = option.key === panel;
-              const accent = option.key === "quick" ? "bg-amber-500" : "bg-indigo-600";
-              return (
-                <button
-                  key={option.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => switchPanel(option.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    active ? `${accent} text-white shadow-sm` : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60"
-                  }`}
-                >
-                  {option.key === "quick" ? <Zap className="w-3.5 h-3.5" /> : <Truck className="w-3.5 h-3.5" />}
-                  <span>{option.label}</span>
-                </button>
-              );
-            })}
-          </div>
+            <Truck className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Shop</span>
+            <span className="text-neutral-400">·</span>
+            <span className="text-neutral-500">Platform admin</span>
+          </a>
 
           {/* Center-Right: Mode Switcher Tab (Admin Portal vs User Storefront) */}
           <div className="hidden sm:flex items-center bg-neutral-100 p-1 rounded-xl border border-neutral-200">
