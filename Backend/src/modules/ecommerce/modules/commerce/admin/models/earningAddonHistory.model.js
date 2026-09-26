@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const earningAddonHistorySchema = new mongoose.Schema(
     {
-        offerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EarningAddon', required: true, index: true },
-        deliveryPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'DeliveryPartner', required: true, index: true },
+        offerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomEarningAddon', required: true, index: true },
+        deliveryPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomDeliveryPartner', required: true, index: true },
 
         ordersCompleted: { type: Number, default: 0 },
         ordersRequired: { type: Number, default: 0 },
@@ -26,5 +27,5 @@ const earningAddonHistorySchema = new mongoose.Schema(
 earningAddonHistorySchema.index({ deliveryPartnerId: 1, completedAt: -1 });
 earningAddonHistorySchema.index({ offerId: 1, deliveryPartnerId: 1, status: 1 });
 
-export const EarningAddonHistory = mongoose.model('EarningAddonHistory', earningAddonHistorySchema);
+export const EarningAddonHistory = ecomModel('EarningAddonHistory', earningAddonHistorySchema);
 

@@ -1,10 +1,11 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const sellerSupportTicketSchema = new mongoose.Schema(
     {
         sellerId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Seller',
+            ref: 'EcomSeller',
             required: true,
             index: true
         },
@@ -27,7 +28,6 @@ const sellerSupportTicketSchema = new mongoose.Schema(
 sellerSupportTicketSchema.index({ sellerId: 1, createdAt: -1 });
 sellerSupportTicketSchema.index({ status: 1, createdAt: -1 });
 
-export const SellerSupportTicket = mongoose.model(
-    'SellerSupportTicket',
+export const SellerSupportTicket = ecomModel('SellerSupportTicket',
     sellerSupportTicketSchema
 );

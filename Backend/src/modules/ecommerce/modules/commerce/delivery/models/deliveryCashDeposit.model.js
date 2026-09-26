@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const deliveryCashDepositSchema = new mongoose.Schema({
     deliveryPartnerId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'DeliveryPartner',
+        ref: 'EcomDeliveryPartner',
         required: true,
         index: true
     },
@@ -30,7 +31,7 @@ const deliveryCashDepositSchema = new mongoose.Schema({
     razorpayPaymentId: String,
     adminId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+        ref: 'EcomUser'
     },
     adminNote: String
 }, { 
@@ -40,4 +41,4 @@ const deliveryCashDepositSchema = new mongoose.Schema({
 
 deliveryCashDepositSchema.index({ createdAt: -1 });
 
-export const DeliveryCashDeposit = mongoose.model('DeliveryCashDeposit', deliveryCashDepositSchema);
+export const DeliveryCashDeposit = ecomModel('DeliveryCashDeposit', deliveryCashDepositSchema);

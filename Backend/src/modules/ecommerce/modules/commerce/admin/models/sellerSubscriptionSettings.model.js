@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const sellerSubscriptionSettingsSchema = new mongoose.Schema(
     {
         starterPrice: { type: Number, required: true, default: 999 },
@@ -15,4 +16,4 @@ const sellerSubscriptionSettingsSchema = new mongoose.Schema(
     { collection: 'seller_subscription_settings', timestamps: true }
 );
 
-export const SellerSubscriptionSettings = mongoose.model('SellerSubscriptionSettings', sellerSubscriptionSettingsSchema);
+export const SellerSubscriptionSettings = ecomModel('SellerSubscriptionSettings', sellerSubscriptionSettingsSchema);

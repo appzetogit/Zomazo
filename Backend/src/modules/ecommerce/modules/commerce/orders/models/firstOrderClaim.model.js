@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * One first-order offer, used once per person. A person is recognised by any
  * of: the account, its verified phone, the device, the card/UPI that paid.
@@ -15,7 +16,7 @@ import mongoose from 'mongoose';
 const firstOrderClaimSchema = new mongoose.Schema(
     {
         /** Always set, for reference; not unique (the account signal may be off). */
-        ownerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+        ownerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
         /** Set only while the "account" signal is on. */
         userId: { type: mongoose.Schema.Types.ObjectId, default: undefined },
         phoneHash: { type: String, default: undefined },
@@ -51,5 +52,5 @@ const firstOrderGuardSettingsSchema = new mongoose.Schema(
     { collection: 'first_order_guard_settings', timestamps: true }
 );
 
-export const FirstOrderClaim = mongoose.model('FirstOrderClaim', firstOrderClaimSchema);
-export const FirstOrderGuardSettings = mongoose.model('FirstOrderGuardSettings', firstOrderGuardSettingsSchema);
+export const FirstOrderClaim = ecomModel('FirstOrderClaim', firstOrderClaimSchema);
+export const FirstOrderGuardSettings = ecomModel('FirstOrderGuardSettings', firstOrderGuardSettingsSchema);

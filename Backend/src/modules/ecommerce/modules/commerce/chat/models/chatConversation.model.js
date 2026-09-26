@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * A support conversation thread.
  *
@@ -20,7 +21,7 @@ const chatConversationSchema = new mongoose.Schema(
 
         orderId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Order',
+            ref: 'EcomOrder',
             default: null,
             index: true
         },
@@ -53,7 +54,6 @@ const chatConversationSchema = new mongoose.Schema(
 chatConversationSchema.index({ orderId: 1, createdAt: -1 });
 chatConversationSchema.index({ participants: 1, createdAt: -1 });
 
-export const ChatConversation = mongoose.model(
-    'ChatConversation',
+export const ChatConversation = ecomModel('ChatConversation',
     chatConversationSchema
 );

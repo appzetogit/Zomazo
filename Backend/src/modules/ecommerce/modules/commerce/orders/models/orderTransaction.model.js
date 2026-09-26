@@ -1,12 +1,13 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const orderTransactionSchema = new mongoose.Schema({
     // Identifiers
-    orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, unique: true, index: true },
+    orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomOrder', required: true, unique: true, index: true },
 
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller', required: true, index: true },
-    deliveryPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'DeliveryPartner', index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
+    sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomSeller', required: true, index: true },
+    deliveryPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomDeliveryPartner', index: true },
 
     // Core Payment Info
     paymentMethod: { 
@@ -111,4 +112,4 @@ orderTransactionSchema.index({ createdAt: -1 });
 orderTransactionSchema.index({ 'settlement.isSellerSettled': 1, sellerId: 1 });
 orderTransactionSchema.index({ 'status': 1, paymentMethod: 1 });
 
-export const OrderTransaction = mongoose.model('OrderTransaction', orderTransactionSchema);
+export const OrderTransaction = ecomModel('OrderTransaction', orderTransactionSchema);

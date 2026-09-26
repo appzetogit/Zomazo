@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const orderItemSchema = new mongoose.Schema(
     {
         itemId: { type: String, required: true, trim: true },
@@ -148,12 +149,12 @@ const dispatchSchema = new mongoose.Schema(
             enum: ['unassigned', 'assigned', 'accepted', 'rejected', 'cancelled'],
             default: 'unassigned'
         },
-        deliveryPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'DeliveryPartner', default: null },
+        deliveryPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomDeliveryPartner', default: null },
         assignedAt: { type: Date },
         acceptedAt: { type: Date },
         /** List of partners who were offered this order (to avoid repeats and track timeouts) */
         offeredTo: [{
-            partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'DeliveryPartner' },
+            partnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomDeliveryPartner' },
             at: { type: Date, default: Date.now },
             action: { type: String, enum: ['offered', 'rejected', 'timeout', 'deassigned'], default: 'offered' }
         }],
@@ -257,27 +258,27 @@ const orderSchema = new mongoose.Schema(
         },
         userId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: 'EcomUser',
             required: true
         },
         sellerId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Seller',
+            ref: 'EcomSeller',
             required: true
         },
         zoneId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Zone',
+            ref: 'EcomZone',
             index: true
         },
         transactionId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'OrderTransaction',
+            ref: 'EcomOrderTransaction',
             index: true
         },
         checkoutId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Checkout',
+            ref: 'EcomCheckout',
             default: null,
             index: true
         },
@@ -461,7 +462,7 @@ orderSchema.pre('save', async function (next) {
     }
 });
 
-export const Order = mongoose.model('Order', orderSchema);
+export const Order = ecomModel('Order', orderSchema);
 
 const settingsSchema = new mongoose.Schema(
     {
@@ -476,4 +477,4 @@ const settingsSchema = new mongoose.Schema(
     { collection: 'dispatch_settings', timestamps: true }
 );
 
-export const DispatchSettings = mongoose.model('DispatchSettings', settingsSchema);
+export const DispatchSettings = ecomModel('DispatchSettings', settingsSchema);

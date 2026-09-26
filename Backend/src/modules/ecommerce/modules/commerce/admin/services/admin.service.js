@@ -688,7 +688,7 @@ export async function getDashboardStats(query = {}) {
                 { $limit: 5 },
                 {
                     $lookup: {
-                        from: 'users',
+                        from: 'ecom_users',
                         localField: '_id',
                         foreignField: '_id',
                         as: 'user'
@@ -898,12 +898,12 @@ export async function getTransactionReport(query = {}) {
                 let restDoc = null;
                 if (mongoose.Types.ObjectId.isValid(sellerRaw)) {
                     restDoc = await mongoose
-                        .model('Seller')
+                        .model('EcomSeller')
                         .findById(sellerRaw)
                         .select('_id')
                         .lean();
                 } else {
-                    restDoc = await mongoose.model('Seller').findOne({
+                    restDoc = await mongoose.model('EcomSeller').findOne({
                         $or: [{ sellerName: sellerRaw }, { name: sellerRaw }]
                     })
                         .select('_id')
@@ -919,7 +919,7 @@ export async function getTransactionReport(query = {}) {
 
         if (!match.sellerId && Object.keys(restFilter).length > 0) {
             const sellersList = await mongoose
-                .model('Seller')
+                .model('EcomSeller')
                 .find(restFilter)
                 .select('_id')
                 .lean();
@@ -1535,7 +1535,7 @@ export async function getCustomers(query = {}) {
                 { $match: filter },
                 {
                     $lookup: {
-                        from: 'orders',
+                        from: 'ecom_orders',
                         let: { uid: '$_id' },
                         pipeline: [
                             {

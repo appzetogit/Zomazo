@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const referralLogSchema = new mongoose.Schema(
     {
         referrerId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
@@ -26,5 +27,5 @@ const referralLogSchema = new mongoose.Schema(
 referralLogSchema.index({ refereeId: 1, role: 1 }, { unique: true });
 referralLogSchema.index({ referrerId: 1, role: 1, createdAt: -1 });
 
-export const ReferralLog = mongoose.model('ReferralLog', referralLogSchema);
+export const ReferralLog = ecomModel('ReferralLog', referralLogSchema);
 

@@ -1,10 +1,11 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const sellerCommissionSchema = new mongoose.Schema(
     {
         sellerId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Seller',
+            ref: 'EcomSeller',
             required: true,
             unique: true,
             index: true
@@ -24,5 +25,5 @@ const sellerCommissionSchema = new mongoose.Schema(
 );
 
 
-export const SellerCommission = mongoose.model('SellerCommission', sellerCommissionSchema);
+export const SellerCommission = ecomModel('SellerCommission', sellerCommissionSchema);
 

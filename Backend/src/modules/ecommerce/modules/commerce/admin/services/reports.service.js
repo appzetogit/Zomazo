@@ -67,7 +67,7 @@ function percentile(sorted, p) {
 }
 
 const sellerLookup = [
-    { $lookup: { from: 'sellers', localField: '_id', foreignField: '_id', as: 'seller', pipeline: [{ $project: { sellerName: 1 } }] } },
+    { $lookup: { from: 'ecom_sellers', localField: '_id', foreignField: '_id', as: 'seller', pipeline: [{ $project: { sellerName: 1 } }] } },
     { $addFields: { sellerName: { $ifNull: [{ $first: '$seller.sellerName' }, ''] } } },
     { $project: { seller: 0 } },
 ];
@@ -116,7 +116,7 @@ export async function getDeliverySlaReport(query = {}) {
             },
         },
         { $addFields: { durationMs: { $subtract: ['$deliveredAt', '$placedAt'] } } },
-        { $lookup: { from: 'sellers', localField: 'sellerId', foreignField: '_id', as: 's', pipeline: [{ $project: { sellerName: 1 } }] } },
+        { $lookup: { from: 'ecom_sellers', localField: 'sellerId', foreignField: '_id', as: 's', pipeline: [{ $project: { sellerName: 1 } }] } },
         { $addFields: { sellerName: { $ifNull: [{ $first: '$s.sellerName' }, ''] } } },
         { $project: { s: 0 } },
         { $sort: { placedAt: 1 } },
@@ -213,7 +213,7 @@ export async function getCommissionReport(query = {}) {
 
     const rows = await Order.aggregate([
         { $match: match },
-        { $lookup: { from: 'order_transactions', localField: '_id', foreignField: 'orderId', as: 't', pipeline: [{ $project: { amounts: 1 } }] } },
+        { $lookup: { from: 'ecom_order_transactions', localField: '_id', foreignField: 'orderId', as: 't', pipeline: [{ $project: { amounts: 1 } }] } },
         { $addFields: { t: { $first: '$t' } } },
         {
             $project: {
@@ -313,7 +313,7 @@ export async function getCoinLiabilityReport(query = {}, now = new Date()) {
         CoinLedger.aggregate([
             { $match: { type: 'debit', createdAt: { $gte: q.from, $lte: q.to } } },
             { $unwind: '$allocations' },
-            { $lookup: { from: 'coin_lots', localField: 'allocations.lotId', foreignField: '_id', as: 'lot', pipeline: [{ $project: { source: 1 } }] } },
+            { $lookup: { from: 'ecom_coin_lots', localField: 'allocations.lotId', foreignField: '_id', as: 'lot', pipeline: [{ $project: { source: 1 } }] } },
             { $group: { _id: { $ifNull: [{ $first: '$lot.source' }, 'unknown'] }, amount: { $sum: '$allocations.amount' } } },
         ]),
         CoinLedger.aggregate([
@@ -324,7 +324,7 @@ export async function getCoinLiabilityReport(query = {}, now = new Date()) {
         CoinLedger.aggregate([
             { $match: { type: 'expire', createdAt: { $gte: q.from, $lte: q.to } } },
             { $addFields: { lotId: { $convert: { input: '$refId', to: 'objectId', onError: null, onNull: null } } } },
-            { $lookup: { from: 'coin_lots', localField: 'lotId', foreignField: '_id', as: 'lot', pipeline: [{ $project: { source: 1 } }] } },
+            { $lookup: { from: 'ecom_coin_lots', localField: 'lotId', foreignField: '_id', as: 'lot', pipeline: [{ $project: { source: 1 } }] } },
             { $group: { _id: { $ifNull: [{ $first: '$lot.source' }, 'unknown'] }, amount: { $sum: '$amount' } } },
         ]),
         getCoinReport(now),

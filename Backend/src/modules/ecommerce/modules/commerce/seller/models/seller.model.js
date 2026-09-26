@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const normalizeRatingValue = (value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
@@ -246,7 +247,7 @@ const sellerSchema = new mongoose.Schema(
     },
     pendingZoneId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Zone",
+      ref: "EcomZone",
       default: undefined,
     },
     locationUpdateStatus: {
@@ -261,7 +262,7 @@ const sellerSchema = new mongoose.Schema(
     /** Optional service zone id (can be computed from location). */
     zoneId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Zone",
+      ref: "EcomZone",
       index: true,
     },
     businessModel: {
@@ -542,7 +543,6 @@ sellerSchema.index({ status: 1, createdAt: -1 });
 sellerSchema.index({ "channels.quick.status": 1 });
 sellerSchema.index({ "channels.shop.status": 1 });
 
-export const Seller = mongoose.model(
-  "Seller",
+export const Seller = ecomModel('Seller',
   sellerSchema,
 );

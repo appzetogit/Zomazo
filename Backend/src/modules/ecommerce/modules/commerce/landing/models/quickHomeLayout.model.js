@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * What the Quick storefront's phone home shows (QUICK_MOBILE_SPEC.md §3): the
  * themed tabs with their promo tiles, the featured cards, the campaign banners
@@ -86,7 +87,7 @@ const campaignSchema = new mongoose.Schema(
 const categoryGroupSchema = new mongoose.Schema(
     {
         title: { type: String, trim: true, required: true },
-        parentCategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
+        parentCategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomCategory', required: true },
         sortOrder: { type: Number, default: 0 },
     },
     { _id: true },
@@ -94,7 +95,7 @@ const categoryGroupSchema = new mongoose.Schema(
 
 const quickHomeLayoutSchema = new mongoose.Schema(
     {
-        zoneId: { type: mongoose.Schema.Types.ObjectId, ref: 'Zone', default: null },
+        zoneId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomZone', default: null },
         themes: { type: [themeSchema], default: [] },
         featured: { type: [featuredSchema], default: [] },
         campaigns: { type: [campaignSchema], default: [] },
@@ -106,4 +107,4 @@ const quickHomeLayoutSchema = new mongoose.Schema(
 // One layout per zone; the global one is zoneId null.
 quickHomeLayoutSchema.index({ zoneId: 1 }, { unique: true });
 
-export const QuickHomeLayout = mongoose.model('QuickHomeLayout', quickHomeLayoutSchema);
+export const QuickHomeLayout = ecomModel('QuickHomeLayout', quickHomeLayoutSchema);

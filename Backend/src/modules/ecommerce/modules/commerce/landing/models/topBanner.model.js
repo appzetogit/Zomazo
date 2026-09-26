@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const topBannerSchema = new mongoose.Schema({
     image: {
         type: String,
@@ -20,6 +21,6 @@ const topBannerSchema = new mongoose.Schema({
     timestamps: true
 });
 
-const TopBanner = mongoose.model('TopBanner', topBannerSchema);
+const TopBanner = ecomModel('TopBanner', topBannerSchema);
 
 export default TopBanner;

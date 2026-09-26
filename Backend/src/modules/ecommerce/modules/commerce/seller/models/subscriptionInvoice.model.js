@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 export const SUBSCRIPTION_INVOICE_STATUSES = [
   "pending",
   "partially_settled",
@@ -19,7 +20,7 @@ const subscriptionInvoiceSchema = new mongoose.Schema(
   {
     sellerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Seller",
+      ref: "EcomSeller",
       required: true,
       index: true,
     },
@@ -71,7 +72,6 @@ subscriptionInvoiceSchema.index({ sellerId: 1, billingMonth: 1 }, { unique: true
 subscriptionInvoiceSchema.index({ billingMonth: 1, status: 1 });
 subscriptionInvoiceSchema.index({ status: 1, outstandingAmount: 1 });
 
-export const SubscriptionInvoice = mongoose.model(
-  "SubscriptionInvoice",
+export const SubscriptionInvoice = ecomModel('SubscriptionInvoice',
   subscriptionInvoiceSchema
 );

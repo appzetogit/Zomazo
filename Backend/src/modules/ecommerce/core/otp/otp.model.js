@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../config/ecomModel.js';
 const otpSchema = new mongoose.Schema(
     {
         phone: {
@@ -37,5 +38,5 @@ const otpSchema = new mongoose.Schema(
 otpSchema.index({ phone: 1 });
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export const Otp = mongoose.model('Otp', otpSchema);
+export const Otp = ecomModel('Otp', otpSchema);
 

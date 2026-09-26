@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * AdminWallet — tracks the platform's overall financial balance.
  * Credited with platform fees + delivery fee margins on every order.
@@ -20,4 +21,4 @@ const adminWalletSchema = new mongoose.Schema(
     { collection: 'admin_wallets', timestamps: true }
 );
 
-export const AdminWallet = mongoose.model('AdminWallet', adminWalletSchema);
+export const AdminWallet = ecomModel('AdminWallet', adminWalletSchema);

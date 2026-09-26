@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const normalizeRatingValue = (value) => {
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return 0;
@@ -105,7 +106,7 @@ const deliveryPartnerSchema = new mongoose.Schema(
         referralCode: { type: String, index: true },
         referredBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'DeliveryPartner',
+            ref: 'EcomDeliveryPartner',
             default: null,
             index: true
         },
@@ -141,5 +142,5 @@ const deliveryPartnerSchema = new mongoose.Schema(
 // Indices
 deliveryPartnerSchema.index({ lastLocation: '2dsphere' });
 
-export const DeliveryPartner = mongoose.model('DeliveryPartner', deliveryPartnerSchema);
+export const DeliveryPartner = ecomModel('DeliveryPartner', deliveryPartnerSchema);
 

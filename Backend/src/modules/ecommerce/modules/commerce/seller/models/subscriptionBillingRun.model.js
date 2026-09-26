@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * One document per closed billing month — used for idempotency and
  * catch-up of months missed while the billing worker was down.
@@ -26,7 +27,6 @@ const subscriptionBillingRunSchema = new mongoose.Schema(
   }
 );
 
-export const SubscriptionBillingRun = mongoose.model(
-  "SubscriptionBillingRun",
+export const SubscriptionBillingRun = ecomModel('SubscriptionBillingRun',
   subscriptionBillingRunSchema
 );

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * One chat message between two parties.
  *
@@ -11,7 +12,7 @@ import mongoose from 'mongoose';
 const chatMessageSchema = new mongoose.Schema(
     {
         conversationId: { type: String, required: true, index: true },
-        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null, index: true },
+        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomOrder', default: null, index: true },
 
         senderRole: { type: String, enum: ['USER', 'SELLER', 'DELIVERY_PARTNER', 'ADMIN'], required: true },
         senderId: { type: mongoose.Schema.Types.ObjectId, required: true },
@@ -34,4 +35,4 @@ chatMessageSchema.index({ conversationId: 1, createdAt: -1 });
 chatMessageSchema.index({ participants: 1, createdAt: -1 });
 chatMessageSchema.index({ recipientToken: 1, readAt: 1 });
 
-export const ChatMessage = mongoose.model('ChatMessage', chatMessageSchema);
+export const ChatMessage = ecomModel('ChatMessage', chatMessageSchema);

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const dailyMetricSchema = new mongoose.Schema(
   {
     date: {
@@ -39,4 +40,4 @@ const dailyMetricSchema = new mongoose.Schema(
   { collection: 'daily_metrics', timestamps: true }
 );
 
-export const DailyMetric = mongoose.model('DailyMetric', dailyMetricSchema);
+export const DailyMetric = ecomModel('DailyMetric', dailyMetricSchema);

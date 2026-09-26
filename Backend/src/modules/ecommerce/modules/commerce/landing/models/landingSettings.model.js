@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const landingSettingsSchema = new mongoose.Schema(
     {
         exploreMoreHeading: {
@@ -8,7 +9,7 @@ const landingSettingsSchema = new mongoose.Schema(
         },
         recommendedSellerIds: {
             type: [mongoose.Schema.Types.ObjectId],
-            ref: 'Seller',
+            ref: 'EcomSeller',
             default: []
         },
         showHeroBanners: {
@@ -30,5 +31,5 @@ const landingSettingsSchema = new mongoose.Schema(
     }
 );
 
-export const LandingSettings = mongoose.model('LandingSettings', landingSettingsSchema);
+export const LandingSettings = ecomModel('LandingSettings', landingSettingsSchema);
 

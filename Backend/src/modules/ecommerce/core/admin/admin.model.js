@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { config } from '../../config/env.js';
 import { ADMIN_ACTIONS, ADMIN_PERMISSION_SECTIONS } from '../../constants/permissions.js';
 
+import { ecomModel } from '../../config/ecomModel.js';
 const adminPermissionsSchema = new mongoose.Schema(
     Object.fromEntries(
         ADMIN_PERMISSION_SECTIONS.map((section) => [
@@ -64,12 +65,12 @@ const adminSchema = new mongoose.Schema(
         },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Admin',
+            ref: 'EcomAdmin',
             default: null
         },
         updatedBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Admin',
+            ref: 'EcomAdmin',
             default: null
         },
         servicesAccess: {
@@ -101,5 +102,5 @@ adminSchema.methods.comparePassword = function (candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
 };
 
-export const Admin = mongoose.model('Admin', adminSchema);
+export const Admin = ecomModel('Admin', adminSchema);
 

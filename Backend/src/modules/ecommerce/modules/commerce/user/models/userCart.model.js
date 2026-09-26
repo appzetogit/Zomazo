@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const userCartItemSchema = new mongoose.Schema(
     {
         lineItemId: { type: String, trim: true, default: '' },
@@ -26,7 +27,7 @@ const userCartSchema = new mongoose.Schema(
     {
         userId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: 'EcomUser',
             required: true,
             index: true,
         },
@@ -71,4 +72,4 @@ userCartSchema.index({ userId: 1, mode: 1 }, { unique: true, name: 'userId_1_mod
 userCartSchema.index({ updatedAt: -1 });
 userCartSchema.index({ sellerId: 1 });
 
-export const UserCart = mongoose.model('UserCart', userCartSchema);
+export const UserCart = ecomModel('UserCart', userCartSchema);

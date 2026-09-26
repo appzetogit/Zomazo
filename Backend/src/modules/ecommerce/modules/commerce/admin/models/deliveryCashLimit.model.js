@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const deliveryCashLimitSchema = new mongoose.Schema(
     {
         deliveryCashLimit: { type: Number, default: 0, min: 0 },
@@ -11,5 +12,5 @@ const deliveryCashLimitSchema = new mongoose.Schema(
 
 deliveryCashLimitSchema.index({ isActive: 1, createdAt: -1 });
 
-export const DeliveryCashLimit = mongoose.model('DeliveryCashLimit', deliveryCashLimitSchema);
+export const DeliveryCashLimit = ecomModel('DeliveryCashLimit', deliveryCashLimitSchema);
 

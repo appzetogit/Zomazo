@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * DeliveryWallet — tracks the financial balance for each delivery partner.
  * Credited when deliveries are completed; debited when settlements are processed.
@@ -8,7 +9,7 @@ const deliveryWalletSchema = new mongoose.Schema(
     {
         deliveryPartnerId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'DeliveryPartner',
+            ref: 'EcomDeliveryPartner',
             required: true,
             unique: true,
             index: true
@@ -30,4 +31,4 @@ const deliveryWalletSchema = new mongoose.Schema(
     { collection: 'delivery_wallets', timestamps: true }
 );
 
-export const DeliveryWallet = mongoose.model('DeliveryWallet', deliveryWalletSchema);
+export const DeliveryWallet = ecomModel('DeliveryWallet', deliveryWalletSchema);

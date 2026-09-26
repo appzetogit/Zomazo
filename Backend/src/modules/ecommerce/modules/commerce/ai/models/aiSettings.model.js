@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * The assistant's admin-editable settings. One document (key "default").
  * The Gemini API key is NOT here: it stays in GEMINI_API_KEY.
@@ -24,4 +25,4 @@ const aiSettingsSchema = new mongoose.Schema(
     { collection: 'ai_settings', timestamps: true }
 );
 
-export const AiSettings = mongoose.models.AiSettings || mongoose.model('AiSettings', aiSettingsSchema);
+export const AiSettings = ecomModel('AiSettings', aiSettingsSchema);

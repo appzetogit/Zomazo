@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const referralSettingsSchema = new mongoose.Schema(
     {
         referralRewardUser: { type: Number, min: 0, default: 0 },
@@ -22,5 +23,5 @@ const referralSettingsSchema = new mongoose.Schema(
 
 referralSettingsSchema.index({ isActive: 1, createdAt: -1 });
 
-export const ReferralSettings = mongoose.model('ReferralSettings', referralSettingsSchema);
+export const ReferralSettings = ecomModel('ReferralSettings', referralSettingsSchema);
 

@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const subscriptionHistorySchema = new mongoose.Schema(
   {
     sellerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Seller",
+      ref: "EcomSeller",
       required: true,
       index: true,
     },
@@ -37,8 +38,7 @@ const subscriptionHistorySchema = new mongoose.Schema(
 
 subscriptionHistorySchema.index({ sellerId: 1, createdAt: -1 });
 
-export const SellerSubscriptionHistory = mongoose.model(
-  "SellerSubscriptionHistory",
+export const SellerSubscriptionHistory = ecomModel('SellerSubscriptionHistory',
   subscriptionHistorySchema
 );
 

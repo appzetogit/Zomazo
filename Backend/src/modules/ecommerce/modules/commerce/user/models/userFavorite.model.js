@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * One favourited seller or dish.
  *
@@ -11,7 +12,7 @@ const userFavoriteSchema = new mongoose.Schema(
     {
         userId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: 'EcomUser',
             required: true,
             index: true
         },
@@ -46,4 +47,4 @@ userFavoriteSchema.index(
 // Serves the listing: everything a user favourited, newest first.
 userFavoriteSchema.index({ userId: 1, entityType: 1, createdAt: -1 });
 
-export const UserFavorite = mongoose.model('UserFavorite', userFavoriteSchema);
+export const UserFavorite = ecomModel('UserFavorite', userFavoriteSchema);

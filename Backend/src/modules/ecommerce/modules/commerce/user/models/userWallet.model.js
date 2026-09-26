@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const walletTransactionSchema = new mongoose.Schema(
     {
         type: {
@@ -28,5 +29,5 @@ const userWalletSchema = new mongoose.Schema(
     { collection: 'user_wallets', timestamps: true }
 );
 
-export const UserWallet = mongoose.model('UserWallet', userWalletSchema);
+export const UserWallet = ecomModel('UserWallet', userWalletSchema);
 

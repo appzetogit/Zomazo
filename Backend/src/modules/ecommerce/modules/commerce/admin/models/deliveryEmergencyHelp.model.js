@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const deliveryEmergencyHelpSchema = new mongoose.Schema(
     {
         medicalEmergency: { type: String, trim: true, default: '' },
@@ -13,5 +14,5 @@ const deliveryEmergencyHelpSchema = new mongoose.Schema(
 
 deliveryEmergencyHelpSchema.index({ isActive: 1, createdAt: -1 });
 
-export const DeliveryEmergencyHelp = mongoose.model('DeliveryEmergencyHelp', deliveryEmergencyHelpSchema);
+export const DeliveryEmergencyHelp = ecomModel('DeliveryEmergencyHelp', deliveryEmergencyHelpSchema);
 

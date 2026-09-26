@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../config/ecomModel.js';
 const adminResetOtpSchema = new mongoose.Schema(
     {
         email: {
@@ -30,4 +31,4 @@ const adminResetOtpSchema = new mongoose.Schema(
 
 adminResetOtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export const AdminResetOtp = mongoose.model('AdminResetOtp', adminResetOtpSchema);
+export const AdminResetOtp = ecomModel('AdminResetOtp', adminResetOtpSchema);

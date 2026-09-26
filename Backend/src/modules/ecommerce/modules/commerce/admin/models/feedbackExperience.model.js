@@ -1,11 +1,14 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const feedbackExperienceSchema = new mongoose.Schema(
     {
         userId: { 
             type: mongoose.Schema.Types.ObjectId, 
             required: true,
-            refPath: 'userModel'
+            // userModel keeps the source app's plain names ('User', 'Seller'...) as
+            // stored data; the registered models carry the Ecom prefix.
+            ref: function () { return `Ecom${this.userModel}`; }
         },
         userModel: {
             type: String,
@@ -15,7 +18,7 @@ const feedbackExperienceSchema = new mongoose.Schema(
         },
         sellerId: { 
             type: mongoose.Schema.Types.ObjectId, 
-            ref: 'Seller', 
+            ref: 'EcomSeller', 
             index: true 
         },
         rating: { 
@@ -45,4 +48,4 @@ const feedbackExperienceSchema = new mongoose.Schema(
 feedbackExperienceSchema.index({ module: 1, createdAt: -1 });
 feedbackExperienceSchema.index({ userId: 1, createdAt: -1 });
 
-export const FeedbackExperience = mongoose.model('FeedbackExperience', feedbackExperienceSchema);
+export const FeedbackExperience = ecomModel('FeedbackExperience', feedbackExperienceSchema);

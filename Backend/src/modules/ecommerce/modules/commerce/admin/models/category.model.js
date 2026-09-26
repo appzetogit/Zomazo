@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const categorySchema = new mongoose.Schema(
     {
         name: { type: String, required: true, trim: true, index: true },
@@ -15,8 +16,8 @@ const categorySchema = new mongoose.Schema(
          *
          * Note: existing categories (created by admin historically) should be treated as approved.
          */
-        sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller', index: true, default: undefined },
-        createdBySellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller', index: true, default: undefined },
+        sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomSeller', index: true, default: undefined },
+        createdBySellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomSeller', index: true, default: undefined },
         approvalStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'approved', index: true },
         isApproved: { type: Boolean, default: true, index: true },
         rejectionReason: { type: String, trim: true, default: '' },
@@ -29,7 +30,7 @@ const categorySchema = new mongoose.Schema(
          * - When set: category is visible only for that zone.
          * - When null/undefined: category is global (visible for all zones).
          */
-        zoneId: { type: mongoose.Schema.Types.ObjectId, ref: 'Zone', index: true, default: undefined },
+        zoneId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomZone', index: true, default: undefined },
         /**
          * Parent category, giving groceries the second level a menu never
          * needed: "Dairy" holds "Milk", "Curd", "Paneer".
@@ -41,12 +42,12 @@ const categorySchema = new mongoose.Schema(
          * ponytail: two levels is all this supports; deeper nesting needs a
          * real tree, and grocery apps do not use one.
          */
-        parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', index: true, default: undefined },
+        parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomCategory', index: true, default: undefined },
         /**
          * The attributes products here vary by (Size, Color...). Children
          * without their own set use their parent's.
          */
-        attributeSetId: { type: mongoose.Schema.Types.ObjectId, ref: 'AttributeSet', default: null },
+        attributeSetId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomAttributeSet', default: null },
         /** Sellers need a valid FSSAI licence to list products here (food, groceries). */
         requiresFssai: { type: Boolean, default: false },
         /**
@@ -69,5 +70,5 @@ categorySchema.index({ sellerId: 1, isApproved: 1, createdAt: -1 });
 categorySchema.index({ approvalStatus: 1, createdAt: -1 });
 categorySchema.index({ createdBySellerId: 1, createdAt: -1 });
 
-export const Category = mongoose.model('Category', categorySchema);
+export const Category = ecomModel('Category', categorySchema);
 

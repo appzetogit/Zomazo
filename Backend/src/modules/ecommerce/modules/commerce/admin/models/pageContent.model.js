@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { config } from '../../../../config/env.js';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const featureSchema = new mongoose.Schema(
     {
         icon: { type: String, default: 'Heart' },
@@ -59,5 +60,5 @@ const pageContentSchema = new mongoose.Schema(
 
 pageContentSchema.index({ key: 1, module: 1 }, { unique: true });
 
-export const PageContent = mongoose.model('PageContent', pageContentSchema);
+export const PageContent = ecomModel('PageContent', pageContentSchema);
 

@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const sellerWithdrawalSchema = new mongoose.Schema({
     sellerId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Seller',
+        ref: 'EcomSeller',
         required: true,
         index: true
     },
@@ -39,4 +40,4 @@ const sellerWithdrawalSchema = new mongoose.Schema({
 
 sellerWithdrawalSchema.index({ createdAt: -1 });
 
-export const SellerWithdrawal = mongoose.model('SellerWithdrawal', sellerWithdrawalSchema);
+export const SellerWithdrawal = ecomModel('SellerWithdrawal', sellerWithdrawalSchema);

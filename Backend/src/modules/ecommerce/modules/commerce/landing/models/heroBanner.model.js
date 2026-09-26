@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const heroBannerSchema = new mongoose.Schema(
     {
         imageUrl: {
@@ -21,7 +22,7 @@ const heroBannerSchema = new mongoose.Schema(
         },
         linkedSellerIds: {
             type: [mongoose.Schema.Types.ObjectId],
-            ref: 'Seller',
+            ref: 'EcomSeller',
             default: []
         },
         sortOrder: {
@@ -43,5 +44,5 @@ const heroBannerSchema = new mongoose.Schema(
 
 heroBannerSchema.index({ isActive: 1, sortOrder: 1 });
 
-export const HeroBanner = mongoose.model('HeroBanner', heroBannerSchema);
+export const HeroBanner = ecomModel('HeroBanner', heroBannerSchema);
 

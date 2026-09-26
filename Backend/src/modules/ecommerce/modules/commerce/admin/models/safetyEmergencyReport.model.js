@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const safetyEmergencyReportSchema = new mongoose.Schema(
     {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
         userName: { type: String, default: '' },
         userEmail: { type: String, default: '' },
         userPhone: { type: String, default: '' },
@@ -26,5 +27,5 @@ const safetyEmergencyReportSchema = new mongoose.Schema(
 safetyEmergencyReportSchema.index({ createdAt: -1 });
 safetyEmergencyReportSchema.index({ status: 1, priority: 1, createdAt: -1 });
 
-export const SafetyEmergencyReport = mongoose.model('SafetyEmergencyReport', safetyEmergencyReportSchema);
+export const SafetyEmergencyReport = ecomModel('SafetyEmergencyReport', safetyEmergencyReportSchema);
 

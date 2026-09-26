@@ -247,7 +247,7 @@ export async function createInitialTransaction(order) {
 
     // Link back to the order
     try {
-        await mongoose.model('Order').updateOne(
+        await mongoose.model('EcomOrder').updateOne(
             { _id: order._id },
             { $set: { transactionId: transaction._id } }
         );

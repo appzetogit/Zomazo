@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../config/ecomModel.js';
 /**
  * Payment — one record per payment attempt on an order.
  * Tracks gateway interactions and final payment status.
@@ -8,13 +9,13 @@ const paymentSchema = new mongoose.Schema(
     {
         orderId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Order',
+            ref: 'EcomOrder',
             required: true,
             index: true
         },
         userId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: 'EcomUser',
             required: true,
             index: true
         },
@@ -56,4 +57,4 @@ const paymentSchema = new mongoose.Schema(
 paymentSchema.index({ orderId: 1, createdAt: -1 });
 paymentSchema.index({ userId: 1, status: 1, createdAt: -1 });
 
-export const Payment = mongoose.model('Payment', paymentSchema);
+export const Payment = ecomModel('Payment', paymentSchema);

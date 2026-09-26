@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 export const AUDIENCE_TYPES = ['all_customers', 'zone', 'channel', 'inactive', 'never_ordered', 'coin_balance', 'sellers', 'riders'];
 export const DEEP_LINK_TYPES = ['none', 'product', 'category', 'store', 'offer', 'spin'];
 export const CAMPAIGN_STATUSES = ['draft', 'scheduled', 'sending', 'completed', 'paused', 'cancelled'];
@@ -74,7 +75,7 @@ const pushCampaignSchema = new mongoose.Schema(
             ],
             default: [],
         },
-        createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+        createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomAdmin', default: null },
     },
     { collection: 'push_campaigns', timestamps: true }
 );
@@ -134,7 +135,7 @@ const notificationPreferenceSchema = new mongoose.Schema(
 notificationPreferenceSchema.index({ ownerType: 1, ownerId: 1 }, { unique: true });
 notificationPreferenceSchema.index({ ownerType: 1, marketingPush: 1 });
 
-export const PushCampaign = mongoose.model('PushCampaign', pushCampaignSchema);
-export const PushCampaignDelivery = mongoose.model('PushCampaignDelivery', pushCampaignDeliverySchema);
-export const MarketingPushSettings = mongoose.model('MarketingPushSettings', marketingPushSettingsSchema);
-export const NotificationPreference = mongoose.model('NotificationPreference', notificationPreferenceSchema);
+export const PushCampaign = ecomModel('PushCampaign', pushCampaignSchema);
+export const PushCampaignDelivery = ecomModel('PushCampaignDelivery', pushCampaignDeliverySchema);
+export const MarketingPushSettings = ecomModel('MarketingPushSettings', marketingPushSettingsSchema);
+export const NotificationPreference = ecomModel('NotificationPreference', notificationPreferenceSchema);

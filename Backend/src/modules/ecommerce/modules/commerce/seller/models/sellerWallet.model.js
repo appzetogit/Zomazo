@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * SellerWallet — tracks the financial balance for each seller.
  * Credited when orders are delivered; debited when settlements are processed.
@@ -8,7 +9,7 @@ const sellerWalletSchema = new mongoose.Schema(
     {
         sellerId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Seller',
+            ref: 'EcomSeller',
             required: true,
             unique: true,
             index: true
@@ -24,4 +25,4 @@ const sellerWalletSchema = new mongoose.Schema(
     { collection: 'seller_wallets', timestamps: true }
 );
 
-export const SellerWallet = mongoose.model('SellerWallet', sellerWalletSchema);
+export const SellerWallet = ecomModel('SellerWallet', sellerWalletSchema);

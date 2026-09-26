@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * Platform coins: promotional credit, kept apart from the wallet (which is real
  * money the customer paid in). Refunds, rewards and admin grants credit coins;
@@ -12,7 +13,7 @@ import mongoose from 'mongoose';
  */
 const coinLotSchema = new mongoose.Schema(
     {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
         amount: { type: Number, required: true, min: 0 },
         /** The part of `amount` that can be spent: fixed when credited. */
         spendable: { type: Number, required: true, min: 0 },
@@ -46,7 +47,7 @@ coinLotSchema.index(
  */
 const coinLedgerSchema = new mongoose.Schema(
     {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
         type: { type: String, enum: ['credit', 'debit', 'reversal', 'expire', 'adjust'], required: true },
         /** Coins moved; for a credit, what was credited (not what is spendable). */
         amount: { type: Number, required: true, min: 0 },
@@ -54,7 +55,7 @@ const coinLedgerSchema = new mongoose.Schema(
         spendable: { type: Number, default: null },
         source: { type: String, default: '' },
         refId: { type: String, default: null },
-        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
+        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomOrder', default: null },
         allocations: {
             // `returned`: how much of this lot's share has gone back to it since.
             type: [{ lotId: mongoose.Schema.Types.ObjectId, amount: Number, returned: { type: Number, default: 0 }, _id: false }],
@@ -98,6 +99,6 @@ const coinSettingsSchema = new mongoose.Schema(
     { collection: 'coin_settings', timestamps: true }
 );
 
-export const CoinLot = mongoose.model('CoinLot', coinLotSchema);
-export const CoinLedger = mongoose.model('CoinLedger', coinLedgerSchema);
-export const CoinSettings = mongoose.model('CoinSettings', coinSettingsSchema);
+export const CoinLot = ecomModel('CoinLot', coinLotSchema);
+export const CoinLedger = ecomModel('CoinLedger', coinLedgerSchema);
+export const CoinSettings = ecomModel('CoinSettings', coinSettingsSchema);

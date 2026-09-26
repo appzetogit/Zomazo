@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../config/ecomModel.js';
 const userAddressSchema = new mongoose.Schema(
     {
         label: {
@@ -112,7 +113,7 @@ const userSchema = new mongoose.Schema(
         },
         referredBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: 'EcomUser',
             default: null,
             index: true
         },
@@ -158,5 +159,5 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ phone: 1 }, { unique: true });
 userSchema.index({ 'addresses.location': '2dsphere' });
 
-export const User = mongoose.model('User', userSchema);
+export const User = ecomModel('User', userSchema);
 

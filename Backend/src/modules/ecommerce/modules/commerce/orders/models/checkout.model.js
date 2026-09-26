@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const checkoutPricingSchema = new mongoose.Schema(
     {
         subtotal: { type: Number, required: true, min: 0 },
@@ -46,7 +47,7 @@ const checkoutSchema = new mongoose.Schema(
         },
         userId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: 'EcomUser',
             required: true,
             index: true,
         },
@@ -58,14 +59,14 @@ const checkoutSchema = new mongoose.Schema(
         },
         childOrderIds: [{
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Order',
+            ref: 'EcomOrder',
         }],
         childOrderCodes: [{
             type: String,
         }],
         sellerIds: [{
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Seller',
+            ref: 'EcomSeller',
         }],
         customerAddress: {
             type: mongoose.Schema.Types.Mixed,
@@ -98,4 +99,4 @@ const checkoutSchema = new mongoose.Schema(
 
 checkoutSchema.index({ createdAt: -1 });
 
-export const Checkout = mongoose.model('Checkout', checkoutSchema);
+export const Checkout = ecomModel('Checkout', checkoutSchema);

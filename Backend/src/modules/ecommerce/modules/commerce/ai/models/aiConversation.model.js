@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const toolCallSchema = new mongoose.Schema(
     { name: { type: String, trim: true }, args: { type: mongoose.Schema.Types.Mixed, default: null } },
     { _id: false }
@@ -23,7 +24,7 @@ const messageSchema = new mongoose.Schema(
  */
 const aiConversationSchema = new mongoose.Schema(
     {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', default: null, index: true },
         /** userId, or "ip:<addr>" for signed-out visitors: what the daily cap counts against. */
         userKey: { type: String, default: '', index: true },
         messages: { type: [messageSchema], default: [] },
@@ -40,7 +41,7 @@ const aiConversationSchema = new mongoose.Schema(
 aiConversationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 aiConversationSchema.index({ createdAt: -1 });
 
-export const AiConversation = mongoose.models.AiConversation || mongoose.model('AiConversation', aiConversationSchema);
+export const AiConversation = ecomModel('AiConversation', aiConversationSchema);
 
 /**
  * Per day and user counters: what the daily cap, the monthly budget and the
@@ -60,4 +61,4 @@ const aiUsageDailySchema = new mongoose.Schema(
 );
 aiUsageDailySchema.index({ day: 1, userKey: 1 }, { unique: true });
 
-export const AiUsageDaily = mongoose.models.AiUsageDaily || mongoose.model('AiUsageDaily', aiUsageDailySchema);
+export const AiUsageDaily = ecomModel('AiUsageDaily', aiUsageDailySchema);

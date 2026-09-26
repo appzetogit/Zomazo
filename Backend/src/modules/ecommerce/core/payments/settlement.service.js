@@ -76,13 +76,13 @@ function resolveWalletForSettlement(entityType, entityId) {
     if (entityType === 'seller') {
         // Dynamic import would be circular — import at top
         return {
-            Model: mongoose.model('SellerWallet'),
+            Model: mongoose.model('EcomSellerWallet'),
             filter: { sellerId: id }
         };
     }
     if (entityType === 'deliveryBoy') {
         return {
-            Model: mongoose.model('DeliveryWallet'),
+            Model: mongoose.model('EcomDeliveryWallet'),
             filter: { deliveryPartnerId: id }
         };
     }

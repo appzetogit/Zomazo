@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * A customer's request to send back some lines of a delivered, courier-shipped
  * (standard) order. One open request per order at a time (`openKey`).
@@ -24,10 +25,10 @@ const returnItemSchema = new mongoose.Schema(
 
 const returnRequestSchema = new mongoose.Schema(
     {
-        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
+        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomOrder', required: true, index: true },
         orderReadableId: { type: String, default: '' },
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-        sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
+        sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomSeller', required: true, index: true },
         items: { type: [returnItemSchema], validate: (v) => Array.isArray(v) && v.length > 0 },
         reason: { type: String, required: true, trim: true, maxlength: 500 },
         comment: { type: String, default: '', trim: true, maxlength: 1000 },
@@ -80,4 +81,4 @@ returnRequestSchema.index({ openKey: 1 }, { unique: true, partialFilterExpressio
 returnRequestSchema.index({ status: 1, createdAt: -1 });
 
 export const ReturnRequest =
-    mongoose.models.ReturnRequest || mongoose.model('ReturnRequest', returnRequestSchema);
+    ecomModel('ReturnRequest', returnRequestSchema);

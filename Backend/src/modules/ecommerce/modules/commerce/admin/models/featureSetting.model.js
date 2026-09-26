@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const featureSettingSchema = new mongoose.Schema(
     {
         key: { type: String, required: true, unique: true, trim: true },
@@ -12,4 +13,4 @@ const featureSettingSchema = new mongoose.Schema(
 
 featureSettingSchema.index({ key: 1 }, { unique: true });
 
-export const FeatureSetting = mongoose.model('FeatureSetting', featureSettingSchema);
+export const FeatureSetting = ecomModel('FeatureSetting', featureSettingSchema);

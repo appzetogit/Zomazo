@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../config/ecomModel.js';
 /**
  * Settlement — batch payout request for sellers /delivery partners.
  * Admin creates a settlement from accumulated wallet balance;
@@ -23,7 +24,7 @@ const settlementSchema = new mongoose.Schema(
         currency: { type: String, default: 'INR', trim: true },
 
         /** Transaction ids included in this settlement batch */
-        transactionIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }],
+        transactionIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EcomTransaction' }],
 
         status: {
             type: String,
@@ -50,4 +51,4 @@ const settlementSchema = new mongoose.Schema(
 
 settlementSchema.index({ entityType: 1, entityId: 1, status: 1, createdAt: -1 });
 
-export const Settlement = mongoose.model('Settlement', settlementSchema);
+export const Settlement = ecomModel('Settlement', settlementSchema);

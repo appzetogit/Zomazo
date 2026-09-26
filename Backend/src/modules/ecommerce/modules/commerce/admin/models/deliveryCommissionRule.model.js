@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const deliveryCommissionRuleSchema = new mongoose.Schema(
     {
         name: { type: String, trim: true, default: '' },
@@ -14,5 +15,5 @@ const deliveryCommissionRuleSchema = new mongoose.Schema(
 
 deliveryCommissionRuleSchema.index({ createdAt: -1 });
 
-export const DeliveryCommissionRule = mongoose.model('DeliveryCommissionRule', deliveryCommissionRuleSchema);
+export const DeliveryCommissionRule = ecomModel('DeliveryCommissionRule', deliveryCommissionRuleSchema);
 

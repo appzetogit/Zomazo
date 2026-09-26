@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../config/ecomModel.js';
 /**
  * Refund — tracks refund requests against a Payment.
  * Supports partial refunds. Gateway refund id stored once processed.
@@ -8,19 +9,19 @@ const refundSchema = new mongoose.Schema(
     {
         paymentId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Payment',
+            ref: 'EcomPayment',
             required: true,
             index: true
         },
         orderId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Order',
+            ref: 'EcomOrder',
             required: true,
             index: true
         },
         userId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: 'EcomUser',
             required: true,
             index: true
         },
@@ -59,4 +60,4 @@ const refundSchema = new mongoose.Schema(
 
 refundSchema.index({ orderId: 1, status: 1 });
 
-export const Refund = mongoose.model('Refund', refundSchema);
+export const Refund = ecomModel('Refund', refundSchema);

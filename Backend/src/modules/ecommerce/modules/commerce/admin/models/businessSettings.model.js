@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { config } from '../../../../config/env.js';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const businessSettingsSchema = new mongoose.Schema(
     {
         companyName: { type: String, required: true, default: () => config.brand.name },
@@ -122,4 +123,4 @@ const businessSettingsSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-export const BusinessSettings = mongoose.model('BusinessSettings', businessSettingsSchema);
+export const BusinessSettings = ecomModel('BusinessSettings', businessSettingsSchema);

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const coordinateSchema = new mongoose.Schema(
     {
         latitude: { type: Number, required: true },
@@ -72,4 +73,4 @@ const zoneSchema = new mongoose.Schema(
 zoneSchema.index({ isActive: 1, name: 1 });
 zoneSchema.index({ country: 1, name: 1 });
 
-export const Zone = mongoose.model('Zone', zoneSchema);
+export const Zone = ecomModel('Zone', zoneSchema);

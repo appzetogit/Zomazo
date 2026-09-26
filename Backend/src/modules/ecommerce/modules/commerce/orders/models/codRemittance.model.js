@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * A courier's COD remittance: the money it collected on delivery and paid over
  * (one bank transfer, identified by its UTR / reference), with the AWBs it covers.
@@ -9,7 +10,7 @@ const lineSchema = new mongoose.Schema(
     {
         awb: { type: String, required: true, trim: true },
         amount: { type: Number, required: true, min: 0 },
-        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
+        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomOrder', default: null },
         orderCode: { type: String, default: '' },
         expected: { type: Number, default: null },
         /** matched | short | excess | unexpected | duplicate */
@@ -43,4 +44,4 @@ const codRemittanceSchema = new mongoose.Schema(
 codRemittanceSchema.index({ date: -1 });
 codRemittanceSchema.index({ 'lines.awb': 1 });
 
-export const CodRemittance = mongoose.model('CodRemittance', codRemittanceSchema);
+export const CodRemittance = ecomModel('CodRemittance', codRemittanceSchema);

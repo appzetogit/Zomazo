@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * Default wheel segments configured with reward amounts and probability weights.
  */
@@ -41,8 +42,8 @@ const spinCampaignSchema = new mongoose.Schema(
 
 const spinResultSchema = new mongoose.Schema(
     {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-        campaignId: { type: mongoose.Schema.Types.ObjectId, ref: 'SpinCampaign', default: null },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
+        campaignId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomSpinCampaign', default: null },
         segmentWon: {
             id: Number,
             label: String,
@@ -76,6 +77,6 @@ const spinBudgetSchema = new mongoose.Schema(
 );
 spinBudgetSchema.index({ campaignId: 1, month: 1 }, { unique: true });
 
-export const SpinCampaign = mongoose.model('SpinCampaign', spinCampaignSchema);
-export const SpinResult = mongoose.model('SpinResult', spinResultSchema);
-export const SpinBudget = mongoose.model('SpinBudget', spinBudgetSchema);
+export const SpinCampaign = ecomModel('SpinCampaign', spinCampaignSchema);
+export const SpinResult = ecomModel('SpinResult', spinResultSchema);
+export const SpinBudget = ecomModel('SpinBudget', spinBudgetSchema);

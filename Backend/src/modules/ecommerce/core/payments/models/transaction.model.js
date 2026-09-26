@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../config/ecomModel.js';
 /**
  * Transaction — universal financial ledger.
  * Every credit/debit across all entity types (user, seller, deliveryBoy, admin)
@@ -14,13 +15,13 @@ const transactionSchema = new mongoose.Schema(
         /** Link to the Payment document that triggered this transaction (optional for manual adjustments) */
         paymentId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Payment',
+            ref: 'EcomPayment',
             default: null
         },
         /** Link to the order (optional — wallet top-ups / adjustments may not have an order) */
         orderId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Order',
+            ref: 'EcomOrder',
             default: null,
             index: true
         },
@@ -91,4 +92,4 @@ transactionSchema.index({ entityType: 1, entityId: 1, createdAt: -1 });
 transactionSchema.index({ orderId: 1, entityType: 1 });
 transactionSchema.index({ paymentId: 1, type: 1 });
 
-export const Transaction = mongoose.model('Transaction', transactionSchema);
+export const Transaction = ecomModel('Transaction', transactionSchema);

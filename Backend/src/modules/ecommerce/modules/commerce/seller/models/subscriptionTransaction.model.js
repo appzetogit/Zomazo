@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 export const SUBSCRIPTION_TRANSACTION_TYPES = [
   "invoice_generated",
   "wallet_deduction",
@@ -17,13 +18,13 @@ const subscriptionTransactionSchema = new mongoose.Schema(
   {
     sellerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Seller",
+      ref: "EcomSeller",
       required: true,
       index: true,
     },
     invoiceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "SubscriptionInvoice",
+      ref: "EcomSubscriptionInvoice",
       required: true,
     },
     billingMonth: { type: String, required: true, index: true },
@@ -56,7 +57,6 @@ const subscriptionTransactionSchema = new mongoose.Schema(
 subscriptionTransactionSchema.index({ sellerId: 1, createdAt: -1 });
 subscriptionTransactionSchema.index({ invoiceId: 1, createdAt: 1 });
 
-export const SubscriptionTransaction = mongoose.model(
-  "SubscriptionTransaction",
+export const SubscriptionTransaction = ecomModel('SubscriptionTransaction',
   subscriptionTransactionSchema
 );

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const exploreIconSchema = new mongoose.Schema(
     {
         label: {
@@ -41,5 +42,5 @@ const exploreIconSchema = new mongoose.Schema(
 
 exploreIconSchema.index({ isActive: 1, sortOrder: 1 });
 
-export const ExploreIcon = mongoose.model('ExploreIcon', exploreIconSchema);
+export const ExploreIcon = ecomModel('ExploreIcon', exploreIconSchema);
 

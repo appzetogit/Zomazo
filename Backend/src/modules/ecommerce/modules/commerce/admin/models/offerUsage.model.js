@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const offerUsageSchema = new mongoose.Schema(
     {
-        offerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Offer', index: true, required: true },
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true, required: true },
+        offerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomOffer', index: true, required: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', index: true, required: true },
         count: { type: Number, default: 0, min: 0 },
         lastUsedAt: { type: Date, default: null }
     },
@@ -12,4 +13,4 @@ const offerUsageSchema = new mongoose.Schema(
 
 offerUsageSchema.index({ offerId: 1, userId: 1 }, { unique: true });
 
-export const OfferUsage = mongoose.models.OfferUsage || mongoose.model('OfferUsage', offerUsageSchema);
+export const OfferUsage = ecomModel('OfferUsage', offerUsageSchema);

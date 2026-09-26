@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const offerSchema = new mongoose.Schema(
     {
         couponCode: { type: String, required: true, trim: true, uppercase: true, unique: true },
@@ -7,8 +8,8 @@ const offerSchema = new mongoose.Schema(
         discountValue: { type: Number, required: true, min: 0 },
         customerScope: { type: String, enum: ['all', 'first-time'], default: 'all', index: true },
         sellerScope: { type: String, enum: ['all', 'selected'], default: 'all', index: true },
-        sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller' },
-        sellerIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Seller' }],
+        sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomSeller' },
+        sellerIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EcomSeller' }],
         minOrderValue: { type: Number, default: 0, min: 0 },
         maxDiscount: { type: Number, default: null, min: 0 },
         usageLimit: { type: Number, default: null, min: 0 },
@@ -29,4 +30,4 @@ const offerSchema = new mongoose.Schema(
 offerSchema.index({ sellerId: 1, createdAt: -1 });
 offerSchema.index({ sellerIds: 1, createdAt: -1 });
 
-export const Offer = mongoose.model('Offer', offerSchema);
+export const Offer = ecomModel('Offer', offerSchema);

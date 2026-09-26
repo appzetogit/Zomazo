@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const homePromotionBannerSchema = new mongoose.Schema(
     {
         imageUrl: {
@@ -36,7 +37,7 @@ const homePromotionBannerSchema = new mongoose.Schema(
         },
         zoneId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Zone',
+            ref: 'EcomZone',
             default: null,
             index: true
         }
@@ -49,4 +50,4 @@ const homePromotionBannerSchema = new mongoose.Schema(
 
 homePromotionBannerSchema.index({ isActive: 1, sortOrder: 1 });
 
-export const HomePromotionBanner = mongoose.model('HomePromotionBanner', homePromotionBannerSchema);
+export const HomePromotionBanner = ecomModel('HomePromotionBanner', homePromotionBannerSchema);

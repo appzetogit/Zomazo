@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * Admin-defined field shown on the driver registration form.
  * A "document" (photo/file upload) is just a field with type 'document'.
@@ -34,7 +35,6 @@ const driverRegistrationFieldSchema = new mongoose.Schema(
 
 driverRegistrationFieldSchema.index({ isActive: 1, page: 1, order: 1 });
 
-export const DriverRegistrationField = mongoose.model(
-    'DriverRegistrationField',
+export const DriverRegistrationField = ecomModel('DriverRegistrationField',
     driverRegistrationFieldSchema
 );

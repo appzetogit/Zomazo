@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const deliveryFeeRangeSchema = new mongoose.Schema(
     {
         min: { type: Number, required: true, min: 0 },
@@ -26,5 +27,5 @@ const feeSettingsSchema = new mongoose.Schema(
 
 feeSettingsSchema.index({ isActive: 1, createdAt: -1 });
 
-export const FeeSettings = mongoose.model('FeeSettings', feeSettingsSchema);
+export const FeeSettings = ecomModel('FeeSettings', feeSettingsSchema);
 

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * Admin-configured cashback rules. Cashback is awarded once per order, when the order is
  * delivered, and is credited to the customer's wallet as a normal 'addition' transaction
@@ -27,7 +28,6 @@ const cashbackSettingsSchema = new mongoose.Schema(
 
 cashbackSettingsSchema.index({ isActive: 1, createdAt: -1 });
 
-export const CashbackSettings = mongoose.model(
-    'CashbackSettings',
+export const CashbackSettings = ecomModel('CashbackSettings',
     cashbackSettingsSchema
 );

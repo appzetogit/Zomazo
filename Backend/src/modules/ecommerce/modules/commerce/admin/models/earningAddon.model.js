@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const earningAddonSchema = new mongoose.Schema(
     {
         title: { type: String, required: true, trim: true, index: true },
@@ -17,5 +18,5 @@ const earningAddonSchema = new mongoose.Schema(
 
 earningAddonSchema.index({ status: 1, startDate: 1, endDate: 1 });
 
-export const EarningAddon = mongoose.model('EarningAddon', earningAddonSchema);
+export const EarningAddon = ecomModel('EarningAddon', earningAddonSchema);
 

@@ -16,7 +16,7 @@ export const getPublicHeroBannersController = async (req, res, next) => {
             .populate({
                 path: 'linkedSellerIds',
                 select: '_id sellerName slug area city rating profileImage',
-                model: 'Seller'
+                model: 'EcomSeller'
             })
             .lean();
         const banners = (docs || []).map((b) => {

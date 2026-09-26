@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * A property a variant can vary by, with the values sellers pick from:
  * Size (S, M, L), Color (Red #d32f2f, Blue #1976d2), Storage (64 GB, 128 GB).
@@ -33,7 +34,7 @@ const attributeSchema = new mongoose.Schema(
     { collection: 'attributes', timestamps: true }
 );
 
-export const Attribute = mongoose.model('Attribute', attributeSchema);
+export const Attribute = ecomModel('Attribute', attributeSchema);
 
 /**
  * The attributes that apply to a kind of product, attached to categories:
@@ -43,10 +44,10 @@ const attributeSetSchema = new mongoose.Schema(
     {
         name: { type: String, required: true, trim: true },
         key: { type: String, required: true, trim: true, lowercase: true, unique: true },
-        attributeIds: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Attribute' }], default: [] },
+        attributeIds: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EcomAttribute' }], default: [] },
         isActive: { type: Boolean, default: true },
     },
     { collection: 'attribute_sets', timestamps: true }
 );
 
-export const AttributeSet = mongoose.model('AttributeSet', attributeSetSchema);
+export const AttributeSet = ecomModel('AttributeSet', attributeSetSchema);

@@ -1,10 +1,11 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const supportTicketSchema = new mongoose.Schema(
     {
         deliveryPartnerId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'DeliveryPartner',
+            ref: 'EcomDeliveryPartner',
             required: true,
             index: true
         },
@@ -39,4 +40,4 @@ const supportTicketSchema = new mongoose.Schema(
 supportTicketSchema.index({ deliveryPartnerId: 1, createdAt: -1 });
 supportTicketSchema.index({ status: 1, createdAt: -1 });
 
-export const DeliverySupportTicket = mongoose.model('DeliverySupportTicket', supportTicketSchema);
+export const DeliverySupportTicket = ecomModel('DeliverySupportTicket', supportTicketSchema);

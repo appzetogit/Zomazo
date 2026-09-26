@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../config/ecomModel.js';
 const notificationSchema = new mongoose.Schema(
     {
         ownerType: {
@@ -45,7 +46,7 @@ const notificationSchema = new mongoose.Schema(
         },
         broadcastId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'BroadcastNotification',
+            ref: 'EcomBroadcastNotification',
             default: null,
             index: true
         },
@@ -79,4 +80,4 @@ notificationSchema.index({ ownerType: 1, ownerId: 1, isRead: 1, dismissedAt: 1 }
 notificationSchema.index({ broadcastId: 1, ownerType: 1, ownerId: 1 }, { unique: true, sparse: true });
 notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
 
-export const Notification = mongoose.model('Notification', notificationSchema);
+export const Notification = ecomModel('Notification', notificationSchema);

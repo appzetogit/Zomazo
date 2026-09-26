@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { computeAvailableIn, isManuallyOff } from '../../shared/channels.js';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /** { quick, shop } of a given type, without an _id. */
 const perChannel = (field) => new mongoose.Schema({ quick: field, shop: field }, { _id: false });
 const countField = () => ({ type: Number, min: 0, default: null });
@@ -53,8 +54,8 @@ const productVariantSchema = new mongoose.Schema(
 
 const productSchema = new mongoose.Schema(
     {
-        sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller', required: true, index: true },
-        categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', index: true },
+        sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomSeller', required: true, index: true },
+        categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomCategory', index: true },
         categoryName: { type: String, trim: true, default: '' },
         name: { type: String, required: true, trim: true, index: true },
         description: { type: String, trim: true, default: '' },
@@ -207,4 +208,4 @@ productSchema.index(
 // Attribute filters ("size M", "colour red") match on variants.
 productSchema.index({ 'variants.attributes.name': 1, 'variants.attributes.value': 1 });
 
-export const Product = mongoose.model('Product', productSchema);
+export const Product = ecomModel('Product', productSchema);

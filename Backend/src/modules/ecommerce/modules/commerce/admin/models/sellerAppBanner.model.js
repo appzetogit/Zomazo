@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * Promo banners shown INSIDE the seller partner app (admin -> sellers).
  * Distinct from HeroBanner (customer app) and from a seller's own coverImages.
@@ -22,8 +23,7 @@ const sellerAppBannerSchema = new mongoose.Schema(
 
 sellerAppBannerSchema.index({ isActive: 1, sortOrder: 1 });
 
-export const SellerAppBanner = mongoose.model(
-    'SellerAppBanner',
+export const SellerAppBanner = ecomModel('SellerAppBanner',
     sellerAppBannerSchema
 );
 

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const unregisteredSellerSchema = new mongoose.Schema(
     {
         ownerName: { type: String, required: true, trim: true },
@@ -13,7 +14,6 @@ const unregisteredSellerSchema = new mongoose.Schema(
 
 unregisteredSellerSchema.index({ createdAt: -1 });
 
-export const UnregisteredSeller = mongoose.model(
-    'UnregisteredSeller',
+export const UnregisteredSeller = ecomModel('UnregisteredSeller',
     unregisteredSellerSchema
 );

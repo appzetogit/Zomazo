@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const dayTimingSchema = new mongoose.Schema(
   {
     day: { type: String, required: true, trim: true },
@@ -23,7 +24,7 @@ const outletTimingsSchema = new mongoose.Schema(
   {
     sellerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Seller",
+      ref: "EcomSeller",
       required: true,
       unique: true,
       index: true,
@@ -39,7 +40,6 @@ const outletTimingsSchema = new mongoose.Schema(
   },
 );
 
-export const SellerOutletTimings = mongoose.model(
-  "SellerOutletTimings",
+export const SellerOutletTimings = ecomModel('SellerOutletTimings',
   outletTimingsSchema,
 );

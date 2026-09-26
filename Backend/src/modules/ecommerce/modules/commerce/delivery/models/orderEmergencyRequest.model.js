@@ -1,22 +1,23 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 const orderEmergencyRequestSchema = new mongoose.Schema(
     {
         orderId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Order',
+            ref: 'EcomOrder',
             required: true,
             index: true
         },
         deliveryPartnerId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'DeliveryPartner',
+            ref: 'EcomDeliveryPartner',
             required: true,
             index: true
         },
         sellerId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Seller',
+            ref: 'EcomSeller',
             required: true,
             index: true
         },
@@ -34,7 +35,7 @@ const orderEmergencyRequestSchema = new mongoose.Schema(
         resolvedAt: { type: Date, default: null },
         resolvedBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Admin',
+            ref: 'EcomAdmin',
             default: null
         }
     },
@@ -47,7 +48,6 @@ const orderEmergencyRequestSchema = new mongoose.Schema(
 orderEmergencyRequestSchema.index({ deliveryPartnerId: 1, createdAt: -1 });
 orderEmergencyRequestSchema.index({ status: 1, createdAt: -1 });
 
-export const DeliveryOrderEmergencyRequest = mongoose.model(
-    'DeliveryOrderEmergencyRequest',
+export const DeliveryOrderEmergencyRequest = ecomModel('DeliveryOrderEmergencyRequest',
     orderEmergencyRequestSchema
 );

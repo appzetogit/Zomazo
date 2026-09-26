@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { ecomModel } from '../../../../config/ecomModel.js';
 /**
  * A customer's review of a product they received. One per customer per
  * product (editable). Published on write; moderation can hide or remove it.
@@ -31,11 +32,11 @@ const moderationEntrySchema = new mongoose.Schema(
 
 const productReviewSchema = new mongoose.Schema(
     {
-        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-        sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller', required: true, index: true },
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomProduct', required: true },
+        sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomSeller', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
         /** The delivered order that made the customer eligible. */
-        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
+        orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomOrder', default: null },
         /** Channel that order was fulfilled in ('quick' | 'shop'); the admin panels filter on it. */
         channel: { type: String, enum: ['quick', 'shop'], default: 'quick', index: true },
         variantId: { type: String, trim: true, default: '' },
@@ -71,4 +72,4 @@ productReviewSchema.index({ productId: 1, status: 1, helpfulCount: -1, createdAt
 productReviewSchema.index({ sellerId: 1, status: 1, createdAt: -1 });
 productReviewSchema.index({ status: 1, reportCount: -1, createdAt: -1 });
 
-export const ProductReview = mongoose.models.ProductReview || mongoose.model('ProductReview', productReviewSchema);
+export const ProductReview = ecomModel('ProductReview', productReviewSchema);
