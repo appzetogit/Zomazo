@@ -54,3 +54,23 @@ export const calculateHeading = (lat1, lon1, lat2, lon2) => {
     const bearing = (Math.atan2(y, x) * 180) / Math.PI;
     return (bearing + 360) % 360;
 };
+
+/**
+ * Google Maps turn-by-turn link to a point, the same /maps/dir form the taxi
+ * driver app uses. A search link only drops a pin and leaves the rider to tap
+ * "Directions" themselves; this one opens straight into navigation from where
+ * they are. Falls back to the written address when the point is unknown, and
+ * returns null when there is neither.
+ */
+export const directionsUrl = (point, address = '') => {
+    const rawLat = point?.lat ?? point?.latitude;
+    const rawLng = point?.lng ?? point?.longitude;
+    const lat = Number(rawLat);
+    const lng = Number(rawLng);
+    const hasPoint = rawLat != null && rawLat !== '' && rawLng != null && rawLng !== ''
+        && Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+    const text = String(address || '').trim();
+    if (!hasPoint && !text) return null;
+    const destination = hasPoint ? `${lat},${lng}` : encodeURIComponent(text);
+    return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+};

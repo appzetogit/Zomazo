@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, MapPin, FastForward, Clock, Phone, ChefHat, ChevronDown } from 'lucide-react';
 import { ActionSlider } from '@/modules/DeliveryV2/components/ui/ActionSlider';
 import { useDeliveryStore } from '@/modules/DeliveryV2/store/useDeliveryStore';
-import { getHaversineDistance, calculateETA } from '@/modules/DeliveryV2/utils/geo';
+import { getHaversineDistance, calculateETA, directionsUrl } from '@/modules/DeliveryV2/utils/geo';
 
 /**
  * NewOrderModal - Ported to Original 1:1 Theme with Slider Accept.
@@ -133,12 +133,8 @@ export const NewOrderModal = ({ order, onAccept, onReject, onMinimize }) => {
       ? `Lat ${Number(customerLocation.lat).toFixed(5)}, Lng ${Number(customerLocation.lng).toFixed(5)}`
       : 'Location not available');
 
-  const mapsLink =
-    customerLocation?.lat != null && customerLocation?.lng != null
-      ? `https://www.google.com/maps?q=${encodeURIComponent(
-          `${customerLocation.lat},${customerLocation.lng}`,
-        )}`
-      : null;
+  // Directions (not a pin search) to the drop, like the taxi driver app.
+  const mapsLink = directionsUrl(customerLocation);
 
   return (
     <motion.div

@@ -9,6 +9,7 @@ import { ActionSlider } from '@/modules/DeliveryV2/components/ui/ActionSlider';
 import { uploadAPI } from '@food/api';
 import { toast } from 'sonner';
 import { openCamera } from "@food/utils/imageUploadUtils";
+import { directionsUrl } from '@/modules/DeliveryV2/utils/geo';
 
 /**
  * PickupActionModal - Unified White/Green Theme with Slider Actions.
@@ -144,7 +145,14 @@ export const PickupActionModal = ({
                   </button>
                 )}
                 <button 
-                  onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurantAddress)}`, '_blank')}
+                  // Directions to the restaurant's pin (the address text only when there
+                  // is no pin), so Maps opens straight into navigation.
+                  onClick={() => {
+                    const url = directionsUrl(order.restaurantLocation, restaurantAddress !== 'Address not available' ? restaurantAddress : '');
+                    if (url) window.open(url, '_blank');
+                    else toast.error('Restaurant location not available');
+                  }}
+                  aria-label="Directions to restaurant"
                   className="w-11 h-11 rounded-2xl bg-gray-950 flex items-center justify-center text-white shadow-xl hover:bg-gray-800 transition-colors active:scale-90"
                 >
                   <Navigation className="w-5 h-5" />

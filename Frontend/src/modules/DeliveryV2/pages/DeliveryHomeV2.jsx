@@ -29,7 +29,7 @@ import {
   Contact, Package
 } from 'lucide-react';
 
-import { getHaversineDistance, calculateETA, calculateHeading } from '@/modules/DeliveryV2/utils/geo';
+import { getHaversineDistance, calculateETA, calculateHeading, directionsUrl } from '@/modules/DeliveryV2/utils/geo';
 import { useCompanyName } from "@food/hooks/useCompanyName";
 import { useNavigate } from 'react-router-dom';
 import useNotificationInbox from "@food/hooks/useNotificationInbox";
@@ -118,6 +118,13 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
     activeOrder?.userId?.phone ||
     activeOrder?.user?.phone ||
     '';
+  // Once the food is on board the rider heads for the customer, so the
+  // navigate button points at the drop, not the restaurant.
+  const dropDirectionsUrl = directionsUrl(
+    activeOrder?.customerLocation,
+    [activeOrder?.deliveryAddress?.street, activeOrder?.deliveryAddress?.city]
+      .map((v) => String(v || '').trim()).filter(Boolean).join(', ') || activeOrder?.customerAddress,
+  );
 
   const [zoom, setZoom] = useState(14);
   const [isSimMode, setIsSimMode] = useState(false);
@@ -904,17 +911,28 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
                                  </div>
                               </div>
                             </div>
-                            {customerPhone && (
-                              <button
-                                onClick={() => {
-                                  window.location.href = `tel:${customerPhone}`;
-                                }}
-                                className="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 hover:bg-emerald-100 transition-colors active:scale-90 shrink-0"
-                                aria-label="Call customer"
-                              >
-                                <Phone className="w-5 h-5" />
-                              </button>
-                            )}
+                            <div className="flex gap-2.5 shrink-0">
+                              {customerPhone && (
+                                <button
+                                  onClick={() => {
+                                    window.location.href = `tel:${customerPhone}`;
+                                  }}
+                                  className="w-11 h-11 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 hover:bg-emerald-100 transition-colors active:scale-90 shrink-0"
+                                  aria-label="Call customer"
+                                >
+                                  <Phone className="w-5 h-5" />
+                                </button>
+                              )}
+                              {dropDirectionsUrl && (
+                                <button
+                                  onClick={() => window.open(dropDirectionsUrl, '_blank')}
+                                  className="w-11 h-11 rounded-2xl bg-gray-950 flex items-center justify-center text-white shadow-xl hover:bg-gray-800 transition-colors active:scale-90 shrink-0"
+                                  aria-label="Directions to customer"
+                                >
+                                  <Navigation2 className="w-5 h-5" />
+                                </button>
+                              )}
+                            </div>
                           </div>
   
                           {/* Customer Instructions Panel */}
