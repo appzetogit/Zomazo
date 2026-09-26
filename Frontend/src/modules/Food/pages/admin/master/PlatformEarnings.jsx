@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Loader2, RefreshCw, ChevronDown } from "lucide-react"
 import { platformPnlAPI } from "@food/api"
-import { SERVICE_PROVIDER_ENABLED } from "@/config/features"
+import { SERVICE_PROVIDER_ENABLED, ECOMMERCE_ENABLED } from "@/config/features"
 
 /**
  * Master > Report Management > Platform Earnings.
@@ -39,6 +39,7 @@ const SERVICE_COLOR = {
   quick: "bg-emerald-600",
   taxi: "bg-amber-400",
   services: "bg-sky-600",
+  shop: "bg-indigo-600",
 }
 
 const rupees = (n, { sign = false } = {}) => {
@@ -148,7 +149,9 @@ export default function PlatformEarnings() {
 
   // Services is only listed where the module is switched on, or where it has earned something.
   const services = useMemo(
-    () => (data?.services || []).filter((s) => s.key !== "services" || SERVICE_PROVIDER_ENABLED || s.count > 0),
+    () => (data?.services || [])
+      .filter((s) => s.key !== "services" || SERVICE_PROVIDER_ENABLED || s.count > 0)
+      .filter((s) => s.key !== "shop" || ECOMMERCE_ENABLED || s.count > 0),
     [data],
   )
   const totals = data?.totals

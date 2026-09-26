@@ -11,8 +11,8 @@ import mongoose from 'mongoose';
  * screens stay each service's.
  *
  * The customer is the platform account (`users`, the id in the token). Food
- * and Taxi key their records by it already; Quick and Services keep their own
- * customer rows, found by platformUserId, else the same phone.
+ * and Taxi key their records by it already; Quick, Services and the Shop keep
+ * their own customer rows, found by platformUserId, else the same phone.
  *
  * Read-only.
  */
@@ -25,6 +25,7 @@ const SERVICE_LABEL = {
   parcel: 'Parcel',
   rental: 'Rental',
   services: 'Services',
+  shop: 'Shop',
 };
 
 const coll = (name) => mongoose.connection.collection(name);
@@ -85,24 +86,25 @@ const itemsSummary = (items = []) => {
   return real.length > 1 ? `${first}, +${real.length - 1} more` : first;
 };
 
-async function sellerNames(collection, ids) {
+async function sellerNames(collection, ids, nameField = 'restaurantName') {
   const list = [...new Set(ids.map(String).filter(isId))];
   if (!list.length) return new Map();
-  const rows = await coll(collection).find({ _id: { $in: list.map(oid) } }).project({ restaurantName: 1, storeType: 1 }).toArray();
-  return new Map(rows.map((r) => [String(r._id), r]));
+  const rows = await coll(collection).find({ _id: { $in: list.map(oid) } }).project({ [nameField]: 1, storeType: 1 }).toArray();
+  return new Map(rows.map((r) => [String(r._id), { ...r, restaurantName: r[nameField] }]));
 }
 
-async function storeOrders({ collection, sellers, userIds, before, limit, key, route }) {
+// The Shop names its seller field sellerId and the seller's name sellerName.
+async function storeOrders({ collection, sellers, userIds, before, limit, key, route, sellerField = 'restaurantId', nameField }) {
   if (!userIds.length) return [];
   const docs = await coll(collection)
     .find({ userId: { $in: userIds }, createdAt: { $lt: before }, orderStatus: { $nin: [...HIDDEN_STORE_STATUSES] } })
     .sort({ createdAt: -1 })
     .limit(limit)
-    .project({ orderStatus: 1, order_id: 1, orderId: 1, restaurantId: 1, items: 1, pricing: 1, createdAt: 1 })
+    .project({ orderStatus: 1, order_id: 1, orderId: 1, [sellerField]: 1, items: 1, pricing: 1, createdAt: 1 })
     .toArray();
-  const names = await sellerNames(sellers, docs.map((d) => d.restaurantId));
+  const names = await sellerNames(sellers, docs.map((d) => d[sellerField]), nameField);
   return docs.map((d) => {
-    const seller = names.get(String(d.restaurantId));
+    const seller = names.get(String(d[sellerField]));
     const service = key === 'quick' && String(seller?.storeType || '').toLowerCase() === 'pharmacy' ? 'medical' : key;
     return {
       key: `${key}:${d._id}`,
@@ -183,7 +185,7 @@ async function bookings({ userIds, before, limit }) {
 
 /* ------------------------------------------------------------------ list */
 
-const SERVICE_FILTERS = ['food', 'quick', 'medical', 'taxi', 'parcel', 'rental', 'services'];
+const SERVICE_FILTERS = ['food', 'quick', 'medical', 'taxi', 'parcel', 'rental', 'services', 'shop'];
 
 /**
  * @param {string} userId  the signed-in customer's platform id
@@ -198,9 +200,10 @@ export async function listMyOrders(userId, query = {}) {
   const state = query.state === 'ongoing' || query.state === 'past' ? query.state : '';
 
   const me = await coll('users').findOne({ _id: oid(userId) }, { projection: { phone: 1 } });
-  const [qcIds, spIds] = await Promise.all([
+  const [qcIds, spIds, shopIds] = await Promise.all([
     linkedIds('qc_users', userId, me?.phone),
     linkedIds('sp_users', userId, me?.phone),
+    linkedIds('ecom_users', userId, me?.phone),
   ]);
 
   // Each source is read one page deep; after merging, the page is exact.
@@ -210,6 +213,7 @@ export async function listMyOrders(userId, query = {}) {
     want(['quick', 'medical']) ? storeOrders({ collection: 'qc_orders', sellers: 'qc_restaurants', userIds: qcIds, before, limit, key: 'quick', route: (id) => `/qc/order/${id}` }) : [],
     want(['taxi', 'parcel', 'rental']) ? rides({ userId, before, limit }) : [],
     want(['services']) ? bookings({ userIds: spIds, before, limit }) : [],
+    want(['shop']) ? storeOrders({ collection: 'ecom_orders', sellers: 'ecom_sellers', userIds: shopIds, before, limit, key: 'shop', route: (id) => `/shop/orders/${id}`, sellerField: 'sellerId', nameField: 'sellerName' }) : [],
   ]);
 
   let rows = lists.flat();

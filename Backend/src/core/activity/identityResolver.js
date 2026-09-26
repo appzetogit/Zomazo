@@ -69,5 +69,13 @@ export const resolveCustomerIdentities = async (masterUserId) => {
         logger.warn(`[Activity] quick-commerce identity unresolved: ${err.message}`);
     }
 
+    try {
+        const { User: EcomUser } = await import('../../modules/ecommerce/core/users/user.model.js');
+        const shop = await EcomUser.findOne(bySatellite).select('_id').lean();
+        if (shop?._id) { ids.push(shop._id); resolved.push('ecommerce'); }
+    } catch (err) {
+        logger.warn(`[Activity] e-commerce identity unresolved: ${err.message}`);
+    }
+
     return { ids, phone, resolved };
 };

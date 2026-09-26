@@ -210,6 +210,25 @@ export const attachAllActivityHooks = async () => {
         attached.push('serviceProvider');
     } catch (err) { logger.warn(`[Activity] service-provider hooks skipped: ${err.message}`); }
 
+    // ── e-commerce (Shop) ───────────────────────────────────────────────────
+    // userId is the Shop's own ecom_users id; identityResolver links it back.
+    try {
+        const { Order: EcomOrder } = await import('../../modules/ecommerce/modules/commerce/orders/models/order.model.js');
+        attachActivityHooks(EcomOrder, {
+            vertical: 'ecommerce',
+            refModel: 'EcomOrder',
+            map: (d) => ({
+                userId: d.userId,
+                rawStatus: d.orderStatus,
+                amount: d.pricing?.total ?? 0,
+                // The order stores no seller name; the first item says what it was.
+                title: d.items?.[0]?.name ? `Shop: ${d.items[0].name}${d.items.length > 1 ? ` +${d.items.length - 1}` : ''}` : 'Shop order',
+                occurredAt: d.updatedAt || d.createdAt,
+            }),
+        });
+        attached.push('ecommerce');
+    } catch (err) { logger.warn(`[Activity] e-commerce hooks skipped: ${err.message}`); }
+
     logger.info(`Activity feed hooks attached: ${attached.join(', ') || 'none'}`);
     return attached;
 };

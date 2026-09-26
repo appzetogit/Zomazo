@@ -182,6 +182,63 @@ check('food-only sub-admin is refused', () => assert.equal(foodRes.status, 403))
 const custAdmin = await call('/api/v1/ecom/admin/orders', 'GET', null, customerToken);
 check('a customer is refused', () => assert.equal(custAdmin.status, 403));
 
+// ── The platform's own screens see the Shop ─────────────────────────────────
+// Master Platform Earnings, Commission Overview and Coupons, and the customer's
+// cross-service My Orders, each read the Shop's collections directly. One
+// delivered order with its money split, and one coupon, must show in all four.
+console.log('\nmaster reports');
+{
+    const satellite = satellites[0];
+    const orderId = new mongoose.Types.ObjectId();
+    const conn = mongoose.connection;
+    await conn.collection('ecom_orders').insertOne({
+        _id: orderId, orderId: 'ORD-SMOKE-1', userId: satellite._id, sellerId,
+        orderStatus: 'delivered', fulfilmentMode: 'standard',
+        items: [{ name: 'Ceramic Mug', quantity: 2, price: 250 }],
+        pricing: { subtotal: 500, total: 500 }, createdAt: new Date(), updatedAt: new Date(),
+    });
+    await conn.collection('ecom_order_transactions').insertOne({
+        orderId, userId: satellite._id, sellerId, paymentMethod: 'razorpay', status: 'captured',
+        pricing: { subtotal: 500, platformFee: 0, deliveryFee: 0, total: 500 },
+        amounts: { totalCustomerPaid: 500, sellerShare: 450, sellerCommission: 50, riderShare: 0, platformNetProfit: 50, taxAmount: 0 },
+        createdAt: new Date(),
+    });
+    await conn.collection('ecom_offers').insertOne({
+        couponCode: 'SHOPSMOKE', discountType: 'percentage', discountValue: 10, status: 'active',
+        sellerScope: 'all', createdByRole: 'ADMIN', usedCount: 0, createdAt: new Date(),
+    });
+
+    const pnl = JSON.parse((await call('/api/v1/platform/pnl', 'GET', null, ownerToken)).body);
+    const shopPnl = (pnl.data?.services || pnl.services || []).find((s) => s.key === 'shop');
+    check('Platform Earnings has a Shop line with the order', () => {
+        assert.ok(shopPnl, JSON.stringify(pnl).slice(0, 200));
+        assert.equal(shopPnl.count, 1);
+        assert.equal(shopPnl.net, 50);
+    });
+
+    const com = JSON.parse((await call('/api/v1/platform/commission', 'GET', null, ownerToken)).body);
+    const shopCom = (com.data?.services || com.services || []).find((s) => s.key === 'shop');
+    const row = shopCom?.rows?.find((r) => r.id === String(sellerId));
+    check('Commission Overview lists the Shop seller and what it paid', () => {
+        assert.ok(row, JSON.stringify(com).slice(0, 200));
+        assert.equal(row.last30.commission, 50);
+        assert.equal(row.source, 'category');
+    });
+
+    const cps = JSON.parse((await call('/api/v1/platform/coupons?source=shop', 'GET', null, ownerToken)).body);
+    const items = cps.data?.items || cps.items || [];
+    check('Master Coupons lists the Shop coupon', () => assert.ok(items.some((c) => c.code === 'SHOPSMOKE' && c.source === 'shop'), JSON.stringify(cps).slice(0, 200)));
+
+    const mine = JSON.parse((await call('/api/v1/platform/me/orders', 'GET', null, customerToken)).body);
+    const rows = mine.data?.items || mine.items || [];
+    check("the customer's My Orders includes the Shop order", () => {
+        const shopRow = rows.find((r) => r.service === 'shop');
+        assert.ok(shopRow, JSON.stringify(mine).slice(0, 200));
+        assert.equal(shopRow.route, `/shop/orders/${orderId}`);
+        assert.equal(shopRow.title, 'Test Store');
+    });
+}
+
 // ── Scheduled jobs ──────────────────────────────────────────────────────────
 // They run in-process from server.js; a broken import in one only ever shows up
 // as a log line at runtime, so each is run once here.

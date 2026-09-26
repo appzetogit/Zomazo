@@ -78,10 +78,11 @@ const byCode = async (admin = owner, query = {}) =>
 
 console.log('\nThe list');
 
-await check('all three services in one list', async () => {
+await check('every service in one list', async () => {
   const res = await coupons.listCoupons(owner, {});
   assert.equal(res.total, 6);
-  assert.deepEqual(res.sources.map((s) => s.key), ['food', 'quick', 'taxi']);
+  // The Shop is a source too; this fixture has no Shop coupons.
+  assert.deepEqual(res.sources.map((s) => s.key), ['food', 'quick', 'taxi', 'shop']);
 });
 
 await check('each coupon reads plainly', async () => {

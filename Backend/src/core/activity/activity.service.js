@@ -57,6 +57,8 @@ const STATUS_MAP = {
 };
 // quick-commerce is a fork of food and shares its status machine exactly.
 STATUS_MAP.quickCommerce = STATUS_MAP.food;
+// The Shop too, with its seller in the restaurant's place.
+STATUS_MAP.ecommerce = { ...STATUS_MAP.food, cancelled_by_seller: ACTIVITY_STATUS.CANCELLED };
 
 export const normaliseStatus = (vertical, rawStatus) => {
     const key = String(rawStatus || '').trim().toLowerCase();

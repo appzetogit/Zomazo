@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { Loader2, RefreshCw, ExternalLink, Search, AlertTriangle } from "lucide-react"
 import { commissionOverviewAPI } from "@food/api"
-import { SERVICE_PROVIDER_ENABLED } from "@/config/features"
+import { SERVICE_PROVIDER_ENABLED, ECOMMERCE_ENABLED } from "@/config/features"
 
 /**
  * Master > Report Management > Commission Overview.
@@ -21,6 +21,8 @@ const SOURCE = {
   medical_default: { label: "Medical default", tone: "bg-violet-50 text-violet-800" },
   plan: { label: "On a plan", tone: "bg-emerald-50 text-emerald-800" },
   none: { label: "No rate", tone: "bg-amber-50 text-amber-800" },
+  // Shop sellers without a rate of their own pay each product category's rate.
+  category: { label: "By category", tone: "bg-indigo-50 text-indigo-800" },
 }
 
 const rupees = (n) => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`
@@ -125,7 +127,9 @@ export default function CommissionOverview() {
   }, [load])
 
   const services = useMemo(
-    () => (data?.services || []).filter((s) => s.key !== "services" || SERVICE_PROVIDER_ENABLED),
+    () => (data?.services || [])
+      .filter((s) => s.key !== "services" || SERVICE_PROVIDER_ENABLED)
+      .filter((s) => s.key !== "shop" || ECOMMERCE_ENABLED),
     [data],
   )
   const query = q.trim().toLowerCase()
@@ -185,6 +189,7 @@ export default function CommissionOverview() {
                     </p>
                   )}
                   {s.key === "taxi" && <p className="text-sm text-neutral-600">Taken from the driver&rsquo;s fare, set on each vehicle and city price row.</p>}
+                  {s.key === "shop" && <p className="text-sm text-neutral-600">A seller without its own rate pays each product category&rsquo;s rate.</p>}
                   <Summary s={s.summary} />
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -195,6 +200,7 @@ export default function CommissionOverview() {
 
               {s.key === "food" && <SellerTable rows={s.rows} q={query} />}
               {s.key === "quick" && <SellerTable rows={s.rows} q={query} showKind />}
+              {s.key === "shop" && <SellerTable rows={s.rows} q={query} />}
 
               {s.key === "taxi" &&
                 (s.rows.length ? (

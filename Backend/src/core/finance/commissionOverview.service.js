@@ -11,6 +11,7 @@ import { decideAdminAccess } from '../admin/adminAccessPolicy.js';
  *   Quick & Medical   per store; a pharmacy with no rate pays the Medical default
  *   Taxi              per vehicle type and city, on each fare row
  *   Services          the vendor's payout share; the platform keeps the rest
+ *   Shop              per seller, else per product category
  *
  * The rate shown for a seller is the one its next order would be charged:
  * each service's own rate function (getRestaurantCommissionSnapshot) is asked
@@ -30,6 +31,7 @@ const SERVICES = {
   quick: { label: 'Quick & Medical', service: 'quickCommerce', resource: 'restaurants', editPath: '/admin/quick-commerce/restaurants/commission' },
   taxi: { label: 'Taxi', service: 'taxi', resource: 'fee_settings', editPath: '/taxi/admin/pricing/set-price' },
   services: { label: 'Services', service: 'serviceProvider', resource: 'settings', editPath: '/admin/sp/settings' },
+  shop: { label: 'Shop', service: 'ecommerce', resource: 'restaurants', editPath: '/admin/shop/sellers/commission' },
 };
 
 const round = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -118,6 +120,48 @@ async function quickOverview(since) {
   };
 }
 
+/*
+ * Shop sellers. A seller's own rule (ecom_seller_commissions) is its rate; with
+ * none, each order line pays its category's rate instead, which differs per
+ * order -- so those rows say 'category' and show what the last 30 days
+ * actually came to rather than a single number.
+ */
+async function shopOverview(since) {
+  const [sellers, rules, paidRows] = await Promise.all([
+    coll('ecom_sellers').find({}).project({ sellerName: 1, status: 1 }).toArray(),
+    coll('ecom_seller_commissions').find({ status: { $ne: false } }).toArray(),
+    coll('ecom_order_transactions')
+      .aggregate([
+        { $lookup: { from: 'ecom_orders', localField: 'orderId', foreignField: '_id', as: 'o' } },
+        { $unwind: '$o' },
+        { $match: { 'o.orderStatus': 'delivered', 'o.createdAt': { $gte: since } } },
+        {
+          $group: {
+            _id: '$sellerId',
+            orders: { $sum: 1 },
+            commission: { $sum: { $ifNull: ['$amounts.sellerCommission', 0] } },
+            base: { $sum: { $ifNull: ['$o.pricing.subtotal', 0] } },
+          },
+        },
+      ])
+      .toArray(),
+  ]);
+  const ruleBySeller = new Map(rules.map((r) => [String(r.sellerId), r]));
+  const paid = new Map(paidRows.map((r) => [String(r._id), r]));
+  const rows = sellers.map((s) => {
+    const rule = ruleBySeller.get(String(s._id));
+    const snap = rule
+      ? {
+        commissionType: rule.defaultCommission?.type || 'percentage',
+        commissionValue: Number(rule.defaultCommission?.value) || 0,
+        commissionSource: 'restaurant_default',
+      }
+      : { commissionType: 'percentage', commissionValue: 0, commissionSource: 'category', commissionLabel: 'By category' };
+    return rateRow({ _id: s._id, restaurantName: s.sellerName, status: s.status }, snap, paid);
+  });
+  return { rows };
+}
+
 async function taxiOverview() {
   const rows = await coll('taxisetprices').find({}).toArray();
   const ids = (field) => [...new Set(rows.map((r) => String(r[field] || '')).filter((v) => mongoose.Types.ObjectId.isValid(v)))];
@@ -164,7 +208,7 @@ async function servicesOverview() {
   };
 }
 
-const LOADERS = { food: foodOverview, quick: quickOverview, taxi: taxiOverview, services: servicesOverview };
+const LOADERS = { food: foodOverview, quick: quickOverview, taxi: taxiOverview, services: servicesOverview, shop: shopOverview };
 
 /** How many sellers pay nothing because no rate is set -- the misconfiguration to look for. */
 function summarise(rows = []) {

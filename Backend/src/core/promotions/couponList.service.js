@@ -6,8 +6,8 @@ import { resolvePromoCeiling, tighten } from '../finance/promoLimits.service.js'
 /**
  * One list of every coupon on the platform (Master > Coupons).
  *
- * Three systems hold them: Food's food_offers, Quick & Medical's qc_offers and
- * Taxi's promo codes. Their forms differ -- restaurant scope and cost sharing
+ * Four systems hold them: Food's food_offers, Quick & Medical's qc_offers,
+ * Taxi's promo codes and the Shop's ecom_offers. Their forms differ -- restaurant scope and cost sharing
  * in one, service locations and ride types in another -- so creating and
  * editing stay on each service's own screen. What an operator needs in one
  * place is the other half: which codes exist, which are live right now, how
@@ -49,7 +49,30 @@ const SOURCES = {
     load: async () => (await import('../../modules/taxi/admin/promotions/models/PromoCode.js')).PromoCode,
     sellers: null,
   },
+  shop: {
+    label: 'Shop',
+    service: 'ecommerce',
+    vertical: 'ecommerce',
+    load: async () => (await import('../../modules/ecommerce/modules/commerce/admin/models/offer.model.js')).Offer,
+    sellers: 'ecom_sellers',
+    sellerNameField: 'sellerName',
+    // The Shop's checkout applies its own coupon rules, not the Master promo
+    // ceiling, so its limits are shown as the coupon states them.
+    noCeiling: true,
+  },
 };
+
+/*
+ * The Shop's offers are food's shape under seller-* names. Mapped onto the
+ * restaurant-* ones storeRow reads, so there is one row builder, not two.
+ */
+const asStoreOffer = (doc) => ({
+  ...doc,
+  restaurantScope: doc.sellerScope,
+  restaurantIds: doc.sellerIds,
+  restaurantId: doc.sellerId,
+  createdByRole: doc.createdByRole === 'SELLER' ? 'RESTAURANT' : doc.createdByRole,
+});
 
 export const COUPON_SOURCES = Object.entries(SOURCES).map(([key, s]) => ({ key, label: s.label, service: s.service }));
 
@@ -157,7 +180,7 @@ function taxiRow(doc, ceiling, now) {
   };
 }
 
-async function sellerNames(collection, docs) {
+async function sellerNames(collection, docs, nameField = 'restaurantName') {
   if (!collection) return new Map();
   const ids = new Set();
   for (const d of docs) {
@@ -167,21 +190,24 @@ async function sellerNames(collection, docs) {
   const rows = await mongoose.connection
     .collection(collection)
     .find({ _id: { $in: [...ids].map((id) => new mongoose.Types.ObjectId(id)) } })
-    .project({ restaurantName: 1 })
+    .project({ [nameField]: 1 })
     .toArray();
-  return new Map(rows.map((r) => [String(r._id), r.restaurantName || '']));
+  return new Map(rows.map((r) => [String(r._id), r[nameField] || '']));
 }
 
 async function rowsFor(source, filter = {}) {
   const def = SOURCES[source];
   const Model = await def.load();
-  const [docs, ceiling] = await Promise.all([
+  const [loaded, ceiling] = await Promise.all([
     Model.find(filter).sort({ createdAt: -1 }).limit(PER_SOURCE_LIMIT).lean(),
-    resolvePromoCeiling({ vertical: def.vertical }),
+    def.noCeiling
+      ? { perUser: null, total: null }
+      : resolvePromoCeiling({ vertical: def.vertical }),
   ]);
   const now = new Date();
-  if (source === 'taxi') return docs.map((d) => taxiRow(d, ceiling, now));
-  const names = await sellerNames(def.sellers, docs);
+  if (source === 'taxi') return loaded.map((d) => taxiRow(d, ceiling, now));
+  const docs = source === 'shop' ? loaded.map(asStoreOffer) : loaded;
+  const names = await sellerNames(def.sellers, docs, def.sellerNameField);
   return docs.map((d) => storeRow(source, d, names, ceiling, now));
 }
 

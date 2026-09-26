@@ -22,6 +22,8 @@ import { decideAdminAccess } from '../admin/adminAccessPolicy.js';
  *                          (driver/services/walletService.js).
  *   Services               paid vendor bills: companyRevenue less its GST, which
  *                          is the government's (models/VendorBill.js).
+ *   Shop                   ecom_order_transactions, on delivered orders; courier
+ *                          delivery, so no rider pay (orderTransaction.service.js).
  *
  * GST is shown beside the income, never in it: it was collected for the
  * government. Orders are counted by the day they were placed (rides by the day
@@ -38,6 +40,7 @@ const SERVICES = {
   quick: { label: 'Quick & Medical', service: 'quickCommerce', unit: 'orders' },
   taxi: { label: 'Taxi', service: 'taxi', unit: 'rides' },
   services: { label: 'Services', service: 'serviceProvider', unit: 'bookings' },
+  shop: { label: 'Shop', service: 'ecommerce', unit: 'orders' },
 };
 
 const round = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -113,6 +116,65 @@ async function storeOrders(transactions, orders, { start, end }) {
       { key: 'platformFee', label: 'Platform fee', amount: t.platformFee || 0 },
       { key: 'deliveryMargin', label: 'Delivery fees less rider pay', amount: t.deliveryMargin || 0 },
       // Packaging kept in admin mode, round-off, less coupons the platform funded.
+      { key: 'other', label: 'Packaging, round-off and platform-funded coupons', amount: (t.net || 0) - known },
+    ],
+    daily: (row?.daily || []).map((d) => ({ date: d._id, net: d.net })),
+  };
+}
+
+/* --------------------------------------------------------------- Shop */
+
+/*
+ * The Shop's own per-order split (ecom_order_transactions), on delivered orders.
+ * Same idea as food's, different field names: the seller's cut is
+ * sellerCommission, and delivery is by courier, so there is no rider pay --
+ * whatever of the delivery fee the Shop charged is platform income here, and the
+ * courier's bill is settled outside the order.
+ */
+async function shopOrders({ start, end }) {
+  const [row] = await coll('ecom_order_transactions')
+    .aggregate([
+      { $lookup: { from: 'ecom_orders', localField: 'orderId', foreignField: '_id', as: 'order' } },
+      { $unwind: '$order' },
+      { $match: { 'order.orderStatus': 'delivered', 'order.createdAt': { $gte: start, $lte: end } } },
+      {
+        $project: {
+          day: dayOf('$order.createdAt'),
+          gross: num('$amounts.totalCustomerPaid'),
+          gst: num('$amounts.taxAmount'),
+          commission: num('$amounts.sellerCommission'),
+          platformFee: num('$pricing.platformFee'),
+          delivery: num('$pricing.deliveryFee'),
+          partners: { $add: [num('$amounts.sellerShare'), num('$amounts.riderShare')] },
+          net: num('$amounts.platformNetProfit'),
+        },
+      },
+      {
+        $facet: {
+          total: [{
+            $group: {
+              _id: null, count: { $sum: 1 }, gross: { $sum: '$gross' }, gst: { $sum: '$gst' },
+              commission: { $sum: '$commission' }, platformFee: { $sum: '$platformFee' },
+              delivery: { $sum: '$delivery' }, partners: { $sum: '$partners' }, net: { $sum: '$net' },
+            },
+          }],
+          daily: [{ $group: { _id: '$day', net: { $sum: '$net' } } }, { $sort: { _id: 1 } }],
+        },
+      },
+    ])
+    .toArray();
+  const t = row?.total?.[0] || {};
+  const known = (t.commission || 0) + (t.platformFee || 0) + (t.delivery || 0);
+  return {
+    count: t.count || 0,
+    gross: t.gross || 0,
+    gst: t.gst || 0,
+    partners: t.partners || 0,
+    net: t.net || 0,
+    lines: [
+      { key: 'commission', label: 'Commission from sellers', amount: t.commission || 0 },
+      { key: 'platformFee', label: 'Platform fee', amount: t.platformFee || 0 },
+      { key: 'delivery', label: 'Delivery fees charged', amount: t.delivery || 0 },
       { key: 'other', label: 'Packaging, round-off and platform-funded coupons', amount: (t.net || 0) - known },
     ],
     daily: (row?.daily || []).map((d) => ({ date: d._id, net: d.net })),
@@ -225,6 +287,7 @@ const LOADERS = {
   quick: (r) => storeOrders('qc_transactions', 'qc_orders', r),
   taxi: taxiRides,
   services: serviceBills,
+  shop: shopOrders,
 };
 
 /* ------------------------------------------------------------- report */
