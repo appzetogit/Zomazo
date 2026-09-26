@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, ChevronDown, Search, Mic, Bell, CheckCircle2, Tag, Gift, AlertCircle, Clock, BellOff, X, ChevronRight, ShoppingBag, Sparkles, Utensils, Car, Menu, User } from 'lucide-react';
+import { ECOMMERCE_ENABLED } from '@/config/features';
 import {
   Popover,
   PopoverContent,
@@ -223,6 +224,15 @@ export default function HomeHeader({
               <img src={taxiIcon} alt="Rides" className="w-5 h-5 object-contain -ml-0.5" />
               <span className="font-extrabold text-[11px] tracking-wide">Rides</span>
             </button>
+            {ECOMMERCE_ENABLED && (
+              <button
+                onClick={() => navigate('/shop')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-300 text-gray-500 hover:text-gray-700"
+              >
+                <ShoppingBag className="w-4 h-4" aria-hidden="true" />
+                <span className="font-extrabold text-[11px] tracking-wide">Shop</span>
+              </button>
+            )}
           </div>
 
           {/* Right: Notifications & Profile/Veg */}

@@ -1,23 +1,23 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react"
-import { getGoogleMapsApiKeySync } from '@store/utils/googleMapsApiKey'
-import { useLocation, useNavigate } from "react-router-dom"
+import { getGoogleMapsApiKeySync } from '@shop/utils/googleMapsApiKey'
+import { useLocation, useNavigate } from "@shop/router"
 import { ChevronLeft, ChevronRight, Plus, MapPin, MoreHorizontal, Navigation, Home, Building2, Briefcase, Phone, X, Crosshair, Search } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { Label } from "@store/components/ui/label"
-import { Textarea } from "@store/components/ui/textarea"
-import { useDeliveryLocation } from "@store/context/DeliveryLocationContext"
-import { useProfile } from "@store/context/ProfileContext"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { Label } from "@shop/components/ui/label"
+import { Textarea } from "@shop/components/ui/textarea"
+import { useDeliveryLocation } from "@shop/context/DeliveryLocationContext"
+import { useProfile } from "@shop/context/ProfileContext"
 import { toast } from "sonner"
-import { locationAPI, userAPI } from "@store/api"
+import { locationAPI, userAPI } from "@shop/api"
 import { Loader } from '@googlemaps/js-api-loader'
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
-import { isModuleAuthenticated } from "@store/utils/auth"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
+import { isModuleAuthenticated } from "@shop/utils/auth"
 import {
   notifyUserLocationChanged,
   setDeliveryAddressMode,
-} from "@store/utils/deliveryLocationUtils"
+} from "@shop/utils/deliveryLocationUtils"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -131,7 +131,7 @@ export default function AddressSelectorPage() {
   // Load Google Maps API key
   useEffect(() => {
     if (!mapsEnabled()) return
-    import('@store/utils/googleMapsApiKey.js').then(({ getGoogleMapsApiKey }) => {
+    import('@shop/utils/googleMapsApiKey.js').then(({ getGoogleMapsApiKey }) => {
       getGoogleMapsApiKey().then(key => {
         setGOOGLE_MAPS_API_KEY(key)
       })

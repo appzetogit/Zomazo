@@ -1,20 +1,20 @@
-import { adminPasswordError } from "@store/utils/adminPasswordRule"
+import { adminPasswordError } from "@shop/utils/adminPasswordRule"
 import { useState, useRef, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { motion, useReducedMotion } from "framer-motion"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { Label } from "@store/components/ui/label"
-import AdminAuthHero from "@store/components/admin/auth/AdminAuthHero"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { Label } from "@shop/components/ui/label"
+import AdminAuthHero from "@shop/components/admin/auth/AdminAuthHero"
 import { ArrowLeft, Shield, Eye, EyeOff, Loader2 } from "lucide-react"
-import brandMark from "@/config/brandMark"
-import { adminAPI } from "@store/api"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import brandMark from "@shop/platform/config/brandMark"
+import { adminAPI } from "@shop/api"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 import {
   loadBusinessSettings,
   applyModulePowerScanning,
   getModulePowerScanning,
-} from "@store/utils/businessSettings"
+} from "@shop/utils/businessSettings"
 
 const THEME = "#FD920B"
 const THEME_INK = "#B45309"

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { ChevronLeft, Loader2, Send } from "lucide-react"
-import { sellerAPI } from "@store/api"
-import BottomNavOrders from "@store/components/seller/BottomNavOrders"
+import { sellerAPI } from "@shop/api"
+import BottomNavOrders from "@shop/components/seller/BottomNavOrders"
 import { toast } from "sonner"
 
 const CATEGORY_OPTIONS = [

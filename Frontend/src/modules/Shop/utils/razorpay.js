@@ -3,7 +3,7 @@
  * Handles Razorpay payment initialization and verification
  */
 
-import { getCachedSettings, getCompanyName } from "@store/utils/businessSettings";
+import { getCachedSettings, getCompanyName } from "@shop/utils/businessSettings";
 
 let razorpayLoaded = false;
 

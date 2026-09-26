@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react"
 import { exportToCSV, exportToExcel, exportToPDF, exportToJSON } from "./ordersExportUtils"
-import brandMark from "@/config/brandMark"
-import { APP_CONFIG } from "@/config/constants"
-import { getCachedSettings, loadBusinessSettings } from "@store/utils/businessSettings"
+import brandMark from "@shop/platform/config/brandMark"
+import { APP_CONFIG } from "@shop/platform/config/constants"
+import { getCachedSettings, loadBusinessSettings } from "@shop/utils/businessSettings"
 const debugError = () => {}
 
 

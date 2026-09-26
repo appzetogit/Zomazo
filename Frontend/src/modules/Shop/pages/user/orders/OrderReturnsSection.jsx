@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Loader2, PackageX, X, ImagePlus } from "lucide-react"
 import { toast } from "sonner"
-import { userAPI, uploadAPI } from "@store/api"
+import { userAPI, uploadAPI } from "@shop/api"
 
 const REASONS = [
   "Wrong item received",

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { Search, ChevronRight, MapPin, X, Bell } from "lucide-react"
-import { sellerAPI } from "@store/api"
-import { getCachedSettings, getModuleLogoUrl, loadBusinessSettings } from "@store/utils/businessSettings"
-import useNotificationInbox from "@store/hooks/useNotificationInbox"
+import { sellerAPI } from "@shop/api"
+import { getCachedSettings, getModuleLogoUrl, loadBusinessSettings } from "@shop/utils/businessSettings"
+import useNotificationInbox from "@shop/hooks/useNotificationInbox"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

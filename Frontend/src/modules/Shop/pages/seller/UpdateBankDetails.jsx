@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { ArrowLeft, AlertCircle, Upload, Loader2 } from "lucide-react"
-import { sellerAPI, uploadAPI } from "@store/api"
-import { ImageSourcePicker } from "@store/components/ImageSourcePicker"
-import { isFlutterBridgeAvailable } from "@store/utils/imageUploadUtils"
+import { sellerAPI, uploadAPI } from "@shop/api"
+import { ImageSourcePicker } from "@shop/components/ImageSourcePicker"
+import { isFlutterBridgeAvailable } from "@shop/utils/imageUploadUtils"
 import { toast } from "sonner"
 
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/

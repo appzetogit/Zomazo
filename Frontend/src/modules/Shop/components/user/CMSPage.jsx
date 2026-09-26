@@ -1,13 +1,13 @@
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { useState, useEffect } from "react"
 import { ArrowLeft, Lock, Loader2, Mail, Phone, MessageSquare, Clock, ShieldCheck } from "lucide-react"
 import { motion } from "framer-motion"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Button } from "@store/components/ui/button"
-import api from "@store/api"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import { getSupportEmail } from "@store/utils/businessSettings"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Button } from "@shop/components/ui/button"
+import api from "@shop/api"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import { getSupportEmail } from "@shop/utils/businessSettings"
 
 export default function CMSPage({ endpoint, title: defaultTitle, module = "USER" }) {
   const companyName = useCompanyName()

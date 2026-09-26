@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { adminAPI } from "@store/api";
+import { useSearchParams } from "@shop/router";
+import { adminAPI } from "@shop/api";
 
 export default function EmployeeRole() {
   const [searchParams] = useSearchParams();

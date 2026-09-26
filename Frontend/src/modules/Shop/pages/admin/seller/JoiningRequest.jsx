@@ -3,9 +3,9 @@ import {
   Search, Filter, Eye, Check, X, UtensilsCrossed, ArrowUpDown, Loader2,
   FileText, Image as ImageIcon, ExternalLink, CreditCard, Calendar, Star, Building2, User, Phone, Mail, MapPin, Clock
 } from "lucide-react"
-import { adminAPI, sellerAPI } from "@store/api"
-import { useAdminPanel } from "@store/components/admin/useAdminPanel"
-import { getChannelInfo, SellerChannelsPanel } from "@store/components/admin/sellers/SellerChannels"
+import { adminAPI, sellerAPI } from "@shop/api"
+import { useAdminPanel } from "@shop/components/admin/useAdminPanel"
+import { getChannelInfo, SellerChannelsPanel } from "@shop/components/admin/sellers/SellerChannels"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

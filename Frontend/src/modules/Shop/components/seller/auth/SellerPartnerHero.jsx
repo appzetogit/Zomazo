@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from "framer-motion"
 import { ShieldCheck, UtensilsCrossed, TrendingUp, Clock } from "lucide-react"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 
 const DEFAULT_THEME = "#FD920B"
 

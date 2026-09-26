@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom"
+import { useLocation } from "@shop/router"
 
 /**
  * The admin is two panels over one set of pages:
@@ -12,7 +12,9 @@ export const ADMIN_PANELS = {
   shop: { key: "shop", label: "Shop", fulfilmentMode: "standard" },
 }
 
-export const DEFAULT_ADMIN_PANEL = "quick"
+// Inside the platform only the Shop panel exists (/admin/shop); quick commerce
+// has its own admin.
+export const DEFAULT_ADMIN_PANEL = "shop"
 
 const PANEL_PATH = /^\/admin\/(quick|shop)(?=\/|$)/
 

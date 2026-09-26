@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Filter, Calendar, ClipboardList, DollarSign, FileText, AlertCircle, Settings, FileSpreadsheet, Code } from "lucide-react"
-import { emptySellerVATReports, emptySellerVATStats } from "@store/utils/adminFallbackData"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@store/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@store/components/ui/dialog"
-import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "@store/components/admin/reports/reportsExportUtils"
+import { emptySellerVATReports, emptySellerVATStats } from "@shop/utils/adminFallbackData"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@shop/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@shop/components/ui/dialog"
+import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "@shop/components/admin/reports/reportsExportUtils"
 
 export default function SellerVATReport() {
   const [searchQuery, setSearchQuery] = useState("")

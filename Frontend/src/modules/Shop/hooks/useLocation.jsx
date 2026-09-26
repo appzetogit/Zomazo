@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react"
-import { userAPI } from "@store/api"
+import { userAPI } from "@shop/api"
 import {
   getDeliveryAddressMode,
   persistUserLocation,
   readStoredUserLocation,
   setDeliveryAddressMode,
-} from "@store/utils/deliveryLocationUtils"
+} from "@shop/utils/deliveryLocationUtils"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -272,7 +272,7 @@ export function useLocation() {
   const getGoogleMapsApiKeySafe = async () => {
     if (cachedGoogleMapsApiKey) return cachedGoogleMapsApiKey
     try {
-      const { getGoogleMapsApiKey } = await import("@store/utils/googleMapsApiKey.js")
+      const { getGoogleMapsApiKey } = await import("@shop/utils/googleMapsApiKey.js")
       const key = await getGoogleMapsApiKey()
       if (key && typeof key === "string") {
         cachedGoogleMapsApiKey = key

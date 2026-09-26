@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Sparkles,
@@ -17,9 +17,9 @@ import {
   HelpCircle,
   LifeBuoy,
 } from "lucide-react"
-import { aiAPI, supportAPI } from "@store/api"
-import { useCart } from "@store/context/CartContext"
-import { useNavigate } from "react-router-dom"
+import { aiAPI, supportAPI } from "@shop/api"
+import { useCart } from "@shop/context/CartContext"
+import { useNavigate } from "@shop/router"
 import { toast } from "sonner"
 
 const QUICK_PROMPTS = [

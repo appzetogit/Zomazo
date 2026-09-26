@@ -2,7 +2,7 @@
  * Single seller "pending order" alert session.
  * One looping Audio (or native loop) for all mounts — idempotent start/stop.
  */
-import alertSound from "@store/assets/audio/alert.mp3";
+import alertSound from "@shop/assets/audio/alert.mp3";
 
 const pendingKeys = new Set();
 let audio = null;

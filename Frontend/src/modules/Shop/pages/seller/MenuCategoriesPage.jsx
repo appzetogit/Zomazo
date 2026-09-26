@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useLocation, useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { AnimatePresence, motion } from "framer-motion"
 import {
   ArrowLeft,
@@ -16,10 +16,10 @@ import {
   Upload,
   X,
 } from "lucide-react"
-import { sellerAPI, uploadAPI } from "@store/api"
+import { sellerAPI, uploadAPI } from "@shop/api"
 import { toast } from "sonner"
-import { ImageSourcePicker } from "@store/components/ImageSourcePicker"
-import { isFlutterBridgeAvailable } from "@store/utils/imageUploadUtils"
+import { ImageSourcePicker } from "@shop/components/ImageSourcePicker"
+import { isFlutterBridgeAvailable } from "@shop/utils/imageUploadUtils"
 
 const defaultFormData = {
   name: "",

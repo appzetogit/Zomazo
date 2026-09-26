@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { useAdminPanel } from "@store/components/admin/useAdminPanel"
-import { Card, CardContent, CardHeader, CardTitle } from "@store/components/ui/card"
+import { useNavigate } from "@shop/router"
+import { useAdminPanel } from "@shop/components/admin/useAdminPanel"
+import { Card, CardContent, CardHeader, CardTitle } from "@shop/components/ui/card"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@store/components/ui/select"
+} from "@shop/components/ui/select"
 import {
   Area,
   AreaChart,
@@ -25,7 +25,7 @@ import {
   YAxis,
 } from "recharts"
 import { Activity, ArrowUpRight, ShoppingBag, CreditCard, Truck, Receipt, DollarSign, Store, UserCheck, Package, UserCircle, Clock, CheckCircle, XCircle } from "lucide-react"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 const debugLog = () => {}
 const debugError = () => {}
 

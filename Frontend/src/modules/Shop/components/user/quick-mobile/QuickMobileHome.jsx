@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { useLocationSelector } from "../UserLayout"
 import { MIN_RAIL_PRODUCTS, QuickProductRail } from "../desktop/quick/QuickRail"
 import { useQuickLayout } from "./QuickLayoutContext"

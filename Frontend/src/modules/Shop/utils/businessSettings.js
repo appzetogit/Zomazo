@@ -3,16 +3,18 @@
  * Handles loading and updating business settings (favicon, title, logo)
  */
 
-import { APP_CONFIG } from "@/config/constants";
-import apiClient from "@store/api/axios";
-import { API_ENDPOINTS } from "@store/api/config";
+import { APP_CONFIG } from "@shop/platform/config/constants";
+import apiClient from "@shop/api/axios";
+import { API_ENDPOINTS } from "@shop/api/config";
 import {
   getCachedBusinessSettings,
   loadCorePublicAppConfig,
   invalidatePublicAppConfig,
-} from "@store/services/publicAppConfig";
+} from "@shop/services/publicAppConfig";
 
 const SETTINGS_KEY = 'store_business_settings';
+// The Shop runs inside the platform, which owns the tab title and favicon.
+const SHOP_OWNS_DOCUMENT_BRANDING = false;
 const BRAND_THEME_COLOR = "#FD920B";
 const BRAND_THEME_INK = "#B45309";
 const OLD_USER_DEFAULT_THEME_COLORS = ["#FA0272", "#EB590E"];
@@ -335,6 +337,10 @@ export const loadBusinessSettings = async ({ force = false } = {}) => {
  * Update favicon in document
  */
 export const updateFavicon = (url) => {
+  // Inside the platform the tab icon is the platform's. The standalone app
+  // removed every <link rel=icon> and put the Shop's in, and it stayed after
+  // the customer left the Shop.
+  if (SHOP_OWNS_DOCUMENT_BRANDING === false) return;
   if (!url || typeof document === 'undefined') return;
 
   // Remove existing favicons
@@ -379,6 +385,8 @@ const resolveFaviconByModule = (settings, moduleName = "user") => {
  * Update page title
  */
 export const updateTitle = (companyName) => {
+  // Same as updateFavicon: the platform names the tab.
+  if (SHOP_OWNS_DOCUMENT_BRANDING === false) return;
   if (companyName && typeof document !== 'undefined') {
     document.title = companyName;
   }
@@ -430,45 +438,63 @@ export const getModulePowerScanning = (moduleName = "user", settingsOverride = n
   return { themeColor, fontFamily };
 };
 
+/**
+ * The element the Shop renders inside (ShopApp / ShopAdminApp).
+ *
+ * The standalone app themed the whole document: variables on <html>, the body
+ * font forced with !important, and an injected stylesheet over `html, body,
+ * #root *`. Inside the platform that restyled food, taxi and the platform
+ * admin -- and, the app being a SPA, kept doing so after the customer left the
+ * Shop. Everything is scoped to this class instead, so it applies only while a
+ * Shop screen is mounted and disappears with it.
+ */
+export const SHOP_ROOT_CLASS = "shop-root";
+
+const scopeCssToShop = (css) =>
+  css.replace(/(^|\})\s*([^{}@]+?)\s*\{/g, (match, close, selectorList) => {
+    const scoped = selectorList
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => {
+        if (/^(html|body|#root)$/.test(s)) return `.${SHOP_ROOT_CLASS}`;
+        if (s === "#root *") return `.${SHOP_ROOT_CLASS} *`;
+        return `.${SHOP_ROOT_CLASS} ${s}`;
+      });
+    return `${close}\n${[...new Set(scoped)].join(", ")} {`;
+  });
+
 export const applyModulePowerScanning = (moduleName = "user", settingsOverride = null) => {
   if (typeof document === "undefined") return;
   const { themeColor, fontFamily } = getModulePowerScanning(moduleName, settingsOverride);
   const fontStack = FONT_STACKS[fontFamily] || FONT_STACKS["Poppins"];
   const rgbTuple = hexToRgbTuple(themeColor);
 
-  document.documentElement.style.setProperty("--module-theme-color", themeColor);
-  document.documentElement.style.setProperty("--module-theme-rgb", rgbTuple);
-  // Text/icon colour for the theme on light backgrounds. The brand orange is too
-  // light for text (about 2.2:1 on white), so it gets the darker brand ink.
-  document.documentElement.style.setProperty(
-    "--module-theme-ink",
-    themeColor.toUpperCase() === BRAND_THEME_COLOR ? BRAND_THEME_INK : themeColor,
-  );
-  document.documentElement.style.setProperty("--color-primary-orange", themeColor);
-  document.documentElement.style.setProperty("--ring", themeColor);
-  document.documentElement.style.setProperty("--module-font-family", fontStack);
-  document.documentElement.style.setProperty("--font-poppins", fontStack);
-  document.documentElement.style.setProperty("--font-outfit", fontStack);
-  document.documentElement.style.setProperty("--font-sans", fontStack);
-  document.documentElement.style.fontFamily = fontStack;
-  document.body.style.setProperty("font-family", fontStack, "important");
-  document.body.style.fontFamily = fontStack;
+  const vars = {
+    "--module-theme-color": themeColor,
+    "--module-theme-rgb": rgbTuple,
+    // Text/icon colour for the theme on light backgrounds. The brand orange is too
+    // light for text (about 2.2:1 on white), so it gets the darker brand ink.
+    "--module-theme-ink": themeColor.toUpperCase() === BRAND_THEME_COLOR ? BRAND_THEME_INK : themeColor,
+    "--color-primary-orange": themeColor,
+    "--ring": themeColor,
+    "--module-font-family": fontStack,
+    "--font-poppins": fontStack,
+    "--font-outfit": fontStack,
+    "--font-sans": fontStack,
+  };
+  document.querySelectorAll(`.${SHOP_ROOT_CLASS}`).forEach((root) => {
+    Object.entries(vars).forEach(([name, value]) => root.style.setProperty(name, value));
+    root.style.fontFamily = fontStack;
+  });
 
-  let themeMeta = document.querySelector('meta[name="theme-color"]');
-  if (!themeMeta) {
-    themeMeta = document.createElement("meta");
-    themeMeta.setAttribute("name", "theme-color");
-    document.head.appendChild(themeMeta);
-  }
-  themeMeta.setAttribute("content", themeColor);
-
-  let styleTag = document.getElementById("module-power-scanning-overrides");
+  let styleTag = document.getElementById("shop-power-scanning-overrides");
   if (!styleTag) {
     styleTag = document.createElement("style");
-    styleTag.id = "module-power-scanning-overrides";
+    styleTag.id = "shop-power-scanning-overrides";
     document.head.appendChild(styleTag);
   }
-  styleTag.textContent = buildThemeOverrideCss();
+  styleTag.textContent = scopeCssToShop(buildThemeOverrideCss());
 };
 
 /**

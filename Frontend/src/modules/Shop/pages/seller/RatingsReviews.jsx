@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
-import { STORE_COVER_PLACEHOLDER } from '@store/utils/placeholders'
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { STORE_COVER_PLACEHOLDER } from '@shop/utils/placeholders'
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
 import {
@@ -12,7 +12,7 @@ import {
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react"
-import BottomPopup from "@delivery/components/BottomPopup"
+import BottomPopup from "@shop/components/shared/BottomPopup"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

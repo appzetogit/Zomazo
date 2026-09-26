@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { Zap } from "lucide-react"
-import { useCart } from "@store/context/CartContext"
-import { cartStorageKeyFor, storePathFor, useStoreMode } from "@store/context/StoreModeContext"
+import { useCart } from "@shop/context/CartContext"
+import { cartStorageKeyFor, storePathFor, useStoreMode } from "@shop/context/StoreModeContext"
 
 /**
  * Shop and Quick keep separate carts and check out separately: a Quick order

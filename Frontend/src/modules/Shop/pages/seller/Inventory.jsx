@@ -22,15 +22,15 @@ import {
   RefreshCw,
   FileSpreadsheet
 } from "lucide-react"
-import SellerNavbar from "@store/components/seller/SellerNavbar"
-import BottomNavOrders from "@store/components/seller/BottomNavOrders"
-import { Switch } from "@store/components/ui/switch"
-import BulkStockModal from "@store/components/seller/BulkStockModal"
-import { ChannelBadges } from "@store/components/seller/channels"
-import { useNavigate } from "react-router-dom"
-import { sellerAPI } from "@store/api"
+import SellerNavbar from "@shop/components/seller/SellerNavbar"
+import BottomNavOrders from "@shop/components/seller/BottomNavOrders"
+import { Switch } from "@shop/components/ui/switch"
+import BulkStockModal from "@shop/components/seller/BulkStockModal"
+import { ChannelBadges } from "@shop/components/seller/channels"
+import { useNavigate } from "@shop/router"
+import { sellerAPI } from "@shop/api"
 import { toast } from "sonner"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

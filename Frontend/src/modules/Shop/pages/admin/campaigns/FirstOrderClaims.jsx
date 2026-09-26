@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Flag, Loader2, RefreshCw, Undo2 } from "lucide-react"
 import { toast } from "sonner"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 
 const PAGE_SIZE = 20
 const SIGNAL_LABELS = { account: "Account", phone: "Phone", device: "Device", payment: "Payment" }

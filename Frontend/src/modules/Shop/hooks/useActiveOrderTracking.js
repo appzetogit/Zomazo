@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useLocation } from "react-router-dom";
-import { useOrders } from "@store/context/OrdersContext";
-import { orderAPI } from "@store/api";
+import { useLocation } from "@shop/router";
+import { useOrders } from "@shop/context/OrdersContext";
+import { orderAPI } from "@shop/api";
 
 export const getOrderKey = (order) => order?.id || order?._id || order?.orderId || null;
 

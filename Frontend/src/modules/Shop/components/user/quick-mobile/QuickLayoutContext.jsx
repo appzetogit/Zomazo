@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
-import { catalogAPI } from "@/services/api"
-import { useDeliveryLocation } from "@store/context/DeliveryLocationContext"
+import { catalogAPI } from "@shop/api"
+import { useDeliveryLocation } from "@shop/context/DeliveryLocationContext"
 
 /**
  * The Quick phone home's layout (QUICK_MOBILE_SPEC.md §3), fetched once per

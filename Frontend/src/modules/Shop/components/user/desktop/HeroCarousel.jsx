@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { ChevronLeft, ChevronRight, ArrowRight, Truck, ShieldCheck, RotateCcw } from "lucide-react"
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { isVideoUrl } from "@store/utils/mediaType"
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { isVideoUrl } from "@shop/utils/mediaType"
 
 const AUTO_MS = 6000
 

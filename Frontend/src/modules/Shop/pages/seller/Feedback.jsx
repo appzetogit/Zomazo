@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useNavigate, useSearchParams } from "@shop/router"
 import { motion, AnimatePresence } from "framer-motion"
 import { HelpCircle, Search, SlidersHorizontal, X, Loader2, Star } from "lucide-react"
-import BottomNavOrders from "@store/components/seller/BottomNavOrders"
-import { sellerAPI } from "@store/api"
+import BottomNavOrders from "@shop/components/seller/BottomNavOrders"
+import { sellerAPI } from "@shop/api"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react"
-import { useNavigate, Link, useSearchParams } from "react-router-dom"
+import { useNavigate, Link, useSearchParams } from "@shop/router"
 import { AlertCircle, Loader2 } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { authAPI } from "@store/api"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { authAPI } from "@shop/api"
 import { motion } from "framer-motion"
-import { brandLogoOnDark } from "@/config/brandMark"
-import { APP_CONFIG } from "@/config/constants"
+import { brandLogoOnDark } from "@shop/platform/config/brandMark"
+import { APP_CONFIG } from "@shop/platform/config/constants"
 const debugLog = (...args) => { }
 const debugWarn = (...args) => { }
 const debugError = (...args) => { }

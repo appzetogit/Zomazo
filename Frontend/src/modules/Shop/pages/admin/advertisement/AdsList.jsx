@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { Search, Download, ChevronDown, Plus, MoreVertical, Building2, Settings, Filter, FileDown, FileSpreadsheet, FileText, Code, Eye, Edit, Trash2 } from "lucide-react"
-import { emptyAds } from "@store/utils/adminFallbackData"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@store/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@store/components/ui/dialog"
-import SettingsDialog from "@store/components/admin/orders/SettingsDialog"
-import { exportAdvertisementsToCSV, exportAdvertisementsToExcel, exportAdvertisementsToPDF, exportAdvertisementsToJSON } from "@store/components/admin/advertisements/advertisementsExportUtils"
+import { emptyAds } from "@shop/utils/adminFallbackData"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@shop/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@shop/components/ui/dialog"
+import SettingsDialog from "@shop/components/admin/orders/SettingsDialog"
+import { exportAdvertisementsToCSV, exportAdvertisementsToExcel, exportAdvertisementsToPDF, exportAdvertisementsToJSON } from "@shop/components/admin/advertisements/advertisementsExportUtils"
 
 export default function AdsList() {
   const navigate = useNavigate()

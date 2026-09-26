@@ -1,7 +1,7 @@
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "@shop/router"
 import { ArrowLeft, Heart, Search, ShoppingCart } from "lucide-react"
-import { useCart } from "@store/context/CartContext"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useCart } from "@shop/context/CartContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 
 /**
  * The top bar on inner pages of the mobile mockup (screens 2, 5, 6, 8, 9, 10):

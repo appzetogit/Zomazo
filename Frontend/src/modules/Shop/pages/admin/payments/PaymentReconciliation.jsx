@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Scale } from "lucide-react"
 import { toast } from "sonner"
-import { paymentReconciliationAPI } from "@store/api"
+import { paymentReconciliationAPI } from "@shop/api"
 
 const STATUS_META = {
   ok: { label: "OK", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },

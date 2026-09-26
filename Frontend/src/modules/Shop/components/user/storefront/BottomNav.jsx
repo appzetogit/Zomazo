@@ -1,7 +1,7 @@
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation } from "@shop/router"
 import { Home, LayoutGrid, Store, Package, User } from "lucide-react"
-import { useCart } from "@store/context/CartContext"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useCart } from "@shop/context/CartContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 
 /**
  * Modern 5-tab bottom navigation matching the fashion multi-vendor reference design:

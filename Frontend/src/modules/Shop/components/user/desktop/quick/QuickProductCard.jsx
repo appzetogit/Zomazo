@@ -6,8 +6,8 @@
  * and drives the real cart through useQuickCartLine.
  */
 import { Clock, Minus, Plus } from "lucide-react"
-import { Link } from "react-router-dom"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { Link } from "@shop/router"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { ImagePlaceholder, isRealImage, percentOff } from "../ui"
 import { useQuickEta } from "../useDeliveryEstimates"
 import useQuickCartLine from "./useQuickCartLine"

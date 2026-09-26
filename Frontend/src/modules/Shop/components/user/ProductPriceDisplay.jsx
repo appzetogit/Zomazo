@@ -4,7 +4,7 @@ import {
   getProductDisplayPrice,
   hasProductStrikePrice,
   hasProductVariants,
-} from "@store/utils/productVariants"
+} from "@shop/utils/productVariants"
 
 const RUPEE = "₹"
 

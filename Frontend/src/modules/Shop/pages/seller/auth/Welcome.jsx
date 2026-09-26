@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { motion, AnimatePresence } from "framer-motion"
-import { Button } from "@store/components/ui/button"
-import loginBanner1 from "@store/assets/seller/loginbanner1.png"
-import loginBanner2 from "@store/assets/seller/loginbanner2.png"
-import loginBanner3 from "@store/assets/seller/loginbanner3.png"
-import loginBanner4 from "@store/assets/seller/loginbanner4.png"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import { Button } from "@shop/components/ui/button"
+import loginBanner1 from "@shop/assets/seller/loginbanner1.png"
+import loginBanner2 from "@shop/assets/seller/loginbanner2.png"
+import loginBanner3 from "@shop/assets/seller/loginbanner3.png"
+import loginBanner4 from "@shop/assets/seller/loginbanner4.png"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 
 // Carousel data with images and taglines
 const carouselData = [

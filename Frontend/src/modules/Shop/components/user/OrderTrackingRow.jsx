@@ -1,8 +1,8 @@
 import { memo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@shop/router";
 import { ChevronRight, X } from "lucide-react";
 import { motion } from "framer-motion";
-import { getOrderKey, getOrderStatusText } from "@store/hooks/useActiveOrderTracking";
+import { getOrderKey, getOrderStatusText } from "@shop/hooks/useActiveOrderTracking";
 
 const CookingAnimation = memo(() => (
   <div className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-orange-50 border border-orange-100 overflow-visible shadow-[0_4px_12px_rgba(253,146,11,0.12)] shrink-0">

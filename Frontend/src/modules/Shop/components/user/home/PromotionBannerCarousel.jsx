@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import api, { publicConfigGetOnce } from "@store/api";
-import { resolveMediaUrl } from "../../../../../shared/utils/mediaUrl.js";
+import api, { publicConfigGetOnce } from "@shop/api";
+import { resolveMediaUrl } from "@shop/platform/utils/mediaUrl";
 
 const PromotionBannerCarousel = ({ zoneId: propZoneId }) => {
   const [banners, setBanners] = useState([]);

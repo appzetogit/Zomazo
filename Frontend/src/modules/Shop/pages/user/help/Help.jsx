@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import {
   Search,
   HelpCircle,
@@ -18,13 +18,13 @@ import {
   Clock,
   MapPin
 } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import ScrollReveal from "@store/components/user/ScrollReveal"
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { Badge } from "@store/components/ui/badge"
-import { getSupportEmail } from "@store/utils/businessSettings"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import ScrollReveal from "@shop/components/user/ScrollReveal"
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { Badge } from "@shop/components/ui/badge"
+import { getSupportEmail } from "@shop/utils/businessSettings"
 
 const helpCategories = [
   {

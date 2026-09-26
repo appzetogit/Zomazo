@@ -12,7 +12,7 @@ import {
   RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
-import { sellerAPI } from "@store/api"
+import { sellerAPI } from "@shop/api"
 import { CHANNELS, CHANNEL_INFO, channelStock, channelThreshold, toStockValue } from "./channels"
 import StockByChannelEditor from "./StockByChannelEditor"
 

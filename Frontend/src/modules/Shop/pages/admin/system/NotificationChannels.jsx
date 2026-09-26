@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react"
 import { Bell, Info, Search, Download, ChevronDown, Settings, FileText, FileSpreadsheet, Code, Check, Columns, ArrowUpDown } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@store/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@store/components/ui/dialog"
-import { exportNotificationsToCSV, exportNotificationsToExcel, exportNotificationsToPDF, exportNotificationsToJSON } from "@store/components/admin/notifications/notificationsExportUtils"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@shop/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shop/components/ui/dialog"
+import { exportNotificationsToCSV, exportNotificationsToExcel, exportNotificationsToPDF, exportNotificationsToJSON } from "@shop/components/admin/notifications/notificationsExportUtils"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 
 const adminNotifications = [
   {

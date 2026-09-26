@@ -3,10 +3,10 @@ import {
   Search, Plus, Edit, Trash2, ArrowUpDown, 
   DollarSign, Percent, Loader2, X, Building2, IndianRupee
 } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@store/components/ui/dialog"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@store/components/ui/dropdown-menu"
-import { adminAPI } from "@store/api"
-import { API_BASE_URL } from "@store/api/config"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@shop/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@shop/components/ui/dropdown-menu"
+import { adminAPI } from "@shop/api"
+import { API_BASE_URL } from "@shop/api/config"
 import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

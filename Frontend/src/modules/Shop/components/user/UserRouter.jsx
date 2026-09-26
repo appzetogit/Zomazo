@@ -1,86 +1,85 @@
-import { Routes, Route, Navigate, useParams } from "react-router-dom"
+import { Routes, Route, Navigate, useParams } from "@shop/router"
 import UserLayout from "./UserLayout"
 import { Suspense, lazy } from "react"
-import Loader from "@store/components/Loader"
-import ProtectedRoute from "@store/components/ProtectedRoute"
-import useIsDesktop from "@store/components/user/desktop/useIsDesktop"
+import Loader from "@shop/components/Loader"
+import ProtectedRoute from "@shop/components/ProtectedRoute"
+import useIsDesktop from "@shop/components/user/desktop/useIsDesktop"
 
 // Lazy Loading Pages
 
 // Home & Discovery
-const Home = lazy(() => import("@store/pages/user/Home"))
-const Categories = lazy(() => import("@store/pages/user/Categories"))
-const OrderAgain = lazy(() => import("@store/pages/user/OrderAgain"))
-const MobileStoreView = lazy(() => import("@store/components/user/mobile/MobileStoreView"))
-const MobileStoresList = lazy(() => import("@store/components/user/mobile/MobileStoresList"))
-const MobileOrders = lazy(() => import("@store/components/user/mobile/MobileOrders"))
-const MobileWishlist = lazy(() => import("@store/components/user/mobile/MobileWishlist"))
-const CategoryPage = lazy(() => import("@store/pages/user/CategoryPage"))
-const Sellers = lazy(() => import("@store/pages/user/sellers/Sellers"))
-const SellerDetails = lazy(() => import("@store/pages/user/sellers/SellerDetails"))
-const SearchResults = lazy(() => import("@store/pages/user/search/ProfessionalSearch"))
-const ProductDetail = lazy(() => import("@store/pages/user/ProductDetail"))
+const Home = lazy(() => import("@shop/pages/user/Home"))
+const Categories = lazy(() => import("@shop/pages/user/Categories"))
+const OrderAgain = lazy(() => import("@shop/pages/user/OrderAgain"))
+const MobileStoreView = lazy(() => import("@shop/components/user/mobile/MobileStoreView"))
+const MobileStoresList = lazy(() => import("@shop/components/user/mobile/MobileStoresList"))
+const MobileOrders = lazy(() => import("@shop/components/user/mobile/MobileOrders"))
+const MobileWishlist = lazy(() => import("@shop/components/user/mobile/MobileWishlist"))
+const CategoryPage = lazy(() => import("@shop/pages/user/CategoryPage"))
+const Sellers = lazy(() => import("@shop/pages/user/sellers/Sellers"))
+const SellerDetails = lazy(() => import("@shop/pages/user/sellers/SellerDetails"))
+const SearchResults = lazy(() => import("@shop/pages/user/search/ProfessionalSearch"))
+const ProductDetail = lazy(() => import("@shop/pages/user/ProductDetail"))
 
 // Cart
-const Cart = lazy(() => import("@store/pages/user/cart/Cart"))
-const SelectAddress = lazy(() => import("@store/pages/user/cart/SelectAddress"))
-const AddressSelectorPage = lazy(() => import("@store/pages/user/cart/AddressSelectorPage"))
+const Cart = lazy(() => import("@shop/pages/user/cart/Cart"))
+const SelectAddress = lazy(() => import("@shop/pages/user/cart/SelectAddress"))
+const AddressSelectorPage = lazy(() => import("@shop/pages/user/cart/AddressSelectorPage"))
 
 // Orders
-const Orders = lazy(() => import("@store/pages/user/orders/Orders"))
-const OrderTracking = lazy(() => import("@store/pages/user/orders/OrderTracking"))
-const OrderInvoice = lazy(() => import("@store/pages/user/orders/OrderInvoice"))
-const UserOrderDetails = lazy(() => import("@store/pages/user/orders/UserOrderDetails"))
+const Orders = lazy(() => import("@shop/pages/user/orders/Orders"))
+const OrderTracking = lazy(() => import("@shop/pages/user/orders/OrderTracking"))
+const OrderInvoice = lazy(() => import("@shop/pages/user/orders/OrderInvoice"))
+const UserOrderDetails = lazy(() => import("@shop/pages/user/orders/UserOrderDetails"))
 
 // Offers
-const Offers = lazy(() => import("@store/pages/user/Offers"))
+const Offers = lazy(() => import("@shop/pages/user/Offers"))
 
 
 // Collections
-const Collections = lazy(() => import("@store/pages/user/Collections"))
-const CollectionDetail = lazy(() => import("@store/pages/user/CollectionDetail"))
+const Collections = lazy(() => import("@shop/pages/user/Collections"))
+const CollectionDetail = lazy(() => import("@shop/pages/user/CollectionDetail"))
 
 
 
 // Profile
-const Profile = lazy(() => import("@store/pages/user/profile/Profile"))
-const EditProfile = lazy(() => import("@store/pages/user/profile/EditProfile"))
-const Payments = lazy(() => import("@store/pages/user/profile/Payments"))
-const AddPayment = lazy(() => import("@store/pages/user/profile/AddPayment"))
-const EditPayment = lazy(() => import("@store/pages/user/profile/EditPayment"))
-const Favorites = lazy(() => import("@store/pages/user/profile/Favorites"))
-const Support = lazy(() => import("@store/pages/user/profile/Support"))
-const Coupons = lazy(() => import("@store/pages/user/profile/Coupons"))
-const About = lazy(() => import("@store/pages/user/profile/About"))
-const Terms = lazy(() => import("@store/pages/user/profile/Terms"))
-const Privacy = lazy(() => import("@store/pages/user/profile/Privacy"))
-const CMSHelpSupport = lazy(() => import("@store/pages/user/profile/CMSHelpSupport"))
-const Refund = lazy(() => import("@store/pages/user/profile/Refund"))
-const Shipping = lazy(() => import("@store/pages/user/profile/Shipping"))
-const Cancellation = lazy(() => import("@store/pages/user/profile/Cancellation"))
-const ReportSafetyEmergency = lazy(() => import("@store/pages/user/profile/ReportSafetyEmergency"))
-const Accessibility = lazy(() => import("@store/pages/user/profile/Accessibility"))
-const Logout = lazy(() => import("@store/pages/user/profile/Logout"))
-const ReferEarn = lazy(() => import("@store/pages/user/profile/ReferEarn"))
+const Profile = lazy(() => import("@shop/pages/user/profile/Profile"))
+const EditProfile = lazy(() => import("@shop/pages/user/profile/EditProfile"))
+const Payments = lazy(() => import("@shop/pages/user/profile/Payments"))
+const AddPayment = lazy(() => import("@shop/pages/user/profile/AddPayment"))
+const EditPayment = lazy(() => import("@shop/pages/user/profile/EditPayment"))
+const Favorites = lazy(() => import("@shop/pages/user/profile/Favorites"))
+const Support = lazy(() => import("@shop/pages/user/profile/Support"))
+const Coupons = lazy(() => import("@shop/pages/user/profile/Coupons"))
+const About = lazy(() => import("@shop/pages/user/profile/About"))
+const Terms = lazy(() => import("@shop/pages/user/profile/Terms"))
+const Privacy = lazy(() => import("@shop/pages/user/profile/Privacy"))
+const CMSHelpSupport = lazy(() => import("@shop/pages/user/profile/CMSHelpSupport"))
+const Refund = lazy(() => import("@shop/pages/user/profile/Refund"))
+const Shipping = lazy(() => import("@shop/pages/user/profile/Shipping"))
+const Cancellation = lazy(() => import("@shop/pages/user/profile/Cancellation"))
+const ReportSafetyEmergency = lazy(() => import("@shop/pages/user/profile/ReportSafetyEmergency"))
+const Accessibility = lazy(() => import("@shop/pages/user/profile/Accessibility"))
+const Logout = lazy(() => import("@shop/pages/user/profile/Logout"))
+const ReferEarn = lazy(() => import("@shop/pages/user/profile/ReferEarn"))
 
 // Auth
-const SignIn = lazy(() => import("@store/pages/user/auth/SignIn"))
-const OTP = lazy(() => import("@store/pages/user/auth/OTP"))
-const AuthCallback = lazy(() => import("@store/pages/user/auth/AuthCallback"))
+// Customers sign in on the platform's /login; see PlatformLoginRedirect.
+import PlatformLoginRedirect from "./PlatformLoginRedirect"
 
 // Help
-const Help = lazy(() => import("@store/pages/user/help/Help"))
-const OrderHelp = lazy(() => import("@store/pages/user/help/OrderHelp"))
+const Help = lazy(() => import("@shop/pages/user/help/Help"))
+const OrderHelp = lazy(() => import("@shop/pages/user/help/OrderHelp"))
 
 // Notifications
-const Notifications = lazy(() => import("@store/pages/user/Notifications"))
+const Notifications = lazy(() => import("@shop/pages/user/Notifications"))
 
 // Wallet
-const Wallet = lazy(() => import("@store/pages/user/Wallet"))
-const Coins = lazy(() => import("@store/pages/user/Coins"))
+const Wallet = lazy(() => import("@shop/pages/user/Wallet"))
+const Coins = lazy(() => import("@shop/pages/user/Coins"))
 
 // Complaints
-const SubmitComplaint = lazy(() => import("@store/pages/user/complaints/SubmitComplaint"))
+const SubmitComplaint = lazy(() => import("@shop/pages/user/complaints/SubmitComplaint"))
 
 /**
  * Picks a route's layout by screen: the mobile-mockup view on phones, the
@@ -282,11 +281,8 @@ export default function UserRouter() {
           <Route path="profile/shipping" element={<Shipping />} />
           <Route path="profile/cancellation" element={<Cancellation />} />
 
-          {/* Auth - User login is centralized at /user/auth/login */}
-          <Route path="auth/login" element={<SignIn />} />
-          <Route path="auth/sign-in" element={<SignIn />} />
-          <Route path="auth/otp" element={<OTP />} />
-          <Route path="auth/callback" element={<AuthCallback />} />
+          {/* Auth -- the platform's one customer login */}
+          <Route path="auth/*" element={<PlatformLoginRedirect />} />
 
           {/* Help */}
           <Route path="help" element={<Help />} />

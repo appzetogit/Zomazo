@@ -1,29 +1,24 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom"
+import { Routes, Route, Navigate, useLocation } from "@shop/router"
 import { useEffect, Suspense, lazy } from "react"
-import ProtectedRoute from "@store/components/ProtectedRoute"
-import AuthRedirect from "@store/components/AuthRedirect"
-import Loader from "@store/components/Loader"
-import PushSoundEnableButton from "@store/components/PushSoundEnableButton"
-import { registerWebPushForCurrentModule } from "@store/utils/firebaseMessaging"
-import { isModuleAuthenticated } from "@store/utils/auth"
-import { useSellerNotifications } from "@store/hooks/useSellerNotifications"
-import { applyModulePowerScanning, getCachedSettings } from "@store/utils/businessSettings"
-import { PublicAppConfigProvider } from "@store/context/PublicAppConfigContext"
-import { shouldSkipScrollResetForHome } from "@store/utils/homeScrollRestore"
+import ProtectedRoute from "@shop/components/ProtectedRoute"
+import AuthRedirect from "@shop/components/AuthRedirect"
+import Loader from "@shop/components/Loader"
+import PushSoundEnableButton from "@shop/components/PushSoundEnableButton"
+import { registerWebPushForCurrentModule } from "@shop/utils/firebaseMessaging"
+import { isModuleAuthenticated } from "@shop/utils/auth"
+import { useSellerNotifications } from "@shop/hooks/useSellerNotifications"
+import { applyModulePowerScanning, getCachedSettings } from "@shop/utils/businessSettings"
+import { PublicAppConfigProvider } from "@shop/context/PublicAppConfigContext"
+import { shouldSkipScrollResetForHome } from "@shop/utils/homeScrollRestore"
 
 // Lazy Loading Components
-const UserRouter = lazy(() => import("@store/components/user/UserRouter"))
+const UserRouter = lazy(() => import("@shop/components/user/UserRouter"))
 
 // Seller Module
-const SellerRouter = lazy(() => import("@store/components/seller/SellerRouter"))
+const SellerRouter = lazy(() => import("@shop/components/seller/SellerRouter"))
 
-// Admin Module
-const AdminRouter = lazy(() => import("@store/components/admin/AdminRouter"))
-const AdminLogin = lazy(() => import("@store/pages/admin/auth/AdminLogin"))
-const AdminForgotPassword = lazy(() => import("@store/pages/admin/auth/AdminForgotPassword"))
-
-// Delivery Module
-const DeliveryRouter = lazy(() => import("../DeliveryV2"))
+// The Shop admin is mounted by the platform at /admin/shop (see ShopAdminApp.jsx),
+// and this vertical ships by courier, so there is no rider app here.
 
 // Scroll to top on route change (skip when Home has a pending scroll restore)
 function ScrollToTop() {
@@ -82,7 +77,6 @@ export default function App() {
   useEffect(() => {
     const resolveModule = () => {
       if (location.pathname.startsWith("/seller")) return "seller"
-      if (location.pathname.startsWith("/food/delivery") || location.pathname.startsWith("/delivery")) return "delivery"
       return "user"
     }
 
@@ -99,13 +93,13 @@ export default function App() {
       <PushSoundEnableButton />
       <Suspense fallback={<Loader />}>
         <Routes>
-          {/* User/Customer Module — mounted at root */}
+          {/* Customer store -- /shop/* (paths here are relative to that mount) */}
           <Route
             path="/*"
             element={<UserRouter />}
           />
 
-          {/* Seller Module */}
+          {/* Seller panel -- /shop/seller/* */}
           <Route
             path="seller/*"
             element={
@@ -113,11 +107,6 @@ export default function App() {
             }
           />
 
-          {/* Delivery Module */}
-          <Route
-            path="delivery/*"
-            element={<DeliveryRouter />}
-          />
         </Routes>
       </Suspense>
     </PublicAppConfigProvider>

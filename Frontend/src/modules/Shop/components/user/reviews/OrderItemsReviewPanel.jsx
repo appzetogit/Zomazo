@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState } from "react"
 import { Star } from "lucide-react"
-import { userAPI } from "@store/api"
+import { userAPI } from "@shop/api"
 import { StarDisplay } from "./StarRating"
 import ReviewFormDialog from "./ReviewFormDialog"
 

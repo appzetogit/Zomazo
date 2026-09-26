@@ -6,9 +6,9 @@
 import { useCallback, useEffect, useState } from "react"
 import { Eye, EyeOff, Flag, Loader2, MessageSquareText, Search, Star, Trash2 } from "lucide-react"
 import { toast } from "sonner"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@store/components/ui/dialog"
-import { adminAPI } from "@store/api"
-import { useAdminPanel } from "@store/components/admin/useAdminPanel"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@shop/components/ui/dialog"
+import { adminAPI } from "@shop/api"
+import { useAdminPanel } from "@shop/components/admin/useAdminPanel"
 
 const STATUS_TABS = [
   { key: "all", label: "All" },

@@ -1,10 +1,10 @@
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { useState, useEffect, useRef } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { X, Search, Clock, Loader2, Mic } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { searchAPI } from "@store/api"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { searchAPI } from "@shop/api"
 
 const SEARCH_HISTORY_KEY = "user_recent_searches_v1"
 

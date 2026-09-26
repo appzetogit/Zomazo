@@ -1,5 +1,5 @@
-import { useSearchParams, Link, useNavigate } from "react-router-dom";
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useSearchParams, Link, useNavigate } from "@shop/router";
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import React, {
   useRef,
   useEffect,
@@ -44,89 +44,89 @@ import {
   Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import Footer from "@store/components/user/Footer";
-import AddToCartButton from "@store/components/user/AddToCartButton";
-import FloatingHomeDock from "@store/components/user/FloatingHomeDock";
-import BackToTopButton from "@store/components/user/BackToTopButton";
+import Footer from "@shop/components/user/Footer";
+import AddToCartButton from "@shop/components/user/AddToCartButton";
+import FloatingHomeDock from "@shop/components/user/FloatingHomeDock";
+import BackToTopButton from "@shop/components/user/BackToTopButton";
 import {
   captureHomeScrollBeforeLeave,
   clearHomeScrollState,
   peekHomePageSnapshot,
   peekHomeScrollState,
   stashHomePageSnapshot,
-} from "@store/utils/homeScrollRestore";
+} from "@shop/utils/homeScrollRestore";
 import {
   CategoryChipRowSkeleton,
   ExploreGridSkeleton,
   HeroBannerSkeleton,
   LoadingSkeletonRegion,
   SellerGridSkeleton,
-} from "@store/components/ui/loading-skeletons";
-import { useProfile } from "@store/context/ProfileContext";
-import { useCart } from "@store/context/CartContext";
-import { HorizontalCarousel } from "@store/components/ui/horizontal-carousel";
-import { DotPattern } from "@store/components/ui/dot-pattern";
+} from "@shop/components/ui/loading-skeletons";
+import { useProfile } from "@shop/context/ProfileContext";
+import { useCart } from "@shop/context/CartContext";
+import { HorizontalCarousel } from "@shop/components/ui/horizontal-carousel";
+import { DotPattern } from "@shop/components/ui/dot-pattern";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardContent,
-} from "@store/components/ui/card";
-import { Button } from "@store/components/ui/button";
-import { Badge } from "@store/components/ui/badge";
-import { Input } from "@store/components/ui/input";
-import { Switch } from "@store/components/ui/switch";
-import { Checkbox } from "@store/components/ui/checkbox";
+} from "@shop/components/ui/card";
+import { Button } from "@shop/components/ui/button";
+import { Badge } from "@shop/components/ui/badge";
+import { Input } from "@shop/components/ui/input";
+import { Switch } from "@shop/components/ui/switch";
+import { Checkbox } from "@shop/components/ui/checkbox";
 import {
   useSearchOverlay,
   useLocationSelector,
-} from "@store/components/user/UserLayout";
-import PageNavbar from "@store/components/user/PageNavbar";
+} from "@shop/components/user/UserLayout";
+import PageNavbar from "@shop/components/user/PageNavbar";
 import {
   getUserSellerDistance,
   normalizeSellerLocation,
-} from "@store/utils/geo";
+} from "@shop/utils/geo";
 import {
   fetchDrivingDistancesMatrix,
   formatDistanceLabel,
-} from "@store/utils/roadDistance";
+} from "@shop/utils/roadDistance";
 
 const debugLog = (...args) => {};
 const debugWarn = (...args) => {};
 const debugError = (...args) => {};
 
 // Import shared food images - prevents duplication
-import { productImages } from "@store/constants/images";
+import { productImages } from "@shop/constants/images";
 
-import { Avatar, AvatarFallback } from "@store/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@shop/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@store/components/ui/dropdown-menu";
-import { useDeliveryLocation } from "@store/context/DeliveryLocationContext";
-import brandMark from "@/config/brandMark"
-import offerImage from "@store/assets/offerimage.png";
-import api, { sellerAPI, adminAPI } from "@store/api";
-import { usePublicAppConfig } from "@store/context/PublicAppConfigContext";
-import { API_BASE_URL } from "@store/api/config";
-import OptimizedImage from "@store/components/OptimizedImage";
-import { getSellerAvailabilityStatus } from "@store/utils/sellerAvailability";
-import HomeHeader from "@store/components/user/home/HomeHeader";
-import PromoRow from "@store/components/user/home/PromoRow";
-import PromotionBannerCarousel from "@store/components/user/home/PromotionBannerCarousel";
-import OutOfZoneScreen from "@store/components/user/OutOfZoneScreen";
-import DesktopHome from "@store/components/user/desktop/DesktopHome";
-import QuickHome from "@store/components/user/desktop/quick/QuickHome";
-import { useStorefrontLayout } from "@store/components/user/desktop/useIsDesktop";
+} from "@shop/components/ui/dropdown-menu";
+import { useDeliveryLocation } from "@shop/context/DeliveryLocationContext";
+import brandMark from "@shop/platform/config/brandMark"
+import offerImage from "@shop/assets/offerimage.png";
+import api, { sellerAPI, adminAPI } from "@shop/api";
+import { usePublicAppConfig } from "@shop/context/PublicAppConfigContext";
+import { API_BASE_URL } from "@shop/api/config";
+import OptimizedImage from "@shop/components/OptimizedImage";
+import { getSellerAvailabilityStatus } from "@shop/utils/sellerAvailability";
+import HomeHeader from "@shop/components/user/home/HomeHeader";
+import PromoRow from "@shop/components/user/home/PromoRow";
+import PromotionBannerCarousel from "@shop/components/user/home/PromotionBannerCarousel";
+import OutOfZoneScreen from "@shop/components/user/OutOfZoneScreen";
+import DesktopHome from "@shop/components/user/desktop/DesktopHome";
+import QuickHome from "@shop/components/user/desktop/quick/QuickHome";
+import { useStorefrontLayout } from "@shop/components/user/desktop/useIsDesktop";
 
 
 // Explore More Icons
-import exploreOffers from "@store/assets/explore more icons/offers.png";
-import exploreTop10 from "@store/assets/explore more icons/top 10.png";
-import exploreCollection from "@store/assets/explore more icons/collection.png";
-import { isVideoUrl } from "@store/utils/mediaType";
+import exploreOffers from "@shop/assets/explore more icons/offers.png";
+import exploreTop10 from "@shop/assets/explore more icons/top 10.png";
+import exploreCollection from "@shop/assets/explore more icons/collection.png";
+import { isVideoUrl } from "@shop/utils/mediaType";
 
 // Banner images for hero carousel - will be fetched from API
 

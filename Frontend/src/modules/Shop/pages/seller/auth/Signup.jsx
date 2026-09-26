@@ -1,20 +1,20 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { Phone, User, AlertCircle, Loader2, Store } from "lucide-react"
-import { sellerAPI } from "@store/api"
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { Label } from "@store/components/ui/label"
+import { sellerAPI } from "@shop/api"
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { Label } from "@shop/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@store/components/ui/select"
-import { brandLogoOnDark } from "@/config/brandMark"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+} from "@shop/components/ui/select"
+import { brandLogoOnDark } from "@shop/platform/config/brandMark"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 
 const countryCodes = [
   { code: "+91", country: "IN", flag: "🇮🇳" },

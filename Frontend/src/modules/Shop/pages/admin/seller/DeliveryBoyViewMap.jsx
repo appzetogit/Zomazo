@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { MapPin, ArrowLeft, Search, Bike } from "lucide-react"
-import { adminAPI } from "@store/api"
-import { getGoogleMapsApiKey } from "@store/utils/googleMapsApiKey"
+import { adminAPI } from "@shop/api"
+import { getGoogleMapsApiKey } from "@shop/utils/googleMapsApiKey"
 import { Loader } from "@googlemaps/js-api-loader"
-import { subscribeAllDeliveryLocations } from "@store/realtimeTracking"
-import bikeLogo from "@store/assets/bikelogo.png"
-import { useAdminBase } from "@store/components/admin/useAdminPanel"
+import { subscribeAllDeliveryLocations } from "@shop/realtimeTracking"
+import bikeLogo from "@shop/assets/bikelogo.png"
+import { useAdminBase } from "@shop/components/admin/useAdminPanel"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

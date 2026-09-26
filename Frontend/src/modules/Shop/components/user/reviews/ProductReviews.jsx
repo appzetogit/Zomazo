@@ -5,11 +5,11 @@
  * signed-in customer received this product. Used by the mobile and desktop pages.
  */
 import { useCallback, useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { BadgeCheck, Flag, Loader2, Store, ThumbsUp } from "lucide-react"
 import { toast } from "sonner"
-import { catalogAPI, userAPI } from "@store/api"
-import { isModuleAuthenticated } from "@store/utils/auth"
+import { catalogAPI, userAPI } from "@shop/api"
+import { isModuleAuthenticated } from "@shop/utils/auth"
 import { StarDisplay } from "./StarRating"
 import ReviewFormDialog from "./ReviewFormDialog"
 

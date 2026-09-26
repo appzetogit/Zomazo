@@ -1,19 +1,19 @@
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { ArrowLeft, AlertTriangle, Phone, Shield, Loader2 } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Button } from "@store/components/ui/button"
-import { Card, CardContent } from "@store/components/ui/card"
-import { Textarea } from "@store/components/ui/textarea"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Button } from "@shop/components/ui/button"
+import { Card, CardContent } from "@shop/components/ui/card"
+import { Textarea } from "@shop/components/ui/textarea"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { userAPI } from "@store/api"
+import { userAPI } from "@shop/api"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@store/components/ui/dialog"
+} from "@shop/components/ui/dialog"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

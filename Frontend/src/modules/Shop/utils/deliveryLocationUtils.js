@@ -1,4 +1,4 @@
-import { parseGeoPoint } from "@store/utils/geo"
+import { parseGeoPoint } from "@shop/utils/geo"
 
 export const DELIVERY_ADDRESS_MODE_KEY = "deliveryAddressMode"
 export const USER_LOCATION_KEY = "userLocation"

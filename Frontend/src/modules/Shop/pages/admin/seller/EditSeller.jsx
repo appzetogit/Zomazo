@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
-import { adminAPI, uploadAPI } from "@store/api"
-import { Input } from "@store/components/ui/input"
-import { Button } from "@store/components/ui/button"
-import { Label } from "@store/components/ui/label"
-import { getGoogleMapsApiKey } from "@store/utils/googleMapsApiKey"
+import { useNavigate, useParams } from "@shop/router"
+import { adminAPI, uploadAPI } from "@shop/api"
+import { Input } from "@shop/components/ui/input"
+import { Button } from "@shop/components/ui/button"
+import { Label } from "@shop/components/ui/label"
+import { getGoogleMapsApiKey } from "@shop/utils/googleMapsApiKey"
 import { ArrowLeft, Loader2, Trash2, Upload } from "lucide-react"
-import { useAdminBase } from "@store/components/admin/useAdminPanel"
-import { SellerChannelsPanel } from "@store/components/admin/sellers/SellerChannels"
+import { useAdminBase } from "@shop/components/admin/useAdminPanel"
+import { SellerChannelsPanel } from "@shop/components/admin/sellers/SellerChannels"
 
 const debugError = (..._args) => {}
 

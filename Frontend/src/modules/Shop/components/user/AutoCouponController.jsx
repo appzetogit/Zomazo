@@ -1,5 +1,5 @@
-import useAutoCouponEngine from "@store/hooks/useAutoCouponEngine"
-import AutoCouponCelebration from "@store/components/user/AutoCouponCelebration"
+import useAutoCouponEngine from "@shop/hooks/useAutoCouponEngine"
+import AutoCouponCelebration from "@shop/components/user/AutoCouponCelebration"
 
 export default function AutoCouponController() {
   useAutoCouponEngine({ enabled: true })

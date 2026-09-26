@@ -1,6 +1,6 @@
 import { motion } from "framer-motion"
 import { Check, Sparkles, ShoppingBag } from "lucide-react"
-import { getProductDiscountPercent } from "@store/utils/productVariants"
+import { getProductDiscountPercent } from "@shop/utils/productVariants"
 
 const RUPEE_SYMBOL = "\u20B9"
 

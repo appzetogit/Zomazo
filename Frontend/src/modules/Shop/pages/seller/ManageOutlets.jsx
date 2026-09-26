@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, Info } from "lucide-react"
 const debugLog = (...args) => {}

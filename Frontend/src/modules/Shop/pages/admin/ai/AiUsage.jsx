@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { BarChart3 } from "lucide-react"
-import { adminAIAPI } from "@store/api"
+import { adminAIAPI } from "@shop/api"
 
 const errorMessage = (e, fallback) => e?.response?.data?.message || e?.message || fallback
 const n = (v) => Number(v || 0).toLocaleString()

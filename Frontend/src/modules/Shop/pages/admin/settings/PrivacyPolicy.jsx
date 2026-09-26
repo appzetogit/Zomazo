@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import api from "@store/api"
-import { API_ENDPOINTS } from "@store/api/config"
-import { Textarea } from "@store/components/ui/textarea"
-import { legalHtmlToPlainText, plainTextToLegalHtml } from "@store/utils/legalContentFormat"
+import api from "@shop/api"
+import { API_ENDPOINTS } from "@shop/api/config"
+import { Textarea } from "@shop/components/ui/textarea"
+import { legalHtmlToPlainText, plainTextToLegalHtml } from "@shop/utils/legalContentFormat"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

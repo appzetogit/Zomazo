@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@shop/router";
 import { Plus, Search, Shield, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
-import { adminAPI } from "@store/api";
-import { useAdminBase } from "@store/components/admin/useAdminPanel";
+import { adminAPI } from "@shop/api";
+import { useAdminBase } from "@shop/components/admin/useAdminPanel";
 
 const SUBADMIN_EMAIL_REGEX = /^(?!.*\.\.)([A-Za-z0-9]+[._%+-]?)*[A-Za-z0-9]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}$/;
 const INDIAN_MOBILE_REGEX = /^[6-9]\d{9}$/;

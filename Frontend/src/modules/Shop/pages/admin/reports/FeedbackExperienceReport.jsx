@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from "react"
 import { Search, Download, ChevronDown, Filter, Star, RefreshCw, Calendar, Trash2, Eye, User, Mail, Phone, MessageSquare } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@store/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@store/components/ui/dialog"
-import { adminAPI } from "@store/api"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@shop/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@shop/components/ui/dialog"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
-import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "@store/components/admin/reports/reportsExportUtils"
+import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "@shop/components/admin/reports/reportsExportUtils"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { isVideoUrl } from "@store/utils/mediaType"
+import { isVideoUrl } from "@shop/utils/mediaType"
 import { cx, focusRing } from "./quickHelpers"
 
 const PER_PAGE = 3

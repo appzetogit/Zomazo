@@ -19,10 +19,10 @@ import {
   Code,
   Calendar,
 } from "lucide-react";
-import { emptyCampaignOrderReports, emptyCampaignOrderStats } from "@store/utils/adminFallbackData";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@store/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@store/components/ui/dialog"
-import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "@store/components/admin/reports/reportsExportUtils"
+import { emptyCampaignOrderReports, emptyCampaignOrderStats } from "@shop/utils/adminFallbackData";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@shop/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@shop/components/ui/dialog"
+import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "@shop/components/admin/reports/reportsExportUtils"
 
 export default function CampaignOrderReport() {
   const [filters, setFilters] = useState({

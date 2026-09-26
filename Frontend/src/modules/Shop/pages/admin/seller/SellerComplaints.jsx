@@ -13,7 +13,7 @@ import {
   Store,
   Package,
 } from "lucide-react"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
 import {
   Dialog,
@@ -21,8 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@store/components/ui/dialog"
-import { Textarea } from "@store/components/ui/textarea"
+} from "@shop/components/ui/dialog"
+import { Textarea } from "@shop/components/ui/textarea"
 
 const PAGE_SIZE = 20
 

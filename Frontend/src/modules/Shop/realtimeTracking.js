@@ -1,5 +1,5 @@
 import { onValue, ref, set, update } from 'firebase/database';
-import { firebaseRealtimeDb, ensureFirebaseInitialized } from '@store/firebase';
+import { firebaseRealtimeDb, ensureFirebaseInitialized } from '@shop/firebase';
 
 function sanitizeRealtimeKey(value) {
   return String(value || '').trim().replace(/[.#$/[\]]/g, '_');

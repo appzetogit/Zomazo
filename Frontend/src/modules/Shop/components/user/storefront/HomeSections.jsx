@@ -1,6 +1,6 @@
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { ArrowRight, BadgeCheck, Gift, RotateCcw, Truck } from "lucide-react"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { ImagePlaceholder, isRealImage } from "../desktop/ui"
 import { mediaUrl } from "../desktop/desktopCart"
 import ProductCard from "./ProductCard"

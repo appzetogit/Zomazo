@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { IndianRupee, Loader2, Wallet } from "lucide-react"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

@@ -6,8 +6,8 @@
 import {
   publicConfigGetOnce,
   invalidatePublicConfigCache,
-} from "@store/api";
-import { API_ENDPOINTS } from "@store/api/config";
+} from "@shop/api";
+import { API_ENDPOINTS } from "@shop/api/config";
 
 export const PUBLIC_CONFIG_URLS = {
   BUSINESS: API_ENDPOINTS.ADMIN.BUSINESS_SETTINGS_PUBLIC,

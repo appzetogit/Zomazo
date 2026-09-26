@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Mail, Calendar, Settings } from "lucide-react"
-import { emptySubscribedEmails } from "@store/utils/adminFallbackData"
+import { emptySubscribedEmails } from "@shop/utils/adminFallbackData"
 
 export default function SubscribedMailList() {
   const [searchQuery, setSearchQuery] = useState("")

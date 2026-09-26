@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
-import { useAdminBase } from "@store/components/admin/useAdminPanel"
+import { Link } from "@shop/router"
+import { useAdminBase } from "@shop/components/admin/useAdminPanel"
 import { Eye, MapPin, Package, User, Phone, Mail, Calendar, Clock, Truck, CreditCard, X, Receipt, CheckCircle2, History, Banknote } from "lucide-react"
 import {
   Dialog,
@@ -8,12 +8,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@store/components/ui/dialog"
-import { adminAPI } from "@/services/api"
-import { getTimelineStatusLabel, getTimelineRoleLabel } from "@store/utils/orderStatus"
-import { computeDeliveryFeeGst, formatDeliveryFeeBreakdownSubtext, getDeliveryFeeTotal, resolveDeliveryFeeGst } from "@store/utils/deliveryFeeDisplay"
-import { getCartCompareItemTotal, getLineCompareUnitPrice } from "@store/utils/productVariants"
-import { DualMoney } from "@store/components/user/ProductPriceDisplay"
+} from "@shop/components/ui/dialog"
+import { adminAPI } from "@shop/api"
+import { getTimelineStatusLabel, getTimelineRoleLabel } from "@shop/utils/orderStatus"
+import { computeDeliveryFeeGst, formatDeliveryFeeBreakdownSubtext, getDeliveryFeeTotal, resolveDeliveryFeeGst } from "@shop/utils/deliveryFeeDisplay"
+import { getCartCompareItemTotal, getLineCompareUnitPrice } from "@shop/utils/productVariants"
+import { DualMoney } from "@shop/components/user/ProductPriceDisplay"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

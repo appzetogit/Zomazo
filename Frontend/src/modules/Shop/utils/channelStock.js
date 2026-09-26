@@ -1,7 +1,7 @@
 // Customer-side helpers for the Quick/Shop channel data (see CHANNELS_CONTRACT.md).
 // A store mode ("quick" | "shop") is the channel. Old fields (stockQty,
 // quickEligible) are read only as a fallback for responses not yet migrated.
-import { cartStorageKeyFor } from "@store/context/StoreModeContext"
+import { cartStorageKeyFor } from "@shop/context/StoreModeContext"
 
 export const otherChannel = (channel) => (channel === "quick" ? "shop" : "quick")
 

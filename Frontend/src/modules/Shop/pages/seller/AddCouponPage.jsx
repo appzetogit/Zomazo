@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { 
   ArrowLeft,
   ChevronDown,
@@ -11,7 +11,7 @@ import {
   Tag,
   Loader2
 } from "lucide-react"
-import { sellerAPI } from "@store/api"
+import { sellerAPI } from "@shop/api"
 import { toast } from "sonner"
 
 export default function AddCouponPage(props) {

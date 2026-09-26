@@ -14,7 +14,11 @@ const TermsPage = lazy(() => import('../modules/auth/pages/TermsPage'))
 const PrivacyPage = lazy(() => import('../modules/auth/pages/PrivacyPage'))
 const LandingPage = lazy(() => import('../modules/LandingPage/LandingPage'))
 const PartnerApp = lazy(() => import('../modules/partner/PartnerApp'))
+// Shop (e-commerce): customer store + seller panel at /shop, its admin at /admin/shop.
+const ShopApp = lazy(() => import('../modules/Shop/ShopApp'))
+const ShopAdminApp = lazy(() => import('../modules/Shop/ShopAdminApp'))
 import ProtectedRoute from '@food/components/ProtectedRoute'
+import { ECOMMERCE_ENABLED } from '../config/features'
 
 const PageLoader = () => <AppShellSkeleton />
 
@@ -154,6 +158,15 @@ const AppRoutes = () => {
 
         {/* Taxi Module */}
         <Route path="/taxi/*" element={<TaxiAppWrapper />} />
+
+        {/* Shop (e-commerce). /admin/shop/* is more specific than /admin/*, so the
+            Shop panel is matched ahead of the platform admin below. */}
+        {ECOMMERCE_ENABLED && (
+          <>
+            <Route path="/shop/*" element={<Suspense fallback={<PageLoader />}><ShopApp /></Suspense>} />
+            <Route path="/admin/shop/*" element={<Suspense fallback={<PageLoader />}><ShopAdminApp /></Suspense>} />
+          </>
+        )}
 
         {/* Global Admin Portal - AdminRouter handles its own protection for sub-routes */}
         <Route

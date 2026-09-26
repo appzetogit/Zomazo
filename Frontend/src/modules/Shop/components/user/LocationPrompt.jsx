@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react"
 import { MapPin, X } from "lucide-react"
-import { Card, CardHeader, CardTitle, CardContent } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
-import { useLocation } from "@store/hooks/useLocation"
+import { Card, CardHeader, CardTitle, CardContent } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { useLocation } from "@shop/hooks/useLocation"
 
 export default function LocationPrompt() {
   return null;

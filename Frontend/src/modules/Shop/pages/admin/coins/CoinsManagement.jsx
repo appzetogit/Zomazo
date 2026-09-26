@@ -17,10 +17,10 @@ import {
   ArrowDownRight
 } from "lucide-react"
 import { toast } from "sonner"
-import { coinsAPI } from "@/services/api"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { Switch } from "@store/components/ui/switch"
+import { coinsAPI } from "@shop/api"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { Switch } from "@shop/components/ui/switch"
 
 export default function CoinsManagement() {
   const [activeTab, setActiveTab] = useState("settings")

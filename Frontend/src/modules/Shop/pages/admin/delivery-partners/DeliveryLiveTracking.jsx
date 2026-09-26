@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Bike, Clock, Loader2, MapPin, RefreshCw, Search, Wifi, WifiOff } from "lucide-react"
 import { Loader } from "@googlemaps/js-api-loader"
-import { adminAPI } from "@store/api"
-import { subscribeAllDeliveryLocations } from "@store/realtimeTracking"
-import { getGoogleMapsApiKey } from "@store/utils/googleMapsApiKey"
+import { adminAPI } from "@shop/api"
+import { subscribeAllDeliveryLocations } from "@shop/realtimeTracking"
+import { getGoogleMapsApiKey } from "@shop/utils/googleMapsApiKey"
 
 const debugError = () => {}
 

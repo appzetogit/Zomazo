@@ -1,13 +1,13 @@
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { useState, useEffect, useRef, useMemo } from "react"
 import { ChevronDown, ShoppingCart, Wallet } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { useDeliveryLocation } from "@store/context/DeliveryLocationContext"
-import { useCart } from "@store/context/CartContext"
+import { Button } from "@shop/components/ui/button"
+import { useDeliveryLocation } from "@shop/context/DeliveryLocationContext"
+import { useCart } from "@shop/context/CartContext"
 import { useLocationSelector } from "./UserLayout"
 import { FaLocationDot } from "react-icons/fa6"
-import { getCachedSettings, loadBusinessSettings } from "@store/utils/businessSettings"
-import brandMark from "@/config/brandMark"
+import { getCachedSettings, loadBusinessSettings } from "@shop/utils/businessSettings"
+import brandMark from "@shop/platform/config/brandMark"
 
 const debugError = (...args) => {}
 

@@ -1,11 +1,11 @@
 import { useState } from "react"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { CheckCircle2, X } from "lucide-react"
-import { API_ENDPOINTS } from "@store/api/config"
-import api from "@store/api"
+import { API_ENDPOINTS } from "@shop/api/config"
+import api from "@shop/api"
 import { toast } from "sonner"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 
 const debugError = (...args) => {}
 

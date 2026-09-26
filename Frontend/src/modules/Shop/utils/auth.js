@@ -153,14 +153,16 @@ export function isModuleAuthenticated(module) {
   return false;
 }
 
-function getRefreshApiUrl() {
+function getRefreshApiUrl(module) {
   const baseURL =
     typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL
       ? String(import.meta.env.VITE_API_BASE_URL).replace(/\/$/, "")
-      : "";
-  return baseURL
-    ? `${baseURL}/food/auth/refresh-token`
-    : "/api/v1/food/auth/refresh-token";
+      : "/api/v1";
+  // Customer and admin sessions are the platform's; a seller's was issued by
+  // the e-commerce module and only refreshes there.
+  return module === "seller"
+    ? `${baseURL}/ecom/auth/refresh-token`
+    : `${baseURL}/food/auth/refresh-token`;
 }
 
 /**
@@ -185,7 +187,7 @@ export async function ensureValidAccessToken(module) {
     refreshPromiseByModule[module] = (async () => {
       try {
         const { data } = await axios.post(
-          getRefreshApiUrl(),
+          getRefreshApiUrl(module),
           { refreshToken },
           { timeout: 10000 }
         );

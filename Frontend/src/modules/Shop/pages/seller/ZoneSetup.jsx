@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { MapPin, Search, Save, Loader2, ArrowLeft, CheckCircle2, AlertTriangle, Navigation } from "lucide-react"
-import SellerNavbar from "@store/components/seller/SellerNavbar"
-import { sellerAPI, zoneAPI } from "@store/api"
-import { getGoogleMapsApiKey } from "@store/utils/googleMapsApiKey"
+import SellerNavbar from "@shop/components/seller/SellerNavbar"
+import { sellerAPI, zoneAPI } from "@shop/api"
+import { getGoogleMapsApiKey } from "@shop/utils/googleMapsApiKey"
 import { Loader } from "@googlemaps/js-api-loader"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

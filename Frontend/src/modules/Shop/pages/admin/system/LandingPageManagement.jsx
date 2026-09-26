@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from "react"
 import { Upload, Trash2, Image as ImageIcon, Loader2, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Layout, Megaphone, Search } from "lucide-react"
-import api from "@store/api"
-import { adminAPI } from "@store/api"
-import { getModuleToken } from "@store/utils/auth"
-import { Input } from "@store/components/ui/input"
-import { Label } from "@store/components/ui/label"
-import { Button } from "@store/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@store/components/ui/dialog"
-import { Checkbox } from "@store/components/ui/checkbox"
-import { resolveMediaUrl } from "../../../../../shared/utils/mediaUrl.js"
+import api from "@shop/api"
+import { adminAPI } from "@shop/api"
+import { getModuleToken } from "@shop/utils/auth"
+import { Input } from "@shop/components/ui/input"
+import { Label } from "@shop/components/ui/label"
+import { Button } from "@shop/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@shop/components/ui/dialog"
+import { Checkbox } from "@shop/components/ui/checkbox"
+import { resolveMediaUrl } from "@shop/platform/utils/mediaUrl"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

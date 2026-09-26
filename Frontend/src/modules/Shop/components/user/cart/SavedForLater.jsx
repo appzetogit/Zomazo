@@ -4,13 +4,13 @@
  * (listed, store approved, in stock) before the line is added back.
  */
 import { useCallback, useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { Loader2, ShoppingBag } from "lucide-react"
 import { toast } from "sonner"
-import { userAPI } from "@store/api"
-import { useCart } from "@store/context/CartContext"
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { isModuleAuthenticated } from "@store/utils/auth"
+import { userAPI } from "@shop/api"
+import { useCart } from "@shop/context/CartContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { isModuleAuthenticated } from "@shop/utils/auth"
 
 const CHANGED_EVENT = "store_saved_for_later_changed"
 const RUPEE = "₹"

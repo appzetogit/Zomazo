@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { sellerAPI } from "@store/api"
+import { sellerAPI } from "@shop/api"
 import { CHANNELS, CHANNEL_INFO, CHANNEL_STATUS_LABEL, channelStatus } from "./channels"
 
 const STATUS_CLS = {

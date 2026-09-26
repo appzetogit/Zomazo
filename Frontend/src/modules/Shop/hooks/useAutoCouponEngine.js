@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react"
-import { useCart } from "@store/context/CartContext"
-import { useProfile } from "@store/context/ProfileContext"
-import { orderAPI, sellerAPI } from "@store/api"
+import { useCart } from "@shop/context/CartContext"
+import { useProfile } from "@shop/context/ProfileContext"
+import { orderAPI, sellerAPI } from "@shop/api"
 import {
   AUTO_COUPON_APPLIED_EVENT,
   buildCartItemsForPricing,
@@ -15,7 +15,7 @@ import {
   rankCouponsBySavings,
   syncCartPreferenceKeys,
   writeAutoCouponState,
-} from "@store/utils/autoCoupon"
+} from "@shop/utils/autoCoupon"
 
 const formatAddressForPricing = (address) => {
   if (!address || typeof address !== "object") return null

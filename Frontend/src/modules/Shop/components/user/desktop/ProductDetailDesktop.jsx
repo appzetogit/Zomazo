@@ -3,13 +3,13 @@
  * gallery | details | buy box, then rails, specifications and ratings.
  * Presentation only: all state and handlers come from ProductDetail.
  */
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { ChevronRight, Coins, MapPin, RotateCcw, Star, Store, Tag } from "lucide-react"
-import RecommendationRail from "@store/components/user/RecommendationRail"
-import { useDeliveryLocation } from "@store/context/DeliveryLocationContext"
-import { CHANNEL_COPY, productInChannel } from "@store/utils/channelStock"
+import RecommendationRail from "@shop/components/user/RecommendationRail"
+import { useDeliveryLocation } from "@shop/context/DeliveryLocationContext"
+import { CHANNEL_COPY, productInChannel } from "@shop/utils/channelStock"
 import { ImagePlaceholder, isRealImage, CtaButton, DealBadge, DeliveryPromise, PriceTag } from "./ui"
-import ProductReviews from "@store/components/user/reviews/ProductReviews"
+import ProductReviews from "@shop/components/user/reviews/ProductReviews"
 import { formatDeliveryWindow, locationPincode, useQuickEta, useShopDeliveryEstimate } from "./useDeliveryEstimates"
 
 const QTY_OPTIONS = Array.from({ length: 10 }, (_, i) => i + 1)

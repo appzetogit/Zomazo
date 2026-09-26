@@ -1,21 +1,21 @@
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { useState, useMemo, useRef, useEffect, useCallback } from "react"
-import { useSearchParams, Link, useNavigate } from "react-router-dom"
+import { useSearchParams, Link, useNavigate } from "@shop/router"
 import { 
   ArrowLeft, Star, Clock, Search, SlidersHorizontal, 
   ChevronDown, Bookmark, BadgePercent, Mic, Grid2x2,
   X, Utensils, Store, Loader2, History
 } from "lucide-react"
-import { Card, CardContent } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { useLocation as useGeoLocation } from "@store/hooks/useLocation"
-import { useZone } from "@store/hooks/useZone"
-import { adminAPI, searchAPI } from "@/services/api"
+import { Card, CardContent } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { useLocation as useGeoLocation } from "@shop/hooks/useLocation"
+import { useZone } from "@shop/hooks/useZone"
+import { adminAPI, searchAPI } from "@shop/api"
 import { motion, AnimatePresence } from "framer-motion"
-import useIsDesktop, { useStorefrontLayout } from "@store/components/user/desktop/useIsDesktop"
-import MobileListing from "@store/components/user/mobile/MobileListing"
-import { DesktopProductListing } from "@store/components/user/desktop/ListingDesktop"
+import useIsDesktop, { useStorefrontLayout } from "@shop/components/user/desktop/useIsDesktop"
+import MobileListing from "@shop/components/user/mobile/MobileListing"
+import { DesktopProductListing } from "@shop/components/user/desktop/ListingDesktop"
 
 // Helper to resolve media URLs consistently
 const getMediaUrl = (url) => {

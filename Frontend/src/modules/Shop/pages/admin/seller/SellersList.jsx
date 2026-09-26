@@ -1,18 +1,18 @@
 import { useState, useMemo, useEffect, useRef } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useNavigate, useSearchParams } from "@shop/router"
 import { Search, Download, ChevronDown, ChevronLeft, ChevronRight, Eye, Settings, ArrowUpDown, Loader2, X, MapPin, Phone, Mail, Clock, Star, Building2, User, FileText, FileSpreadsheet, CreditCard, Calendar, Image as ImageIcon, ExternalLink, ShieldX, AlertTriangle, Trash2, Plus } from "lucide-react"
-import { adminAPI, sellerAPI, uploadAPI } from "@store/api"
-import { clearModuleAuth } from "@store/utils/auth"
-import { resolveMediaUrl } from "../../../../../shared/utils/mediaUrl.js"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@store/components/ui/dropdown-menu"
-import { getGoogleMapsApiKey } from "@store/utils/googleMapsApiKey"
+import { adminAPI, sellerAPI, uploadAPI } from "@shop/api"
+import { clearModuleAuth } from "@shop/utils/auth"
+import { resolveMediaUrl } from "@shop/platform/utils/mediaUrl"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@shop/components/ui/dropdown-menu"
+import { getGoogleMapsApiKey } from "@shop/utils/googleMapsApiKey"
 
 // Import icons from Dashboard-icons
-import locationIcon from "@store/assets/Dashboard-icons/image1.png"
-import sellerIcon from "@store/assets/Dashboard-icons/image2.png"
-import inactiveIcon from "@store/assets/Dashboard-icons/image3.png"
-import { useAdminBase, useAdminPanel } from "@store/components/admin/useAdminPanel"
-import { ChannelStatusBadges, SellerChannelsPanel } from "@store/components/admin/sellers/SellerChannels"
+import locationIcon from "@shop/assets/Dashboard-icons/image1.png"
+import sellerIcon from "@shop/assets/Dashboard-icons/image2.png"
+import inactiveIcon from "@shop/assets/Dashboard-icons/image3.png"
+import { useAdminBase, useAdminPanel } from "@shop/components/admin/useAdminPanel"
+import { ChannelStatusBadges, SellerChannelsPanel } from "@shop/components/admin/sellers/SellerChannels"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -1208,7 +1208,7 @@ export default function SellersList() {
 
   // Handle export functionality
   const loadSellersExportUtils = () =>
-    import("@store/components/admin/sellers/sellersExportUtils")
+    import("@shop/components/admin/sellers/sellersExportUtils")
 
   const handleExport = async () => {
     const dataToExport = filteredSellers.length > 0 ? filteredSellers : sellers

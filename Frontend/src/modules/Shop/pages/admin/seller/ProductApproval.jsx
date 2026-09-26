@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { Search, CheckCircle2, XCircle, Eye, Clock, Loader2 } from "lucide-react"
-import { Card } from "@store/components/ui/card"
+import { Card } from "@shop/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -8,10 +8,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@store/components/ui/dialog"
-import { adminAPI } from "@store/api"
+} from "@shop/components/ui/dialog"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
-import { useAdminPanel } from "@store/components/admin/useAdminPanel"
+import { useAdminPanel } from "@shop/components/admin/useAdminPanel"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

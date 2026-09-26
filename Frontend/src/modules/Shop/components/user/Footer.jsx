@@ -1,9 +1,9 @@
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { Facebook, Twitter, Instagram, Mail, Phone, MapPin, Heart } from "lucide-react"
 import { useState, useEffect } from "react"
-import { getCachedSettings, loadBusinessSettings } from "@store/utils/businessSettings"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import brandMark from "@/config/brandMark"
+import { getCachedSettings, loadBusinessSettings } from "@shop/utils/businessSettings"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import brandMark from "@shop/platform/config/brandMark"
 
 export default function Footer() {
   const companyName = useCompanyName()

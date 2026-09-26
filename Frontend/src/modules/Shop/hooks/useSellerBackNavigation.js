@@ -1,5 +1,5 @@
 import { useCallback } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "@shop/router"
 
 const toSellerPath = (value) => {
   if (typeof value !== "string") return null

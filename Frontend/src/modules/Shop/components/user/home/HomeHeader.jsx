@@ -1,16 +1,16 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from '@shop/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, ChevronDown, Search, Mic, Bell, CheckCircle2, Tag, Gift, AlertCircle, Clock, BellOff, X, ChevronRight, ShoppingBag } from 'lucide-react';
-import { Badge } from "@store/components/ui/badge";
-import { Avatar, AvatarFallback } from "@store/components/ui/avatar";
-import productIcon from "@store/assets/category-icons/food.png";
-import quickIcon from "@store/assets/category-icons/quick.png";
-import taxiIcon from "@store/assets/category-icons/taxi.png";
-import hotelIcon from "@store/assets/category-icons/hotel.png";
-import useNotificationInbox from "@store/hooks/useNotificationInbox";
+import { Badge } from "@shop/components/ui/badge";
+import { Avatar, AvatarFallback } from "@shop/components/ui/avatar";
+import productIcon from "@shop/assets/category-icons/food.png";
+import quickIcon from "@shop/assets/category-icons/quick.png";
+import taxiIcon from "@shop/assets/category-icons/taxi.png";
+import hotelIcon from "@shop/assets/category-icons/hotel.png";
+import useNotificationInbox from "@shop/hooks/useNotificationInbox";
 import { useSearchOverlay } from "../UserLayout";
-import { resolveMediaUrl } from "../../../../../shared/utils/mediaUrl.js";
+import { resolveMediaUrl } from "@shop/platform/utils/mediaUrl";
 const ICON_MAP = {
   CheckCircle2,
   Tag,

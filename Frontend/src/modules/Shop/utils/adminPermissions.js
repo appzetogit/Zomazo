@@ -4,7 +4,10 @@
  * a super admin holds, so the UI gates on the same thing: the account type,
  * never a particular email.
  */
-const isSuperAdmin = (adminUser) => String(adminUser?.adminType || "") === "super_admin"
+import { isPlatformAdmin } from "@shop/utils/platformAdmin"
+
+const isSuperAdmin = (adminUser) =>
+  isPlatformAdmin(adminUser) || String(adminUser?.adminType || "") === "super_admin"
 
 export function canAccessFeatureSettings(adminUser) {
   return isSuperAdmin(adminUser)

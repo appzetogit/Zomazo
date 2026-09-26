@@ -1,5 +1,5 @@
-import CMSPage from "@store/components/user/CMSPage"
-import { API_ENDPOINTS } from "@store/api/config"
+import CMSPage from "@shop/components/user/CMSPage"
+import { API_ENDPOINTS } from "@shop/api/config"
 
 export default function CMSHelpSupport() {
   return (

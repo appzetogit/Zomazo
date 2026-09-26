@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { Search, Wallet, Eye, CheckCircle, XCircle, Loader2, Package, QrCode } from "lucide-react"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
 import {
   Dialog,
@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@store/components/ui/dialog"
+} from "@shop/components/ui/dialog"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

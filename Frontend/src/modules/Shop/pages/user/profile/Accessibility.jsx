@@ -1,10 +1,10 @@
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { ArrowLeft, Accessibility as AccessibilityIcon, Eye, Volume2, MousePointerClick } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Button } from "@store/components/ui/button"
-import { Card, CardContent } from "@store/components/ui/card"
-import { Switch } from "@store/components/ui/switch"
-import { Label } from "@store/components/ui/label"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Button } from "@shop/components/ui/button"
+import { Card, CardContent } from "@shop/components/ui/card"
+import { Switch } from "@shop/components/ui/switch"
+import { Label } from "@shop/components/ui/label"
 import { useState } from "react"
 
 export default function Accessibility() {

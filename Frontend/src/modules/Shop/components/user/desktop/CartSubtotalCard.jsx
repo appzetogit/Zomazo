@@ -4,7 +4,7 @@
  * payment sheet, place order) so checkout behaves exactly as on mobile.
  */
 import { MapPin } from "lucide-react"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { CtaButton, DeliveryPromise } from "./ui"
 
 const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`

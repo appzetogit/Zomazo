@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
-import { API_BASE_URL } from '@store/api/config';
-import { sellerAPI } from '@store/api';
-import { dispatchNotificationInboxRefresh } from '@store/hooks/useNotificationInbox';
+import { API_BASE_URL } from '@shop/api/config';
+import { ecomSocketUrl } from '@shop/api/socketUrl';
+import { sellerAPI } from '@shop/api';
+import { dispatchNotificationInboxRefresh } from '@shop/hooks/useNotificationInbox';
 import {
   attachSellerAlertUnlockListeners,
   getSellerOrderAlertKey,
@@ -10,7 +11,7 @@ import {
   stopAllSellerAlerts,
   stopSellerAlert,
   syncSellerAlertsWithOrders,
-} from '@store/utils/sellerAlertSession';
+} from '@shop/utils/sellerAlertSession';
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -277,7 +278,8 @@ export const useSellerNotifications = () => {
     }
 
     // Normalize backend URL - use simpler, more robust approach
-    let backendUrl = API_BASE_URL;
+    // Absolute, so a same-origin '/api/v1' passes the http(s) check below.
+    let backendUrl = new URL(API_BASE_URL, window.location.origin).href;
     
     // Step 1: Extract protocol and hostname using URL parsing if possible
     try {
@@ -394,8 +396,8 @@ export const useSellerNotifications = () => {
         .replace(/\/+$/, "");
     }
 
-    // Backend uses default namespace; rooms handle role separation.
-    const socketUrl = `${socketOrigin}`;
+    // The Shop's namespace on the platform's server; rooms handle role separation.
+    const socketUrl = ecomSocketUrl();
     
     // Validate socket URL format
     try {

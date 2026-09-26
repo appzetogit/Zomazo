@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { Check, ChevronDown, Search, X } from "lucide-react"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

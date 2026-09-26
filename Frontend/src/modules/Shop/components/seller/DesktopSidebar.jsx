@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { NavLink, useNavigate, useLocation } from "react-router-dom"
+import { NavLink, useNavigate, useLocation } from "@shop/router"
 import {
   Store,
   FileText,
@@ -23,9 +23,9 @@ import {
   Wallet,
   CreditCard,
 } from "lucide-react"
-import { sellerAPI } from "@store/api"
-import { getCompanyName, getModuleLogoUrl, getCachedSettings, loadBusinessSettings } from "@store/utils/businessSettings"
-import { logoutSellerSession } from "@store/utils/sellerLogout"
+import { sellerAPI } from "@shop/api"
+import { getCompanyName, getModuleLogoUrl, getCachedSettings, loadBusinessSettings } from "@shop/utils/businessSettings"
+import { logoutSellerSession } from "@shop/utils/sellerLogout"
 
 const BASE = "/seller"
 

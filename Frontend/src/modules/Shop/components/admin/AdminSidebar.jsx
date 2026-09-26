@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation } from "@shop/router"
 import {
   Search,
   FileText,
@@ -58,15 +58,15 @@ import {
   BellRing,
   Star,
 } from "lucide-react"
-import { cn } from "@store/utils/utils"
-import { Input } from "@store/components/ui/input"
-import { adminSidebarMenu, getAdminSidebarMenu } from "@store/utils/adminSidebarMenu"
+import { cn } from "@shop/utils/utils"
+import { Input } from "@shop/components/ui/input"
+import { adminSidebarMenu, getAdminSidebarMenu } from "@shop/utils/adminSidebarMenu"
 import { useAdminPanel } from "./useAdminPanel"
-import { adminAPI } from "@store/api"
-import { getCachedSettings, loadBusinessSettings } from "@store/utils/businessSettings"
-import { canAccessFeatureSettings, canAccessSuperPowers } from "@store/utils/adminPermissions"
-import { canAdminAccess, isSuperAdmin, resolvePermissionSectionByPath } from "@store/utils/adminRbac"
-import brandMark from "@/config/brandMark"
+import { adminAPI } from "@shop/api"
+import { getCachedSettings, loadBusinessSettings } from "@shop/utils/businessSettings"
+import { canAccessFeatureSettings, canAccessSuperPowers } from "@shop/utils/adminPermissions"
+import { canAdminAccess, isSuperAdmin, resolvePermissionSectionByPath } from "@shop/utils/adminRbac"
+import brandMark from "@shop/platform/config/brandMark"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

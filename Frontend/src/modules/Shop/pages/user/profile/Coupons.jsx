@@ -1,9 +1,9 @@
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { useEffect, useMemo, useState } from "react"
 import { ArrowLeft, Copy, MapPin, TicketPercent } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Button } from "@store/components/ui/button"
-import { sellerAPI } from "@store/api"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Button } from "@shop/components/ui/button"
+import { sellerAPI } from "@shop/api"
 import { toast } from "sonner"
 
 export default function Coupons() {

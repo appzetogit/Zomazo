@@ -1,0 +1,256 @@
+/*
+ * The Shop's share of the global stylesheet, @imported by shared/styles/global.css.
+ *
+ * Only what the Shop needs and the platform did not already have. The
+ * standalone app's global.css also redefined the shadcn colour variables and
+ * the html/body/#root base rules; both apps descend from the same template, so
+ * the platform already has those, and taking the Shop's copies would have
+ * restyled food and taxi. Everything here is either prefixed wh-* (no other
+ * module uses that prefix) or a helper the platform was missing.
+ *
+ * It lives in the global sheet rather than being imported by the Shop's own
+ * components because Tailwind 4 only generates utilities (bg-wh-surface,
+ * wide:grid-cols-6) for theme tokens declared in the main stylesheet.
+ */
+
+:root {
+  /* Desktop storefront theme */
+  --wh-nav: #131921;
+  --wh-nav-2: #232F3E;
+  --wh-nav-3: #37475A;
+  --wh-brand: #FD920B;
+  --wh-brand-600: #E07F00;
+  --wh-brand-ink: #B45309; /* brand-coloured text/icons on light backgrounds (AA) */
+  --wh-brand-50: #FFF4E5;  /* light brand tint */
+  --wh-cta: #FFD814;
+  --wh-cta-hover: #F7CA00;
+  --wh-cta-2: #FFA41C;
+  --wh-cta-2-hover: #FA8900;
+  --wh-page: #E3E6E6;
+  --wh-surface: #FFFFFF;
+  --wh-text: #0F1111;
+  --wh-muted: #565959;
+  --wh-link: #2162A1;
+  --wh-link-hover: #C7511F;
+  --wh-deal: #CC0C39;
+  --wh-success: #0B7B3C;
+  --wh-border: #D5D9D9;
+  --wh-quick: #0B7B3C;
+  /* Serif display face for storefront section headings. Loaded by ShopApp. */
+  --wh-display: "Cormorant Garamond", "Playfair Display", Georgia, serif;
+}
+
+@theme inline {
+  /* A grid step at 1400px: `wide:` variants. */
+  --breakpoint-wide: 1400px;
+  --color-wh-nav: var(--wh-nav);
+  --color-wh-nav-2: var(--wh-nav-2);
+  --color-wh-nav-3: var(--wh-nav-3);
+  --color-wh-brand: var(--wh-brand);
+  --color-wh-brand-600: var(--wh-brand-600);
+  --color-wh-brand-ink: var(--wh-brand-ink);
+  --color-wh-brand-50: var(--wh-brand-50);
+  --color-wh-cta: var(--wh-cta);
+  --color-wh-cta-hover: var(--wh-cta-hover);
+  --color-wh-cta-2: var(--wh-cta-2);
+  --color-wh-cta-2-hover: var(--wh-cta-2-hover);
+  --color-wh-page: var(--wh-page);
+  --color-wh-surface: var(--wh-surface);
+  --color-wh-text: var(--wh-text);
+  --color-wh-muted: var(--wh-muted);
+  --color-wh-link: var(--wh-link);
+  --color-wh-link-hover: var(--wh-link-hover);
+  --color-wh-deal: var(--wh-deal);
+  --color-wh-success: var(--wh-success);
+  --color-wh-border: var(--wh-border);
+  --color-wh-quick: var(--wh-quick);
+}
+
+/* Helpers the platform did not have. */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-7px); }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes ticker {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-14deg); }
+  75% { transform: rotate(14deg); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.4), 0 0 30px rgba(234, 88, 12, 0.2); }
+  50% { box-shadow: 0 0 25px rgba(245, 158, 11, 0.8), 0 0 50px rgba(234, 88, 12, 0.4); }
+}
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+.animate-float { animation: float 3.5s ease-in-out infinite; }
+.animate-spin-slow { animation: spin-slow 12s linear infinite; }
+.animate-ticker { animation: ticker 0.1s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-shimmer-sweep { animation: shimmer-sweep 2.5s ease-in-out infinite; }
+
+/* Desktop storefront shell: Inter, 14/20. Applied only by lg+ desktop components. */
+.wh-desktop {
+  font-family: 'Inter', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--wh-text);
+}
+.wh-desktop :focus-visible {
+  outline: 2px solid var(--wh-brand);
+  outline-offset: 2px;
+}
+.wh-container {
+  max-width: 1500px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.font-display {
+  font-family: var(--wh-display);
+}
+
+@keyframes wh-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes wh-slide-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes wh-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Sections start hidden and rise into place when they scroll into view. */
+.wh-reveal { opacity: 0; }
+.wh-reveal.is-visible {
+  animation: wh-slide-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.wh-marquee-track { animation: wh-marquee 28s linear infinite; }
+
+/* A rail scrolls horizontally and snaps, without showing a scrollbar. */
+.wh-rail {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.wh-rail::-webkit-scrollbar { display: none; }
+
+@keyframes wh-ken-burns {
+  from { transform: scale(1) translate3d(0, 0, 0); }
+  to { transform: scale(1.08) translate3d(0, -1.5%, 0); }
+}
+@keyframes wh-sheen {
+  from { transform: translateX(-120%) skewX(-18deg); }
+  to { transform: translateX(220%) skewX(-18deg); }
+}
+@keyframes wh-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.wh-kenburns { animation: wh-ken-burns 18s ease-in-out infinite alternate; }
+.wh-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: translateX(-120%) skewX(-18deg);
+  pointer-events: none;
+}
+.wh-sheen:hover::after { animation: wh-sheen 0.9s ease-out; }
+.wh-blink { animation: wh-blink 1.6s ease-in-out infinite; }
+
+/* Cards and tiles lift a little under the pointer. */
+.wh-lift {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+}
+.wh-lift:hover { transform: translateY(-3px); }
+
+@keyframes wh-slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes wh-slide-up-bar {
+  from { opacity: 0; transform: translateY(120%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes wh-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+@keyframes wh-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes wh-shuffle {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  33% { transform: translateX(3px) rotate(-4deg); }
+  66% { transform: translateX(-3px) rotate(4deg); }
+}
+.wh-slide-in-right { animation: wh-slide-in-right 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.wh-slide-up-bar { animation: wh-slide-up-bar 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+.wh-pop { animation: wh-pop 0.45s ease-out; }
+.wh-bob { animation: wh-bob 3.2s ease-in-out infinite; }
+.wh-shuffle { animation: wh-shuffle 2.8s ease-in-out infinite; }
+
+/* Two stacked range inputs make one price slider (FilterSheet): the tracks
+ * are invisible and only the thumbs take the pointer. */
+.wh-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+.wh-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid #ea580c;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+.wh-range::-moz-range-thumb {
+  pointer-events: auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid #ea580c;
+  cursor: pointer;
+}
+.wh-range::-webkit-slider-runnable-track,
+.wh-range::-moz-range-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wh-reveal { opacity: 1; }
+  .wh-reveal.is-visible,
+  .wh-marquee-track,
+  .wh-kenburns,
+  .wh-blink,
+  .wh-sheen:hover::after,
+  .wh-slide-in-right,
+  .wh-slide-up-bar,
+  .wh-pop,
+  .wh-bob,
+  .wh-shuffle {
+    animation: none;
+  }
+  .wh-lift:hover { transform: none; }
+}

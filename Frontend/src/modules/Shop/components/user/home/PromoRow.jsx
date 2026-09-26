@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import discountPromoIcon from "@store/assets/category-icons/discount_promo.png";
-import collectionPromoIcon from "@store/assets/explore more icons/collection.png";
+import discountPromoIcon from "@shop/assets/category-icons/discount_promo.png";
+import collectionPromoIcon from "@shop/assets/explore more icons/collection.png";
 
 export default function PromoRow({ navigate }) {
   const promoCardsData = [

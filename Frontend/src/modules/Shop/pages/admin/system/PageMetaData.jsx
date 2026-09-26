@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react"
 import { Pencil, Settings, Search, Download, ChevronDown, FileText, FileSpreadsheet, Code, Check, Columns, ArrowUpDown } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@store/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@store/components/ui/dialog"
-import { Label } from "@store/components/ui/label"
-import { Textarea } from "@store/components/ui/textarea"
-import { exportSEOPagesToCSV, exportSEOPagesToExcel, exportSEOPagesToPDF, exportSEOPagesToJSON } from "@store/components/admin/seo/seoExportUtils"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@shop/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shop/components/ui/dialog"
+import { Label } from "@shop/components/ui/label"
+import { Textarea } from "@shop/components/ui/textarea"
+import { exportSEOPagesToCSV, exportSEOPagesToExcel, exportSEOPagesToPDF, exportSEOPagesToJSON } from "@shop/components/admin/seo/seoExportUtils"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

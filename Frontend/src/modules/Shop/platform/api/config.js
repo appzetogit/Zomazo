@@ -9,6 +9,11 @@ export const API_BASE_URL =
     ? String(import.meta.env.VITE_API_BASE_URL).replace(/\/$/, "")
     : "/api/v1";
 
+// The platform API root, for the few calls that belong to the platform rather
+// than the Shop's /ecom mount (the admin's own profile). Same fallback as the
+// Shop's axios client.
+export const PLATFORM_API_BASE_URL = API_BASE_URL || "/api/v1";
+
 // Minimal shape so existing API_ENDPOINTS.* references do not break
 export const API_ENDPOINTS = {
   AUTH: { SEND_OTP: "", VERIFY_OTP: "", REGISTER: "", LOGIN: "", ME: "", LOGOUT: "", REFRESH_TOKEN: "" },

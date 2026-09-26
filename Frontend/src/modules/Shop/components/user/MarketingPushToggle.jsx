@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
 import { BellRing } from "lucide-react"
 import { toast } from "sonner"
-import { userAPI } from "@store/api"
-import { Card, CardContent } from "@store/components/ui/card"
+import { userAPI } from "@shop/api"
+import { Card, CardContent } from "@shop/components/ui/card"
 
 /** Customer setting: receive offers & promotions push notifications (default on). */
 export default function MarketingPushToggle() {

@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from "react"
 import { Search, Filter, Eye, Check, X, Package, ArrowUpDown, FileText, FileSpreadsheet, Loader2, Download, ExternalLink, Calendar, MapPin, CreditCard, User, Mail, Phone, Bike, FileCheck } from "lucide-react"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@store/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@shop/components/ui/dialog"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -193,7 +193,7 @@ export default function JoinRequest() {
   }
 
   const loadJoinRequestExportUtils = () =>
-    import("@store/components/admin/deliveryman/joinRequestExportUtils")
+    import("@shop/components/admin/deliveryman/joinRequestExportUtils")
 
   const handleExportPDF = async () => {
     if (filteredRequests.length === 0) {

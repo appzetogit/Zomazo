@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Loader2, RotateCcw, Search } from "lucide-react"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 import { formatCurrency, formatDateTime, errorMessage } from "../reports/reportShared"
 import ShipmentTabs from "./ShipmentTabs"
 

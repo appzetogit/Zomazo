@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useParams } from "@shop/router"
 import { toast } from "sonner"
 import { ArrowLeft, Loader2 } from "lucide-react"
-import { adminAPI } from "@store/api"
-import { useAdminBase } from "@store/components/admin/useAdminPanel"
+import { adminAPI } from "@shop/api"
+import { useAdminBase } from "@shop/components/admin/useAdminPanel"
 import { SummaryCard, formatCurrency, formatDateTime, errorMessage } from "../reports/reportShared"
 import { LineStatus } from "./codShared"
 

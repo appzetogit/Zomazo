@@ -13,10 +13,10 @@ import {
   Upload,
   X,
 } from "lucide-react"
-import { adminAPI, attributeAdminAPI, uploadAPI } from "@store/api"
-import { API_BASE_URL } from "@store/api/config"
+import { adminAPI, attributeAdminAPI, uploadAPI } from "@shop/api"
+import { API_BASE_URL } from "@shop/api/config"
 import { toast } from "sonner"
-import { canCurrentAdminAction } from "@store/utils/adminRbac"
+import { canCurrentAdminAction } from "@shop/utils/adminRbac"
 
 const defaultFormData = {
   name: "",

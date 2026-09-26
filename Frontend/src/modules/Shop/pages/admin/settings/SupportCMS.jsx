@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import api from "@store/api"
-import { API_ENDPOINTS } from "@store/api/config"
-import { Textarea } from "@store/components/ui/textarea"
-import { legalHtmlToPlainText, plainTextToLegalHtml } from "@store/utils/legalContentFormat"
+import api from "@shop/api"
+import { API_ENDPOINTS } from "@shop/api/config"
+import { Textarea } from "@shop/components/ui/textarea"
+import { legalHtmlToPlainText, plainTextToLegalHtml } from "@shop/utils/legalContentFormat"
 const debugError = (...args) => {}
 const SUPPORT_EMAIL_REGEX = /^(?!.*\.\.)([A-Za-z0-9]+[._%+-]?)*[A-Za-z0-9]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}$/
 const INDIAN_MOBILE_REGEX = /^[6-9]\d{9}$/

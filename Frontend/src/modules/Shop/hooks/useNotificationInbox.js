@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { notificationAPI } from "@store/api";
+import { notificationAPI } from "@shop/api";
 
 const normalizeInboxItems = (rows = []) =>
   (Array.isArray(rows) ? rows : []).map((item, index) => ({

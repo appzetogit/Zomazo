@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Monitor, Info, Check, Copy, Edit, ExternalLink, Settings, ArrowUpDown, Columns } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@store/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shop/components/ui/dialog"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

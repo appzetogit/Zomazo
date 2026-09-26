@@ -1,9 +1,9 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, Edit, Phone, Users, ChevronDown, X } from "lucide-react"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 
 export default function PhoneNumbersPage() {
   const companyName = useCompanyName()

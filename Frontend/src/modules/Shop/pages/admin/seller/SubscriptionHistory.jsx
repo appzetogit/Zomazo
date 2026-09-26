@@ -12,7 +12,7 @@ import {
   ReceiptText,
 } from "lucide-react";
 import { toast } from "sonner";
-import { adminAPI } from "@store/api";
+import { adminAPI } from "@shop/api";
 
 const formatMoney = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

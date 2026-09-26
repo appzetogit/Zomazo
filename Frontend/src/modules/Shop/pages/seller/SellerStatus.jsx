@@ -1,16 +1,16 @@
-import SalesChannelsCard from "@store/components/seller/SalesChannelsCard"
+import SalesChannelsCard from "@shop/components/seller/SalesChannelsCard"
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import Lenis from "lenis"
 import { ArrowLeft, Settings, ChevronRight } from "lucide-react"
-import { Switch } from "@store/components/ui/switch"
-import { Card, CardContent } from "@store/components/ui/card"
-import { sellerAPI } from "@store/api"
+import { Switch } from "@shop/components/ui/switch"
+import { Card, CardContent } from "@shop/components/ui/card"
+import { sellerAPI } from "@shop/api"
 import {
   getSellerOperationalStatus,
   broadcastSellerOperationalStatus,
-} from "@store/utils/sellerOperationalStatus"
+} from "@shop/utils/sellerOperationalStatus"
 const debugLog = (...args) => {}
 const debugError = (...args) => {}
 

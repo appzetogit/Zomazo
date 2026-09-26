@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom"
+import { useNavigate, useLocation } from "@shop/router"
 import { memo, useMemo } from "react"
 import { motion } from "framer-motion"
 import {

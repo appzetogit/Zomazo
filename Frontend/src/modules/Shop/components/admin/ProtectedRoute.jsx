@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react"
-import { Navigate, useLocation } from "react-router-dom"
-import { adminAPI } from "@store/api"
+import { Navigate, useLocation } from "@shop/router"
+import { adminAPI } from "@shop/api"
 import {
-  clearModuleAuth,
   ensureValidAccessToken,
   getCurrentUser,
   isModuleAuthenticated,
-  setAuthData,
-} from "@store/utils/auth"
-import { canAccessAdminPath, findFirstAllowedAdminPath } from "@store/utils/adminRbac"
+} from "@shop/utils/auth"
+import { canAccessAdminPath, findFirstAllowedAdminPath } from "@shop/utils/adminRbac"
 import { getAdminPanelFromPath } from "./useAdminPanel"
 
 export default function ProtectedRoute({ children }) {
@@ -34,28 +32,21 @@ export default function ProtectedRoute({ children }) {
         return
       }
 
+      // The session is the PLATFORM admin's (admin_accessToken / admin_user,
+      // written by the platform's /admin/login). This guard only checks it is
+      // still good; it never rewrites or clears it. The standalone guard stored
+      // its own profile over admin_user and, on any 401/403, deleted the token --
+      // which signed the admin out of the whole platform, and did so for every
+      // food-only admin who merely opened /admin/shop.
       try {
-        const res = await adminAPI.getCurrentAdmin()
-        const user =
-          res?.data?.data?.user ??
-          res?.data?.user ??
-          res?.data?.data ??
-          res?.data
-        const token = localStorage.getItem("admin_accessToken")
-        const refreshToken = localStorage.getItem("admin_refreshToken")
-        if (token && user) {
-          setAuthData("admin", token, user, refreshToken)
-          window.dispatchEvent(new Event("adminAuthChanged"))
-        }
+        await adminAPI.getCurrentAdmin()
         if (isMounted) setStatus("ok")
       } catch (error) {
-        // Only force logout on auth failure — keep session on network/server blips.
-        const statusCode = error?.response?.status
-        if (statusCode === 401 || statusCode === 403) {
-          clearModuleAuth("admin")
+        if (error?.response?.status === 401) {
           if (isMounted) setStatus("deny")
           return
         }
+        // Network/server blips keep the session.
         if (isMounted) setStatus("ok")
       }
     }

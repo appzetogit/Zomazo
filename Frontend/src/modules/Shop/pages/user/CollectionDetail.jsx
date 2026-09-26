@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react"
-import { Link, useParams, useNavigate } from "react-router-dom"
+import { Link, useParams, useNavigate } from "@shop/router"
 import { ArrowLeft, Share2, Trash2, Heart, Star, Clock, MapPin } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import ScrollReveal from "@store/components/user/ScrollReveal"
-import { Card, CardContent } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
-import { Badge } from "@store/components/ui/badge"
-import { useProfile } from "@store/context/ProfileContext"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
-import { imagePlaceholder } from "@store/constants/images"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import ScrollReveal from "@shop/components/user/ScrollReveal"
+import { Card, CardContent } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { Badge } from "@shop/components/ui/badge"
+import { useProfile } from "@shop/context/ProfileContext"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
+import { imagePlaceholder } from "@shop/constants/images"
 
 export default function CollectionDetail() {
   const { id } = useParams()

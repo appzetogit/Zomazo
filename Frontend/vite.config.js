@@ -19,6 +19,7 @@ const buildId = String(Date.now())
 
 const foodSrc = path.resolve(__dirname, './src/modules/Food')
 const servicesApi = path.resolve(__dirname, './src/services/api')
+const shopSrc = path.resolve(__dirname, './src/modules/Shop')
 
 export default defineConfig({
   plugins: [
@@ -47,6 +48,14 @@ export default defineConfig({
       '@food': foodSrc,
       '@delivery': path.resolve(__dirname, './src/modules/DeliveryV2'),
       '@sp': path.resolve(__dirname, './src/modules/ServiceProvider'),
+      // Shop (e-commerce). Its API client, router and platform shims live inside
+      // the module, so it never reaches into another module's files.
+      '@shop/api/axios': path.resolve(shopSrc, 'platform/api/axios.js'),
+      '@shop/api/config': path.resolve(shopSrc, 'platform/api/config.js'),
+      '@shop/api/socketUrl': path.resolve(shopSrc, 'platform/api/socketUrl.js'),
+      '@shop/api': path.resolve(shopSrc, 'platform/api'),
+      '@shop/router': path.resolve(shopSrc, 'platform/router.jsx'),
+      '@shop': shopSrc,
       '@/assets': path.resolve(__dirname, './src/modules/Taxi/assets'),
       '@': path.resolve(__dirname, './src'),
     },

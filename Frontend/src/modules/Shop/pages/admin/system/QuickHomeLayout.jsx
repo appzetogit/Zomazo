@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { ArrowDown, ArrowUp, ExternalLink, ImagePlus, Loader2, Plus, RotateCcw, Save, Trash2 } from "lucide-react"
-import { adminAPI, uploadAPI } from "@/services/api"
+import { adminAPI, uploadAPI } from "@shop/api"
 
 /**
  * Editor for the Quick phone home (QUICK_MOBILE_SPEC.md §3): the themed tabs

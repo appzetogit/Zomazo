@@ -1,7 +1,7 @@
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { useState, useEffect, useMemo } from "react"
-import { useParams, Link, useNavigate } from "react-router-dom"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
+import { useParams, Link, useNavigate } from "@shop/router"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   ArrowLeft, 
@@ -22,18 +22,18 @@ import {
   AlertCircle
 } from "lucide-react"
 import { toast } from "sonner"
-import { catalogAPI } from "@/services/api"
-import { brandMarkUrl } from "@/config/brandMark"
-import SEOHead from "@store/components/SEOHead"
-import RecommendationRail from "@store/components/user/RecommendationRail"
-import ProductReviews from "@store/components/user/reviews/ProductReviews"
-import { useCart } from "@store/context/CartContext"
-import { Button } from "@store/components/ui/button"
-import ProductDetailDesktop from "@store/components/user/desktop/ProductDetailDesktop"
-import useIsDesktop, { useStorefrontLayout } from "@store/components/user/desktop/useIsDesktop"
-import MobileProductView from "@store/components/user/mobile/MobileProductView"
-import { ProductDetailSkeleton } from "@store/components/user/desktop/HomeSkeletons"
-import { CHANNEL_COPY, channelAvailability, otherChannel, productInChannel, stockLabel, variantInChannel } from "@store/utils/channelStock"
+import { catalogAPI } from "@shop/api"
+import { brandMarkUrl } from "@shop/platform/config/brandMark"
+import SEOHead from "@shop/components/SEOHead"
+import RecommendationRail from "@shop/components/user/RecommendationRail"
+import ProductReviews from "@shop/components/user/reviews/ProductReviews"
+import { useCart } from "@shop/context/CartContext"
+import { Button } from "@shop/components/ui/button"
+import ProductDetailDesktop from "@shop/components/user/desktop/ProductDetailDesktop"
+import useIsDesktop, { useStorefrontLayout } from "@shop/components/user/desktop/useIsDesktop"
+import MobileProductView from "@shop/components/user/mobile/MobileProductView"
+import { ProductDetailSkeleton } from "@shop/components/user/desktop/HomeSkeletons"
+import { CHANNEL_COPY, channelAvailability, otherChannel, productInChannel, stockLabel, variantInChannel } from "@shop/utils/channelStock"
 
 export default function ProductDetail() {
   const { storePath, fulfilmentMode, isQuick } = useStoreMode()

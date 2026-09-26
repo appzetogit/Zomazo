@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
-import { useLocation } from "react-router-dom"
+import { useLocation } from "@shop/router"
 import { AnimatePresence, motion } from "framer-motion"
 import confetti from "canvas-confetti"
 import { Check } from "lucide-react"
-import { AUTO_COUPON_APPLIED_EVENT } from "@store/utils/autoCoupon"
+import { AUTO_COUPON_APPLIED_EVENT } from "@shop/utils/autoCoupon"
 
 function fireOfferConfetti(originY = 0.78) {
   try {

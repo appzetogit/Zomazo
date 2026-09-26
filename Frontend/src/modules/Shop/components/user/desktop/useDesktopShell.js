@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
-import { adminAPI } from "@store/api"
-import { getCachedSettings, loadBusinessSettings } from "@store/utils/businessSettings"
-import { APP_CONFIG } from "@/config/constants"
-import { brandLogoOnDark } from "@/config/brandMark"
+import { adminAPI } from "@shop/api"
+import { getCachedSettings, loadBusinessSettings } from "@shop/utils/businessSettings"
+import { APP_CONFIG } from "@shop/platform/config/constants"
+import { brandLogoOnDark } from "@shop/platform/config/brandMark"
 
 /** Business Settings (cached, refreshed on the businessSettingsUpdated event). */
 export function useBusinessSettings() {

@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "@shop/router"
 import { ArrowLeft, Search, MoreVertical, ChevronRight, Star, RotateCcw, AlertCircle, Loader2, Clock, X, Share2, MessageCircle, Send, Copy, Mail, MessagesSquare, Link2 } from "lucide-react"
-import { orderAPI } from "@store/api"
-import { useCart } from "@store/context/CartContext"
+import { orderAPI } from "@shop/api"
+import { useCart } from "@shop/context/CartContext"
 import { toast } from "sonner"
-import { getCompanyNameAsync } from "@store/utils/businessSettings"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import { imagePlaceholder } from "@store/constants/images"
+import { getCompanyNameAsync } from "@shop/utils/businessSettings"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import { imagePlaceholder } from "@shop/constants/images"
 const debugLog = (...args) => { }
 const debugWarn = (...args) => { }
 const debugError = (...args) => { }

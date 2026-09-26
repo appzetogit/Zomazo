@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
 
 /**

@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { RotateCcw } from "lucide-react"
-import { catalogAPI, orderAPI } from "@/services/api"
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { isModuleAuthenticated } from "@store/utils/auth"
-import QuickProductCard from "@store/components/user/desktop/quick/QuickProductCard"
-import { QUICK_GRID, QuickGridSkeleton } from "@store/components/user/desktop/quick/QuickRail"
-import ProductCard from "@store/components/user/storefront/ProductCard"
-import { useDesktopAddToCart } from "@store/components/user/desktop/desktopCart"
+import { catalogAPI, orderAPI } from "@shop/api"
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { isModuleAuthenticated } from "@shop/utils/auth"
+import QuickProductCard from "@shop/components/user/desktop/quick/QuickProductCard"
+import { QUICK_GRID, QuickGridSkeleton } from "@shop/components/user/desktop/quick/QuickRail"
+import ProductCard from "@shop/components/user/storefront/ProductCard"
+import { useDesktopAddToCart } from "@shop/components/user/desktop/desktopCart"
 
 /**
  * Order Again (QUICK_MOBILE_SPEC.md, Q5): everything the customer has bought

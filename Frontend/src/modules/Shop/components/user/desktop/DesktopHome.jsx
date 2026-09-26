@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
-import { catalogAPI, searchAPI, orderAPI } from "@store/api"
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { isModuleAuthenticated } from "@store/utils/auth"
-import { resolveMediaUrl } from "@/shared/utils/mediaUrl"
+import { catalogAPI, searchAPI, orderAPI } from "@shop/api"
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { isModuleAuthenticated } from "@shop/utils/auth"
+import { resolveMediaUrl } from "@shop/platform/utils/mediaUrl"
 import HeroCarousel from "./HeroCarousel"
 import { HomeSkeleton } from "./HomeSkeletons"
 import {

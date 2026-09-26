@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Save, Loader2, Gift } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { adminAPI } from "@store/api"
+import { Button } from "@shop/components/ui/button"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
 
 const debugError = (...args) => {}

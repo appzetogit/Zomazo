@@ -1,9 +1,9 @@
 import { useState, useRef } from "react"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { ArrowLeft, Upload } from "lucide-react"
-import { ImageSourcePicker } from "@store/components/ImageSourcePicker"
-import { isFlutterBridgeAvailable } from "@store/utils/imageUploadUtils"
+import { ImageSourcePicker } from "@shop/components/ImageSourcePicker"
+import { isFlutterBridgeAvailable } from "@shop/utils/imageUploadUtils"
 import { toast } from "sonner"
 
 export default function FssaiUpdate() {

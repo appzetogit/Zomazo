@@ -4,8 +4,8 @@
  * Built from the real category tree — the children of the top parents, falling
  * back to the parents themselves when a parent has no subcategories.
  */
-import { Link } from "react-router-dom"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { Link } from "@shop/router"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { isRealImage } from "../ui"
 import { cx, focusRing } from "./quickHelpers"
 import { mediaUrl } from "../desktopCart"

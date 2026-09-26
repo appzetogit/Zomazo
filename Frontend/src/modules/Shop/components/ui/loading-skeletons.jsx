@@ -1,5 +1,5 @@
-import { Skeleton } from "@store/components/ui/skeleton"
-import { cn } from "@store/utils/utils"
+import { Skeleton } from "@shop/components/ui/skeleton"
+import { cn } from "@shop/utils/utils"
 
 const DEFAULT_CARD_COUNT = 4
 

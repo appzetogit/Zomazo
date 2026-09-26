@@ -3,9 +3,9 @@
  * Always clears local session even if network/API calls fail.
  */
 
-import { authAPI, sellerAPI, deliveryAPI, userAPI } from "@store/api";
-import { clearModuleAuth, clearAuthData } from "@store/utils/auth";
-import { resolveDeviceFcmToken } from "@store/utils/firebaseMessaging";
+import { authAPI, sellerAPI, deliveryAPI, userAPI } from "@shop/api";
+import { clearModuleAuth, clearAuthData } from "@shop/utils/auth";
+import { resolveDeviceFcmToken } from "@shop/utils/firebaseMessaging";
 
 const LOGIN_PATHS = {
   seller: "/seller/login",
@@ -24,7 +24,7 @@ const USER_SESSION_PREFERENCE_KEYS = ["userVegMode"];
 
 async function signOutFirebaseAuthBestEffort() {
   try {
-    const { firebaseAuth, ensureFirebaseInitialized } = await import("@store/firebase");
+    const { firebaseAuth, ensureFirebaseInitialized } = await import("@shop/firebase");
     ensureFirebaseInitialized({ enableAuth: true, enableRealtimeDb: false });
     const { signOut } = await import("firebase/auth");
     if (firebaseAuth?.currentUser) {

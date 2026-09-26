@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import Lenis from "lenis"
 import { ArrowLeft, ChevronDown } from "lucide-react"
-import BottomPopup from "@delivery/components/BottomPopup"
-import { sellerAPI } from "@store/api"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import BottomPopup from "@shop/components/shared/BottomPopup"
+import { sellerAPI } from "@shop/api"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

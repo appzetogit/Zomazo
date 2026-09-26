@@ -1,5 +1,5 @@
-import { Navigate } from "react-router-dom"
-import { isModuleAuthenticated } from "@store/utils/auth"
+import { Navigate } from "@shop/router"
+import { isModuleAuthenticated } from "@shop/utils/auth"
 
 /**
  * AuthRedirect Component

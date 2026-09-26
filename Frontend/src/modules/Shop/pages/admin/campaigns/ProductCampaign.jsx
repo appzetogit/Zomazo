@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, ArrowUpDown, Plus, Edit, Trash2, Megaphone, Settings } from "lucide-react"
-import { emptyProductCampaigns } from "@store/utils/adminFallbackData"
+import { emptyProductCampaigns } from "@shop/utils/adminFallbackData"
 
 export default function ProductCampaign() {
   const [searchQuery, setSearchQuery] = useState("")

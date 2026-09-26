@@ -3,9 +3,9 @@
  * Both take the rows their pages already fetched.
  */
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { Star, Clock, Search } from "lucide-react"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 
 const cx = (...a) => a.filter(Boolean).join(" ")
 const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wh-brand"

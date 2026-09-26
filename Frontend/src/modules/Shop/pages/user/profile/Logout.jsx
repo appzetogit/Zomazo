@@ -1,11 +1,11 @@
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "@shop/router"
 import { ArrowLeft, Power, AlertCircle } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Button } from "@store/components/ui/button"
-import { Card, CardContent } from "@store/components/ui/card"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Button } from "@shop/components/ui/button"
+import { Card, CardContent } from "@shop/components/ui/card"
 import { useState } from "react"
-import { clearModuleAuth } from "@store/utils/auth"
-import { logoutUserSession } from "@store/utils/moduleLogout"
+import { clearModuleAuth } from "@shop/utils/auth"
+import { logoutUserSession } from "@shop/utils/moduleLogout"
 
 const USER_SESSION_PREFERENCE_KEYS = ["userVegMode"]
 

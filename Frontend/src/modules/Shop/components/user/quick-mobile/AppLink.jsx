@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 
 /**
  * A link from the admin-edited layout. Layout links are app paths; "/spin" is

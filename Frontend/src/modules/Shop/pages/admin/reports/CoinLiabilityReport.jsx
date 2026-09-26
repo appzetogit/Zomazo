@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 import {
   ReportPage, ReportFilters, ReportTable, SummaryCard, defaultRange, toParams, errorMessage,
   formatCurrency, formatNumber, useXlsxDownload,

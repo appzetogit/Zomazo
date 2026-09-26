@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "@shop/router"
 import { Clock3, ShieldCheck } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import { sellerAPI } from "@store/api"
+import { Button } from "@shop/components/ui/button"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import { sellerAPI } from "@shop/api"
 import {
   clearSellerPendingPhone,
   getModuleToken,
   getSellerPendingPhone,
-} from "@store/utils/auth"
+} from "@shop/utils/auth"
 
 export default function VerificationPending() {
   const companyName = useCompanyName()

@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate } from "@shop/router"
 import AddCouponPage from "./AddCouponPage"
 
 export default function EditCouponPage() {

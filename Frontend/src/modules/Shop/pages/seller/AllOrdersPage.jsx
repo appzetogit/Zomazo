@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import {
   ArrowLeft,
   Search,
@@ -12,12 +12,12 @@ import {
   ChevronRight,
   X,
 } from "lucide-react"
-import { DateRangeCalendar } from "@store/components/ui/date-range-calendar"
-import { sellerAPI } from "@store/api"
-import { useSellerNotifications } from "@store/hooks/useSellerNotifications"
-import { getSellerCookingNote } from "@store/utils/orderCookingNote"
-import OrderDetailPage from "@store/pages/seller/OrderDetailPage"
-import SellerReturnsPanel from "@store/pages/seller/SellerReturnsPanel"
+import { DateRangeCalendar } from "@shop/components/ui/date-range-calendar"
+import { sellerAPI } from "@shop/api"
+import { useSellerNotifications } from "@shop/hooks/useSellerNotifications"
+import { getSellerCookingNote } from "@shop/utils/orderCookingNote"
+import OrderDetailPage from "@shop/pages/seller/OrderDetailPage"
+import SellerReturnsPanel from "@shop/pages/seller/SellerReturnsPanel"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "@shop/router"
 import { toast } from "sonner"
-import { catalogAPI, orderAPI } from "@/services/api"
-import { useCart } from "@store/context/CartContext"
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { channelAvailability } from "@store/utils/channelStock"
+import { catalogAPI, orderAPI } from "@shop/api"
+import { useCart } from "@shop/context/CartContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { channelAvailability } from "@shop/utils/channelStock"
 import { mediaUrl } from "../desktop/desktopCart"
 
 /**

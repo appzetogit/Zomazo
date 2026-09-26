@@ -1,10 +1,10 @@
 import { useState, useMemo } from "react"
 import { Search, Settings, MoreVertical, Building2, Download, ChevronDown, Filter, FileDown, FileSpreadsheet, FileText, Code, Eye, CheckCircle2, XCircle } from "lucide-react"
-import { emptyAdRequests } from "@store/utils/adminFallbackData"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "@store/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@store/components/ui/dialog"
-import SettingsDialog from "@store/components/admin/orders/SettingsDialog"
-import { exportAdvertisementsToCSV, exportAdvertisementsToExcel, exportAdvertisementsToPDF, exportAdvertisementsToJSON } from "@store/components/admin/advertisements/advertisementsExportUtils"
+import { emptyAdRequests } from "@shop/utils/adminFallbackData"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "@shop/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@shop/components/ui/dialog"
+import SettingsDialog from "@shop/components/admin/orders/SettingsDialog"
+import { exportAdvertisementsToCSV, exportAdvertisementsToExcel, exportAdvertisementsToPDF, exportAdvertisementsToJSON } from "@shop/components/admin/advertisements/advertisementsExportUtils"
 
 export default function AdRequests() {
   const [activeTab, setActiveTab] = useState("new")

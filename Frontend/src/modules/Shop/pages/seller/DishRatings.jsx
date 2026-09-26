@@ -6,9 +6,9 @@
 import { useCallback, useEffect, useState } from "react"
 import { ArrowLeft, Flag, Loader2, MessageSquareReply, Star } from "lucide-react"
 import { toast } from "sonner"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
-import { sellerAPI } from "@store/api"
-import { StarDisplay } from "@store/components/user/reviews/StarRating"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
+import { sellerAPI } from "@shop/api"
+import { StarDisplay } from "@shop/components/user/reviews/StarRating"
 
 const FILTERS = [
   { key: "all", label: "All" },

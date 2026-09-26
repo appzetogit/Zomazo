@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@shop/router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Printer,
@@ -22,19 +22,19 @@ import {
   Star,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getSellerCookingNote } from "@store/utils/orderCookingNote";
-import BottomNavOrders from "@store/components/seller/BottomNavOrders";
-import SellerNavbar from "@store/components/seller/SellerNavbar";
-import NewOrderAcceptCard from "@store/components/seller/NewOrderAcceptCard";
-import { sellerAPI } from "@store/api";
-import { useSellerNotifications } from "@store/hooks/useSellerNotifications";
-import ResendNotificationButton from "@store/components/seller/ResendNotificationButton";
+import { getSellerCookingNote } from "@shop/utils/orderCookingNote";
+import BottomNavOrders from "@shop/components/seller/BottomNavOrders";
+import SellerNavbar from "@shop/components/seller/SellerNavbar";
+import NewOrderAcceptCard from "@shop/components/seller/NewOrderAcceptCard";
+import { sellerAPI } from "@shop/api";
+import { useSellerNotifications } from "@shop/hooks/useSellerNotifications";
+import ResendNotificationButton from "@shop/components/seller/ResendNotificationButton";
 import {
   getSellerOrderAlertKey,
   setSellerAlertMuted,
   stopSellerAlert,
   unlockSellerAlertAudio,
-} from "@store/utils/sellerAlertSession";
+} from "@shop/utils/sellerAlertSession";
 const debugLog = (...args) => { };
 const debugWarn = (...args) => { };
 const debugError = (...args) => { };
@@ -1091,7 +1091,7 @@ export default function OrdersMain() {
         if (!error.response?.data?.message?.includes("inactive")) {
           // Only redirect if it's not an "inactive" error (which we handle differently)
           setTimeout(() => {
-            window.location.href = "/seller/login";
+            window.location.href = "/shop/seller/login";
           }, 1500);
         }
       } else {

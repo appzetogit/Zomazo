@@ -4,7 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@store/components/ui/dialog"
+} from "@shop/components/ui/dialog"
 
 export default function SettingsDialog({ isOpen, onOpenChange, visibleColumns, toggleColumn, resetColumns, columnsConfig }) {
   const defaultColumnsConfig = {

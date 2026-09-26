@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "@shop/router";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -25,37 +25,37 @@ import {
   Coins,
 } from "lucide-react";
 
-import AnimatedPage from "@store/components/user/AnimatedPage";
-import { resolveMediaUrl } from "@store/utils/common";
-import { Card, CardContent } from "@store/components/ui/card";
-import { Button } from "@store/components/ui/button";
-import { useProfile } from "@store/context/ProfileContext";
-import { useLocationSelector } from "@store/components/user/UserLayout";
+import AnimatedPage from "@shop/components/user/AnimatedPage";
+import { resolveMediaUrl } from "@shop/utils/common";
+import { Card, CardContent } from "@shop/components/ui/card";
+import { Button } from "@shop/components/ui/button";
+import { useProfile } from "@shop/context/ProfileContext";
+import { useLocationSelector } from "@shop/components/user/UserLayout";
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@store/components/ui/avatar";
-import { useCompanyName } from "@store/hooks/useCompanyName";
-import OptimizedImage from "@store/components/OptimizedImage";
+} from "@shop/components/ui/avatar";
+import { useCompanyName } from "@shop/hooks/useCompanyName";
+import OptimizedImage from "@shop/components/OptimizedImage";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@store/components/ui/dialog";
-import { userAPI } from "@store/api";
-import { clearModuleAuth } from "@store/utils/auth";
-import { logoutUserSession } from "@store/utils/moduleLogout";
+} from "@shop/components/ui/dialog";
+import { userAPI } from "@shop/api";
+import { clearModuleAuth } from "@shop/utils/auth";
+import { logoutUserSession } from "@shop/utils/moduleLogout";
 import { toast } from "sonner";
 const debugLog = (...args) => { };
 const debugError = (...args) => { };
 const USER_SESSION_PREFERENCE_KEYS = ["userVegMode"];
 
-import { registerWebPushForCurrentModule } from "@store/utils/firebaseMessaging";
-import DeleteAccountModal from "@store/components/DeleteAccountModal";
-import MarketingPushToggle from "@store/components/user/MarketingPushToggle";
+import { registerWebPushForCurrentModule } from "@shop/utils/firebaseMessaging";
+import DeleteAccountModal from "@shop/components/DeleteAccountModal";
+import MarketingPushToggle from "@shop/components/user/MarketingPushToggle";
 
 export default function Profile() {
   const { userProfile, vegMode, setVegMode, getDefaultAddress, addresses } =

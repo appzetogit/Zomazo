@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@store/components/ui/dialog"
+} from "@shop/components/ui/dialog"
 
 export default function DeleteCampaignDialog({ isOpen, onOpenChange, campaign, onConfirm }) {
   return (

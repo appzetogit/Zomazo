@@ -1,15 +1,15 @@
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { channelAvailability, stockLabel } from "@store/utils/channelStock"
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { channelAvailability, stockLabel } from "@shop/utils/channelStock"
 import { useState, useEffect, useRef, Component, useMemo } from "react"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { sellerAPI, orderAPI } from "@store/api"
-import { API_BASE_URL } from "@store/api/config"
+import { useParams, useNavigate, useSearchParams } from "@shop/router"
+import { sellerAPI, orderAPI } from "@shop/api"
+import { API_BASE_URL } from "@shop/api/config"
 import { toast } from "sonner"
-import { useDeliveryLocation } from "@store/context/DeliveryLocationContext"
-import { getUserSellerDistance, normalizeSellerLocation } from "@store/utils/geo"
-import { fetchDrivingDistanceKm, formatDistanceLabel } from "@store/utils/roadDistance"
+import { useDeliveryLocation } from "@shop/context/DeliveryLocationContext"
+import { getUserSellerDistance, normalizeSellerLocation } from "@shop/utils/geo"
+import { fetchDrivingDistanceKm, formatDistanceLabel } from "@shop/utils/roadDistance"
 import {
   ArrowLeft,
   Search,
@@ -40,19 +40,19 @@ import {
   Send,
   Mail,
 } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { Badge } from "@store/components/ui/badge"
-import { Checkbox } from "@store/components/ui/checkbox"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { useCart } from "@store/context/CartContext"
-import { useProfile } from "@store/context/ProfileContext"
-import AddToCartAnimation from "@store/components/user/AddToCartAnimation"
-import VariantSelector from "@store/components/user/VariantSelector"
-import ProductPriceDisplay from "@store/components/user/ProductPriceDisplay"
-import { getCompanyNameAsync } from "@store/utils/businessSettings"
-import { isModuleAuthenticated } from "@store/utils/auth"
-import { getSellerAvailabilityStatus } from "@store/utils/sellerAvailability"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
+import { Button } from "@shop/components/ui/button"
+import { Badge } from "@shop/components/ui/badge"
+import { Checkbox } from "@shop/components/ui/checkbox"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { useCart } from "@shop/context/CartContext"
+import { useProfile } from "@shop/context/ProfileContext"
+import AddToCartAnimation from "@shop/components/user/AddToCartAnimation"
+import VariantSelector from "@shop/components/user/VariantSelector"
+import ProductPriceDisplay from "@shop/components/user/ProductPriceDisplay"
+import { getCompanyNameAsync } from "@shop/utils/businessSettings"
+import { isModuleAuthenticated } from "@shop/utils/auth"
+import { getSellerAvailabilityStatus } from "@shop/utils/sellerAvailability"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
 import {
   buildCartLineId,
   getDefaultProductVariant,
@@ -61,11 +61,11 @@ import {
   getProductDisplayPrice,
   getProductVariants,
   hasProductVariants,
-} from "@store/utils/productVariants"
-import fssaiLogo from "@store/assets/fssai.png"
-import { SellerDetailSkeleton } from "@store/components/ui/loading-skeletons"
-import { useStorefrontLayout } from "@store/components/user/desktop/useIsDesktop"
-import StoreDesktop from "@store/components/user/desktop/StoreDesktop"
+} from "@shop/utils/productVariants"
+import fssaiLogo from "@shop/assets/fssai.png"
+import { SellerDetailSkeleton } from "@shop/components/ui/loading-skeletons"
+import { useStorefrontLayout } from "@shop/components/user/desktop/useIsDesktop"
+import StoreDesktop from "@shop/components/user/desktop/StoreDesktop"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

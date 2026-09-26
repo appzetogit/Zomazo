@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react"
-import { useNavigate, useParams, useLocation } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate, useParams, useLocation } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ArrowLeft,
@@ -16,24 +16,24 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react"
-import { Switch } from "@store/components/ui/switch"
+import { Switch } from "@shop/components/ui/switch"
 // Removed getAllProducts and saveProduct - now using menu API
-import api from "@store/api"
-import { sellerAPI, uploadAPI } from "@store/api"
+import api from "@shop/api"
+import { sellerAPI, uploadAPI } from "@shop/api"
 import { toast } from "sonner"
-import { ImageSourcePicker } from "@store/components/ImageSourcePicker"
-import { isFlutterBridgeAvailable } from "@store/utils/imageUploadUtils"
-import { CHANNELS, isChannelApproved } from "@store/components/seller/channels"
+import { ImageSourcePicker } from "@shop/components/ImageSourcePicker"
+import { isFlutterBridgeAvailable } from "@shop/utils/imageUploadUtils"
+import { CHANNELS, isChannelApproved } from "@shop/components/seller/channels"
 import {
   ProductChannelFields,
   emptyChannelDraft,
   channelDraftFrom,
   channelDraftToPayload,
-} from "@store/components/seller/ChannelStockFields"
+} from "@shop/components/seller/ChannelStockFields"
 import VariantMatrixEditor, {
   createVariantDraft,
   toVariantPayload,
-} from "@store/components/shared/products/VariantMatrixEditor"
+} from "@shop/components/shared/products/VariantMatrixEditor"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

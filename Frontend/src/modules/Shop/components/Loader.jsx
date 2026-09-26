@@ -1,5 +1,5 @@
-import { AppShellSkeleton } from "@store/components/ui/loading-skeletons"
-import { StorefrontShellSkeleton } from "@store/components/user/desktop/HomeSkeletons"
+import { AppShellSkeleton } from "@shop/components/ui/loading-skeletons"
+import { StorefrontShellSkeleton } from "@shop/components/user/desktop/HomeSkeletons"
 
 /**
  * The fallback shown while a route's code loads. Storefront visitors get the

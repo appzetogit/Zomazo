@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { catalogAPI } from "@store/api"
-import { useDeliveryLocation } from "@store/context/DeliveryLocationContext"
+import { catalogAPI } from "@shop/api"
+import { useDeliveryLocation } from "@shop/context/DeliveryLocationContext"
 
 export const DEFAULT_QUICK_ETA = 10
 

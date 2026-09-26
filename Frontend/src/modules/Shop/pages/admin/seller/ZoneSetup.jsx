@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { MapPin, Plus, Search, Edit, Trash2, Eye, Map, Bike } from "lucide-react"
-import { adminAPI } from "@store/api"
-import { useAdminBase } from "@store/components/admin/useAdminPanel"
+import { adminAPI } from "@shop/api"
+import { useAdminBase } from "@shop/components/admin/useAdminPanel"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

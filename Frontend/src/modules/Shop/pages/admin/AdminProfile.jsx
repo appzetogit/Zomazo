@@ -1,16 +1,16 @@
-import { adminPasswordError } from "@store/utils/adminPasswordRule";
+import { adminPasswordError } from "@shop/utils/adminPasswordRule";
 import { useState, useEffect, useRef } from "react";
-import { adminAPI, uploadAPI } from "@store/api";
-import { Button } from "@store/components/ui/button";
-import { Input } from "@store/components/ui/input";
-import { Label } from "@store/components/ui/label";
+import { adminAPI, uploadAPI } from "@shop/api";
+import { Button } from "@shop/components/ui/button";
+import { Input } from "@shop/components/ui/input";
+import { Label } from "@shop/components/ui/label";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@store/components/ui/card";
+} from "@shop/components/ui/card";
 import { toast } from "sonner";
 import { User, Mail, Phone, Save, Loader2, Upload, X, Pencil, Eye, EyeOff } from "lucide-react";
 const debugLog = (...args) => {}

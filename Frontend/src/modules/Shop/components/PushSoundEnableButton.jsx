@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "@shop/router";
 import { BellRing, Volume2 } from "lucide-react";
-import { Button } from "@store/components/ui/button";
-import { enablePushNotificationSound, isPushSoundEnabled } from "@store/utils/firebaseMessaging";
+import { Button } from "@shop/components/ui/button";
+import { enablePushNotificationSound, isPushSoundEnabled } from "@shop/utils/firebaseMessaging";
 
 function isMobileDevice() {
   if (typeof window === "undefined" || typeof navigator === "undefined") return false;

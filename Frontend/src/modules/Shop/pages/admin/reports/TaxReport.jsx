@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react"
 import { Download, ChevronDown, FileText, DollarSign, Settings, FileSpreadsheet, Code, Loader2, Calendar } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@store/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@store/components/ui/dialog"
-import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "@store/components/admin/reports/reportsExportUtils"
-import { adminAPI } from "@store/api"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@shop/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shop/components/ui/dialog"
+import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "@shop/components/admin/reports/reportsExportUtils"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
 
 const debugLog = (...args) => {}

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Edit, Trash2, Calendar, RefreshCw } from "lucide-react"
-import { emptyCashbacks } from "@store/utils/adminFallbackData"
+import { emptyCashbacks } from "@shop/utils/adminFallbackData"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

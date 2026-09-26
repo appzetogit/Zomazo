@@ -1,18 +1,18 @@
 import { useState, useEffect, useRef } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { motion, useReducedMotion } from "framer-motion"
 import { Shield, Loader2, Timer, RefreshCw, ArrowLeft } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { sellerAPI } from "@store/api"
+import { Button } from "@shop/components/ui/button"
+import { sellerAPI } from "@shop/api"
 import {
   setAuthData as setSellerAuthData,
   setSellerPendingPhone,
-} from "@store/utils/auth"
-import { resolveDeviceFcmToken, registerWebPushForCurrentModule } from "@store/utils/firebaseMessaging"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import { loadBusinessSettings, getModuleLogoUrl } from "@store/utils/businessSettings"
-import SellerPartnerHero from "@store/components/seller/auth/SellerPartnerHero"
-import brandMark from "@/config/brandMark"
+} from "@shop/utils/auth"
+import { resolveDeviceFcmToken, registerWebPushForCurrentModule } from "@shop/utils/firebaseMessaging"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import { loadBusinessSettings, getModuleLogoUrl } from "@shop/utils/businessSettings"
+import SellerPartnerHero from "@shop/components/seller/auth/SellerPartnerHero"
+import brandMark from "@shop/platform/config/brandMark"
 
 const THEME = "#FD920B"
 const THEME_INK = "#B45309"

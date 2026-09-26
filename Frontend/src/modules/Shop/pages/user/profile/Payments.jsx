@@ -1,10 +1,10 @@
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { CreditCard, Trash2, Edit, Check, Plus } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Card, CardHeader, CardTitle, CardContent } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
-import { Badge } from "@store/components/ui/badge"
-import { useProfile } from "@store/context/ProfileContext"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Card, CardHeader, CardTitle, CardContent } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { Badge } from "@shop/components/ui/badge"
+import { useProfile } from "@shop/context/ProfileContext"
 
 export default function Payments() {
   const { paymentMethods, deletePaymentMethod, setDefaultPaymentMethod } = useProfile()

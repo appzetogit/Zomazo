@@ -5,7 +5,7 @@
 import apiClient from "./axios.js";
 import { API_BASE_URL, API_ENDPOINTS } from "./config.js";
 import * as authService from "./auth.js";
-import { resolveMediaUrl } from "../../shared/utils/mediaUrl.js";
+import { resolveMediaUrl } from "../utils/mediaUrl.js";
 
 const stub = () =>
   Promise.resolve({
@@ -105,7 +105,7 @@ async function resolveLogoutFcmToken(moduleName) {
   // Prefer full resolver (Flutter + cache + live web getToken) when available.
   try {
     const { resolveDeviceFcmToken } = await import(
-      "../../modules/Store/utils/firebaseMessaging.js"
+      "../../utils/firebaseMessaging.js"
     );
     if (typeof resolveDeviceFcmToken === "function") {
       return await resolveDeviceFcmToken(moduleName);

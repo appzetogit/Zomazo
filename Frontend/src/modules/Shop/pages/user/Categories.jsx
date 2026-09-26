@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { Link, useNavigate } from "react-router-dom";
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { Link, useNavigate } from "@shop/router";
 import { ArrowLeft, Search, Grid2x2, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
-import { adminAPI } from "@store/api";
-import { productImages } from "@store/constants/images";
-import { resolveMediaUrl } from "@/shared/utils/mediaUrl";
-import OptimizedImage from "@store/components/OptimizedImage";
-import { useDeliveryLocation } from "@store/context/DeliveryLocationContext";
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation";
-import { useStorefrontLayout } from "@store/components/user/desktop/useIsDesktop";
-import { CategoriesDesktop } from "@store/components/user/desktop/IndexDesktop";
+import { adminAPI } from "@shop/api";
+import { productImages } from "@shop/constants/images";
+import { resolveMediaUrl } from "@shop/platform/utils/mediaUrl";
+import OptimizedImage from "@shop/components/OptimizedImage";
+import { useDeliveryLocation } from "@shop/context/DeliveryLocationContext";
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation";
+import { useStorefrontLayout } from "@shop/components/user/desktop/useIsDesktop";
+import { CategoriesDesktop } from "@shop/components/user/desktop/IndexDesktop";
 
 export default function Categories() {
   const { storePath } = useStoreMode()

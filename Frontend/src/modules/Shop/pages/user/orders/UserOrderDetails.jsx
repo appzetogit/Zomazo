@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
+import { useNavigate, useParams } from "@shop/router"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
 import {
   ArrowLeft,
   ShoppingBag,
@@ -14,16 +14,16 @@ import {
   RotateCcw,
   FileText,
 } from "lucide-react"
-import { orderAPI, sellerAPI } from "@store/api"
-import { useCart } from "@store/context/CartContext"
+import { orderAPI, sellerAPI } from "@shop/api"
+import { useCart } from "@shop/context/CartContext"
 import { toast } from "sonner"
-import { getCompanyNameAsync } from "@store/utils/businessSettings"
-import { getCartCompareItemTotal, getLineCompareUnitPrice } from "@store/utils/productVariants"
-import { DualMoney } from "@store/components/user/ProductPriceDisplay"
+import { getCompanyNameAsync } from "@shop/utils/businessSettings"
+import { getCartCompareItemTotal, getLineCompareUnitPrice } from "@shop/utils/productVariants"
+import { DualMoney } from "@shop/components/user/ProductPriceDisplay"
 import OrderReturnsSection from "./OrderReturnsSection"
-import OrderItemsReviewPanel from "@store/components/user/reviews/OrderItemsReviewPanel"
-import CompletePaymentCard from "@store/components/user/CompletePaymentCard"
-import { imagePlaceholder } from "@store/constants/images"
+import OrderItemsReviewPanel from "@shop/components/user/reviews/OrderItemsReviewPanel"
+import CompletePaymentCard from "@shop/components/user/CompletePaymentCard"
+import { imagePlaceholder } from "@shop/constants/images"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BellRing, Loader2, Search, Send, Trash2 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { adminAPI } from "@store/api";
+import { Link } from "@shop/router";
+import { adminAPI } from "@shop/api";
 
 const TARGET_OPTIONS = [
   { value: "ALL", label: "All" },

@@ -3,8 +3,8 @@
  * wide, sticky with its own scroll, icon above a 12px label, and the current
  * one marked by a brand-tinted pill with a left bar.
  */
-import { Link } from "react-router-dom"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { Link } from "@shop/router"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { isRealImage } from "../ui"
 import { mediaUrl } from "../desktopCart"
 import { cx, focusRing } from "./quickHelpers"

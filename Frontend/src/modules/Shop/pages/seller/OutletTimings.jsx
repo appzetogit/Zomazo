@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, ChevronUp, ChevronDown, Clock } from "lucide-react"
-import { Switch } from "@store/components/ui/switch"
+import { Switch } from "@shop/components/ui/switch"
 import { MobileTimePicker } from "@mui/x-date-pickers/MobileTimePicker"
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import { sellerAPI } from "@store/api"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import { sellerAPI } from "@shop/api"
 import { toast } from "sonner"
 
 const debugLog = (...args) => {}

@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Info } from "lucide-react"
-import mobileImage1 from "@store/assets/Transaction-report-icons/mobile_image1.png"
-import mobileImage2 from "@store/assets/Transaction-report-icons/mobile_image2.png"
+import mobileImage1 from "@shop/assets/Transaction-report-icons/mobile_image1.png"
+import mobileImage2 from "@shop/assets/Transaction-report-icons/mobile_image2.png"
 
 export default function ThemeSettings() {
   const [selectedTheme, setSelectedTheme] = useState("theme1")

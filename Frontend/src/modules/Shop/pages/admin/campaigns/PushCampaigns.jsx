@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { BarChart3, BellRing, Loader2, Pause, Play, Plus, RefreshCw, Settings2, ShieldCheck, Trash2, XCircle } from "lucide-react"
 import { toast } from "sonner"
-import { adminAPI } from "@store/api"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@store/components/ui/dialog"
+import { adminAPI } from "@shop/api"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shop/components/ui/dialog"
 
 const AUDIENCES = [
   { value: "all_customers", label: "All customers" },

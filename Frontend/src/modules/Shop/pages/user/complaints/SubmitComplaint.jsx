@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "@shop/router"
 import { ArrowLeft, AlertCircle, FileText } from "lucide-react"
-import { orderAPI } from "@store/api"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
+import { orderAPI } from "@shop/api"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
 import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

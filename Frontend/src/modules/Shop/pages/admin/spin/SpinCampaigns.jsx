@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { BarChart3, Loader2, Pencil, Plus, RefreshCw, Trash2, Disc3 } from "lucide-react"
 import { toast } from "sonner"
-import { spinAdminAPI } from "@store/api"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@store/components/ui/dialog"
+import { spinAdminAPI } from "@shop/api"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shop/components/ui/dialog"
 
 const PALETTE = ["#f59e0b", "#8b5cf6", "#6b7280", "#10b981", "#3b82f6", "#ec4899", "#ef4444", "#14b8a6"]
 

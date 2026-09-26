@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { Save, Loader2, DollarSign, Plus, Trash2, Edit, Check, X } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { adminAPI } from "@store/api"
+import { Button } from "@shop/components/ui/button"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

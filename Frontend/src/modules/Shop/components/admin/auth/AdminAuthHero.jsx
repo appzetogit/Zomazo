@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from "framer-motion"
 import { Store, Zap, Truck, Coins } from "lucide-react"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 import MarketplaceArt from "./MarketplaceArt"
 
 /**

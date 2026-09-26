@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { ShoppingBag } from "lucide-react"
-import { catalogAPI } from "@/services/api"
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { resolveMediaUrl } from "@/shared/utils/mediaUrl"
-import { ProductTile } from "@store/components/user/desktop/ui"
+import { catalogAPI } from "@shop/api"
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { resolveMediaUrl } from "@shop/platform/utils/mediaUrl"
+import { ProductTile } from "@shop/components/user/desktop/ui"
 
 /**
  * A horizontal rail of recommended products for one product:

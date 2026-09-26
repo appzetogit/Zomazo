@@ -4,6 +4,10 @@
  */
 
 import apiClient from "./axios.js";
+import { PLATFORM_API_BASE_URL } from "./config.js";
+
+// The platform admin's own profile endpoint (same one the platform panel calls).
+const PLATFORM_ADMIN_ME = "/food/auth/me";
 
 const AUTH = {
   USER_REQUEST_OTP: "/auth/user/request-otp",
@@ -162,6 +166,11 @@ export function logout(refreshToken, fcmToken = null, platform = "web") {
  */
 export function getMe(module = "user") {
   const m = String(module || "user");
+  // An admin in the Shop panel is a platform admin; their profile is the
+  // platform's (the Shop's own /auth/me only knows sellers and customers).
+  if (m === "admin") {
+    return apiClient.get(PLATFORM_ADMIN_ME, { contextModule: m, baseURL: PLATFORM_API_BASE_URL });
+  }
   return apiClient.get(AUTH.ME, { contextModule: m });
 }
 

@@ -6,7 +6,7 @@
  */
 import { useMemo, useState } from "react"
 import { Star, Clock, MapPin } from "lucide-react"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { ListingTile, SORT_OPTIONS, TileGrid, mediaUrl } from "./ListingDesktop"
 
 const cx = (...a) => a.filter(Boolean).join(" ")

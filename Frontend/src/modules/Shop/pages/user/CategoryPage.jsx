@@ -1,31 +1,31 @@
 import { useState, useMemo, useRef, useEffect, startTransition, useDeferredValue } from "react"
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { channelAvailability } from "@store/utils/channelStock"
-import { useParams, Link, useNavigate } from "react-router-dom"
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { channelAvailability } from "@shop/utils/channelStock"
+import { useParams, Link, useNavigate } from "@shop/router"
 import { createPortal } from "react-dom"
-import useIsDesktop, { useStorefrontLayout } from "@store/components/user/desktop/useIsDesktop"
-import MobileListing from "@store/components/user/mobile/MobileListing"
-import { DesktopProductListing } from "@store/components/user/desktop/ListingDesktop"
+import useIsDesktop, { useStorefrontLayout } from "@shop/components/user/desktop/useIsDesktop"
+import MobileListing from "@shop/components/user/mobile/MobileListing"
+import { DesktopProductListing } from "@shop/components/user/desktop/ListingDesktop"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, Star, Clock, Search, SlidersHorizontal, ChevronDown, Bookmark, BadgePercent, MapPin, ArrowDownUp, Timer, IndianRupee, UtensilsCrossed, ShieldCheck, X, Loader2, Grid2x2 } from "lucide-react"
-import { Card, CardContent } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
+import { Card, CardContent } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
 import {
   CategoryChipRowSkeleton,
   LoadingSkeletonRegion,
   SellerGridSkeleton,
-} from "@store/components/ui/loading-skeletons"
+} from "@shop/components/ui/loading-skeletons"
 
 // Import shared food images - prevents duplication
-import { productImages } from "@store/constants/images"
-import api from "@store/api"
-import { sellerAPI, adminAPI } from "@store/api"
-import { API_BASE_URL } from "@store/api/config"
-import { useProfile } from "@store/context/ProfileContext"
-import { useDeliveryLocation } from "@store/context/DeliveryLocationContext"
-import { useDelayedLoading } from "@store/hooks/useDelayedLoading"
-import { getSellerAvailabilityStatus } from "@store/utils/sellerAvailability"
+import { productImages } from "@shop/constants/images"
+import api from "@shop/api"
+import { sellerAPI, adminAPI } from "@shop/api"
+import { API_BASE_URL } from "@shop/api/config"
+import { useProfile } from "@shop/context/ProfileContext"
+import { useDeliveryLocation } from "@shop/context/DeliveryLocationContext"
+import { useDelayedLoading } from "@shop/hooks/useDelayedLoading"
+import { getSellerAvailabilityStatus } from "@shop/utils/sellerAvailability"
 
 const debugError = (...args) => {}
 

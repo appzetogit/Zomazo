@@ -2,8 +2,8 @@
 
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { cn } from "@store/utils/utils"
+import { Button } from "@shop/components/ui/button"
+import { cn } from "@shop/utils/utils"
 
 interface HorizontalCarouselProps {
   children: React.ReactNode

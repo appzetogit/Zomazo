@@ -3,8 +3,8 @@
  * Everything goes through CartContext (`useCart`), so the header count, the
  * cart page and checkout see exactly the same lines as before.
  */
-import { useCart } from "@store/context/CartContext"
-import { channelAvailability } from "@store/utils/channelStock"
+import { useCart } from "@shop/context/CartContext"
+import { channelAvailability } from "@shop/utils/channelStock"
 import { useDesktopAddToCart } from "../desktopCart"
 import { productHasOptions, productId } from "./quickHelpers"
 

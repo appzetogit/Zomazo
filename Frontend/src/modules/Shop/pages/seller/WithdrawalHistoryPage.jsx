@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ArrowLeft,
@@ -11,8 +11,8 @@ import {
   History,
   Banknote,
 } from "lucide-react"
-import BottomNavOrders from "@store/components/seller/BottomNavOrders"
-import { sellerAPI } from "@store/api"
+import BottomNavOrders from "@shop/components/seller/BottomNavOrders"
+import { sellerAPI } from "@shop/api"
 
 const debugError = (...args) => {}
 

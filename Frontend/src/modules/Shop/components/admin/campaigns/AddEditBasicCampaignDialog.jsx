@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@store/components/ui/dialog"
+} from "@shop/components/ui/dialog"
 
 export default function AddEditBasicCampaignDialog({ isOpen, onOpenChange, campaign, onSave }) {
   const [formData, setFormData] = useState({

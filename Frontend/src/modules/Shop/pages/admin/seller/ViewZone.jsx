@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "@shop/router"
 import { MapPin, ArrowLeft } from "lucide-react"
-import { adminAPI } from "@store/api"
-import { getGoogleMapsApiKey } from "@store/utils/googleMapsApiKey"
+import { adminAPI } from "@shop/api"
+import { getGoogleMapsApiKey } from "@shop/utils/googleMapsApiKey"
 import { Loader } from "@googlemaps/js-api-loader"
-import { useAdminBase } from "@store/components/admin/useAdminPanel"
+import { useAdminBase } from "@shop/components/admin/useAdminPanel"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

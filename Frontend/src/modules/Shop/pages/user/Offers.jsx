@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "@shop/router"
 import { ArrowLeft, Star, Clock } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { Card, CardContent } from "@store/components/ui/card"
-import { sellerAPI } from "@store/api"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
+import { Button } from "@shop/components/ui/button"
+import { Card, CardContent } from "@shop/components/ui/card"
+import { sellerAPI } from "@shop/api"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
 import { toast } from "sonner"
-import { SellerGridSkeleton } from "@store/components/ui/loading-skeletons"
-import { useDelayedLoading } from "@store/hooks/useDelayedLoading"
+import { SellerGridSkeleton } from "@shop/components/ui/loading-skeletons"
+import { useDelayedLoading } from "@shop/hooks/useDelayedLoading"
 
 // Import banner image
-import offerBanner from "@store/assets/offerpagebanner.png"
-import { imagePlaceholder } from "@store/constants/images"
+import offerBanner from "@shop/assets/offerpagebanner.png"
+import { imagePlaceholder } from "@shop/constants/images"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

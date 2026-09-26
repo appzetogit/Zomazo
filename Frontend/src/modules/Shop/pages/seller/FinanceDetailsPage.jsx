@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate, useLocation } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, ChevronDown, ChevronUp, Download, Mail, X, Info } from "lucide-react"
 

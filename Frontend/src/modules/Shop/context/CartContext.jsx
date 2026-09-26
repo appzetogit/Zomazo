@@ -1,10 +1,10 @@
 // src/context/cart-context.jsx
-import { cartStorageKeyFor } from "@store/context/StoreModeContext"
+import { cartStorageKeyFor } from "@shop/context/StoreModeContext"
 import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { buildCartLineId } from "@store/utils/productVariants"
-import { userAPI } from "@/services/api"
+import { buildCartLineId } from "@shop/utils/productVariants"
+import { userAPI } from "@shop/api"
 import { toast } from "sonner"
-import CartReplaceDialog from "@store/components/user/CartReplaceDialog"
+import CartReplaceDialog from "@shop/components/user/CartReplaceDialog"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

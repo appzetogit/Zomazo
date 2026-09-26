@@ -1,5 +1,5 @@
-import { NavLink } from "react-router-dom"
-import { useAdminBase } from "@store/components/admin/useAdminPanel"
+import { NavLink } from "@shop/router"
+import { useAdminBase } from "@shop/components/admin/useAdminPanel"
 
 /** Tabs across the courier pages: all shipments, the NDR queue, the RTO queue, COD remittances. */
 export default function ShipmentTabs() {

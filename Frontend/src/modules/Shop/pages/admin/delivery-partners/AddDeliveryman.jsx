@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Upload, Calendar, Eye, EyeOff, Settings } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@store/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@shop/components/ui/dialog"
 
 export default function AddDeliveryman() {
   const [formData, setFormData] = useState({

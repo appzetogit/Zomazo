@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
 import { toast } from 'sonner';
-import { API_BASE_URL } from '@store/api/config';
-import { userAPI } from '@store/api';
-import { dispatchNotificationInboxRefresh } from '@store/hooks/useNotificationInbox';
+import { API_BASE_URL } from '@shop/api/config';
+import { ecomSocketUrl } from '@shop/api/socketUrl';
+import { userAPI } from '@shop/api';
+import { dispatchNotificationInboxRefresh } from '@shop/hooks/useNotificationInbox';
 
 const debugLog = (...args) => {
   if (import.meta.env.DEV) {
@@ -57,7 +58,8 @@ export const useUserNotifications = () => {
         .replace(/\/+$/, "");
     }
 
-    const socketUrl = `${backendUrl}`;
+    // The Shop's namespace on the platform's server.
+    const socketUrl = ecomSocketUrl();
     
     // Auth token
     const token = localStorage.getItem('user_accessToken') || localStorage.getItem('accessToken');

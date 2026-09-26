@@ -1,4 +1,4 @@
-import { useParams, Link, useSearchParams } from "react-router-dom"
+import { useParams, Link, useSearchParams } from "@shop/router"
 import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
@@ -20,26 +20,26 @@ import {
   Store,
   FileText
 } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import CompletePaymentCard from "@store/components/user/CompletePaymentCard"
-import { Card, CardContent } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import CompletePaymentCard from "@shop/components/user/CompletePaymentCard"
+import { Card, CardContent } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@store/components/ui/dialog"
-import { Textarea } from "@store/components/ui/textarea"
-import { useOrders } from "@store/context/OrdersContext"
-import { useProfile } from "@store/context/ProfileContext"
-import { useLocation as useUserLocation } from "@store/hooks/useLocation"
-import DeliveryTrackingMap from "@store/components/user/DeliveryTrackingMap"
-import { orderAPI, sellerAPI } from "@store/api"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import { useUserNotifications } from "@store/hooks/useUserNotifications"
-import circleIcon from "@store/assets/circleicon.png"
-import { SELLER_PIN_SVG, CUSTOMER_PIN_SVG, RIDER_BIKE_SVG } from "@store/constants/mapIcons"
+} from "@shop/components/ui/dialog"
+import { Textarea } from "@shop/components/ui/textarea"
+import { useOrders } from "@shop/context/OrdersContext"
+import { useProfile } from "@shop/context/ProfileContext"
+import { useLocation as useUserLocation } from "@shop/hooks/useLocation"
+import DeliveryTrackingMap from "@shop/components/user/DeliveryTrackingMap"
+import { orderAPI, sellerAPI } from "@shop/api"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import { useUserNotifications } from "@shop/hooks/useUserNotifications"
+import circleIcon from "@shop/assets/circleicon.png"
+import { SELLER_PIN_SVG, CUSTOMER_PIN_SVG, RIDER_BIKE_SVG } from "@shop/constants/mapIcons"
 
 // Fallback definitions in case imports fail at runtime or are shadowed
 const DEFAULT_CUSTOMER_PIN = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="#10B981"><path d="M12 2C8.13 2 5 5.13 5 9c0 4.17 4.42 9.92 6.24 12.11.4.48 1.08.48 1.52 0C14.58 18.92 19 13.17 19 9c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5 14.5 7.62 14.5 9 13.38 11.5 12 11.5z"/><circle cx="12" cy="9" r="3" fill="#FFFFFF"/></svg>`;

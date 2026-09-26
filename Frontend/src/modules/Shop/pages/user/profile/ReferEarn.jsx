@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@shop/router";
 import { ArrowLeft, Share2, Users, Wallet, CircleCheck, Clock3, CircleX } from "lucide-react";
-import AnimatedPage from "@store/components/user/AnimatedPage";
-import { Button } from "@store/components/ui/button";
-import { Card, CardContent } from "@store/components/ui/card";
-import { useCompanyName } from "@store/hooks/useCompanyName";
-import { useProfile } from "@store/context/ProfileContext";
+import AnimatedPage from "@shop/components/user/AnimatedPage";
+import { Button } from "@shop/components/ui/button";
+import { Card, CardContent } from "@shop/components/ui/card";
+import { useCompanyName } from "@shop/hooks/useCompanyName";
+import { useProfile } from "@shop/context/ProfileContext";
 import { toast } from "sonner";
-import { userAPI } from "@store/api";
+import { userAPI } from "@shop/api";
 
 const statusMeta = {
   credited: {

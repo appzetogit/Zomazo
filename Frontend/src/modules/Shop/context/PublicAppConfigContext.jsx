@@ -6,18 +6,18 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "@shop/router";
 import {
   getPublicAppConfigSnapshot,
   invalidatePublicAppConfig,
   loadCorePublicAppConfig,
   loadLandingSettingsForZone,
   loadUserHomePublicConfig,
-} from "@store/services/publicAppConfig";
+} from "@shop/services/publicAppConfig";
 import {
   applyModulePowerScanning,
   setCachedSettings,
-} from "@store/utils/businessSettings";
+} from "@shop/utils/businessSettings";
 
 const PublicAppConfigContext = createContext(null);
 

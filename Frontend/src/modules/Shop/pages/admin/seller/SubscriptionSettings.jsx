@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react"
-import { adminAPI } from "@/services/api"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { Label } from "@store/components/ui/label"
+import { adminAPI } from "@shop/api"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { Label } from "@shop/components/ui/label"
 import { toast } from "sonner"
 import {
   Loader2,

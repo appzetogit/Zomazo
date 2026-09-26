@@ -1,6 +1,6 @@
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { ChevronRight } from "lucide-react"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { mediaUrl } from "../desktop/desktopCart"
 import Rail from "../storefront/Rail"
 import Reveal from "../storefront/Reveal"

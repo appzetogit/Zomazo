@@ -7,10 +7,10 @@
  * just navigates to the existing cart route — no pricing or checkout logic here.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "@shop/router"
 import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react"
-import { useCart } from "@store/context/CartContext"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useCart } from "@shop/context/CartContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { ImagePlaceholder, isRealImage } from "../ui"
 import { useQuickEta } from "../useDeliveryEstimates"
 import { mediaUrl } from "../desktopCart"

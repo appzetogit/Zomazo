@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { Heart, Store } from "lucide-react"
-import { catalogAPI } from "@/services/api"
-import { useProfile } from "@store/context/ProfileContext"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { catalogAPI } from "@shop/api"
+import { useProfile } from "@shop/context/ProfileContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import MobileTopBar from "./MobileTopBar"
 import ProductTile from "./ProductTile"
 

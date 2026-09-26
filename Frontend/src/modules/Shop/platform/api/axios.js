@@ -1,19 +1,25 @@
 /**
- * Central API client for backend (auth and future APIs).
- * - baseURL from VITE_API_BASE_URL (e.g. http://localhost:5000/api/v1)
- * - When baseURL ends with /api/v1, request paths must NOT include /v1 (use /catalog/..., /auth/...)
- * - Attaches Bearer token (user or admin based on request URL)
- * - On 401: attempts refresh, retries once; on refresh failure logs out
+ * API client for the Shop (e-commerce) module.
+ * - Talks to the platform's /api/v1/ecom mount; request paths stay as the
+ *   standalone app wrote them (/catalog/..., /user/..., /seller/...).
+ * - Attaches Bearer token (user, seller or admin based on request URL). Customer
+ *   and admin tokens are the platform's own (user_accessToken, admin_accessToken)
+ *   -- the same keys the rest of the platform writes -- so one sign-in covers
+ *   the Shop. Sellers have their own login here.
+ * - On 401: attempts refresh, retries once; signs out only when the server
+ *   rejects the refresh token.
  */
 
 import axios from "axios";
 
-// Prefer explicit env. If not set, use same-origin (works with a Vite proxy).
-// This avoids hardcoding ports like 5000 that may conflict with local setups.
-const baseURL =
+// The platform API root (VITE_API_BASE_URL, or same-origin /api/v1 via proxy).
+const platformRoot =
   typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL
     ? String(import.meta.env.VITE_API_BASE_URL).replace(/\/$/, "")
     : "/api/v1"; // same origin: the dev server and the production host proxy it
+
+// Every Shop request goes to the e-commerce mount.
+const baseURL = `${platformRoot}/ecom`;
 
 /**
  * A stable id for this browser, sent as X-Device-Id (first-order offers are
@@ -46,55 +52,6 @@ const apiClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-const ADMIN_PERMISSION_PATH_MAP = [
-  { prefix: "/admin/sub-admins", section: "sub_admin_management" },
-  { prefix: "/admin/customers", section: "customer_management" },
-  { prefix: "/admin/support-tickets", section: "customer_management" },
-  { prefix: "/admin/sellers", section: "seller_management" },
-  { prefix: "/admin/seller-settings", section: "seller_management" },
-  { prefix: "/admin/seller-subscription-settings", section: "seller_management" },
-  { prefix: "/admin/seller-subscriptions", section: "seller_management" },
-  { prefix: "/admin/zones", section: "seller_management" },
-  { prefix: "/admin/categories", section: "product_management" },
-  { prefix: "/admin/products", section: "product_management" },
-  { prefix: "/admin/offers", section: "promotions_management" },
-  { prefix: "/admin/push-campaigns", section: "promotions_management" },
-  { prefix: "/admin/first-order-guard", section: "promotions_management" },
-  { prefix: "/admin/orders", section: "order_management" },
-  { prefix: "/admin/shipments", section: "order_management" },
-  { prefix: "/admin/returns", section: "order_management" },
-  { prefix: "/admin/checkouts", section: "order_management" },
-  { prefix: "/admin/cod-remittances", section: "report_management" },
-  { prefix: "/admin/spin", section: "promotions_management" },
-  { prefix: "/admin/coins", section: "transaction_management" },
-  { prefix: "/admin/attributes", section: "product_management" },
-  { prefix: "/admin/attribute-sets", section: "product_management" },
-  { prefix: "/admin/product-reviews", section: "product_management" },
-  { prefix: "/admin/inventory", section: "product_management" },
-  { prefix: "/admin/ai", section: "system_settings" },
-  { prefix: "/admin/order-detect-delivery", section: "order_management" },
-  { prefix: "/admin/sidebar-badges", section: "dashboard" },
-  { prefix: "/admin/dashboard-stats", section: "dashboard" },
-  { prefix: "/admin/referral-settings", section: "referral_rewards" },
-  { prefix: "/admin/delivery", section: "delivery_management" },
-  { prefix: "/admin/fee-settings", section: "delivery_management" },
-  { prefix: "/admin/delivery-cash-limit", section: "delivery_management" },
-  { prefix: "/admin/cash-limit-settlements", section: "delivery_management" },
-  { prefix: "/admin/cash-limit-settlement", section: "delivery_management" },
-  { prefix: "/admin/withdrawals", section: "transaction_management" },
-  { prefix: "/admin/reports", section: "report_management" },
-  { prefix: "/admin/feedback-experiences", section: "report_management" },
-  { prefix: "/content/hero-banners", section: "banner_management" },
-  { prefix: "/admin/quick-home-layout", section: "banner_management" },
-  { prefix: "/admin/contact-messages", section: "support_management" },
-  { prefix: "/admin/safety-emergency-reports", section: "support_management" },
-  { prefix: "/admin/feature-settings", section: "system_settings" },
-  { prefix: "/admin/business-settings", section: "system_settings" },
-  { prefix: "/admin/power-scanning", section: "system_settings" },
-  { prefix: "/admin/notifications", section: "system_settings" },
-  { prefix: "/admin/pages-social-media", section: "pages_social_media" },
-];
-
 const normalizePath = (url) => {
   const raw = String(url || "");
   const noQuery = raw.split("?")[0].split("#")[0];
@@ -107,50 +64,6 @@ const normalizePath = (url) => {
     }
   }
   return noQuery.startsWith("/") ? noQuery : `/${noQuery}`;
-};
-
-const resolveAdminSectionByApiPath = (url, method = "GET") => {
-  const path = normalizePath(url).toLowerCase();
-  const normalizedMethod = String(method || "GET").toUpperCase();
-  if (path === "/admin/zones" && normalizedMethod === "GET") {
-    return "seller_management";
-  }
-  const match = ADMIN_PERMISSION_PATH_MAP.find((item) => path.startsWith(item.prefix));
-  return match?.section || null;
-};
-
-const resolveActionByMethod = (method) => {
-  const normalized = String(method || "get").toUpperCase();
-  if (normalized === "GET") return "view";
-  if (normalized === "POST") return "create";
-  if (normalized === "DELETE") return "delete";
-  if (normalized === "PATCH" || normalized === "PUT") return "edit";
-  return "view";
-};
-
-const getAdminUser = () => {
-  try {
-    const raw = localStorage.getItem("admin_user");
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
-const isAdminAllowedForAction = (section, action) => {
-  const adminUser = getAdminUser();
-  const adminType = String(adminUser?.adminType || "").trim().toLowerCase();
-  if (adminType === "super_admin") return true;
-  if (!section) return false;
-  const permissions = adminUser?.effectivePermissions || adminUser?.permissions || {};
-  const actions = Array.isArray(permissions?.[section]) ? permissions[section] : [];
-  return actions.includes(action);
-};
-
-const hasAdminAction = (adminUser, section, action = "view") => {
-  const permissions = adminUser?.effectivePermissions || adminUser?.permissions || {};
-  const actions = Array.isArray(permissions?.[section]) ? permissions[section] : [];
-  return actions.includes(action);
 };
 
 function getModuleFromUrl(url = "") {
@@ -250,112 +163,11 @@ apiClient.interceptors.request.use(
   (config) => {
     config.contextModule = getModuleFromConfig(config);
 
-    // Client-side RBAC safety net for sub-admins across all admin APIs.
-    if (config.contextModule === "admin") {
-      const path = normalizePath(config?.url);
-      const normalizedPath = String(path || "").toLowerCase();
-      const isPublicAdminEndpoint =
-        normalizedPath.startsWith("/admin/") &&
-        normalizedPath.endsWith("/public");
-      const isAuthEndpoint =
-        path.includes("/auth/admin/login") ||
-        path.includes("/auth/me") ||
-        path.includes("/auth/refresh-token") ||
-        path.includes("/auth/logout");
-
-      if (!isAuthEndpoint && !isPublicAdminEndpoint) {
-        const action = resolveActionByMethod(config?.method);
-        const isSellerListRead = normalizedPath === "/admin/sellers" && action === "view";
-        const isSellerDetailRead =
-          /^\/admin\/sellers\/[^/]+$/.test(normalizedPath) && action === "view";
-        const isSellerAnalyticsRead =
-          /^\/admin\/sellers\/[^/]+\/analytics$/.test(normalizedPath) && action === "view";
-        const isOrdersRead = normalizedPath === "/admin/orders" && action === "view";
-        const isCustomersRead = normalizedPath === "/admin/customers" && action === "view";
-        const isZonesRead = normalizedPath === "/admin/zones" && action === "view";
-        const isZoneDetailRead =
-          /^\/admin\/zones\/[^/]+$/.test(normalizedPath) && action === "view";
-
-        // POS dropdown needs seller list read access.
-        if (isSellerListRead || isSellerDetailRead || isSellerAnalyticsRead) {
-          const adminUser = getAdminUser();
-          const adminType = String(adminUser?.adminType || "").trim().toLowerCase();
-          const isAllowed =
-            adminType === "super_admin" ||
-            hasAdminAction(adminUser, "seller_management", "view") ||
-            hasAdminAction(adminUser, "point_of_sale", "view") ||
-            hasAdminAction(adminUser, "report_management", "view") ||
-            hasAdminAction(adminUser, "banner_management", "view");
-          if (!isAllowed) {
-            const error = new Error("Insufficient permissions for this action");
-            error.response = {
-              status: 403,
-              data: { message: "Insufficient permissions for this action" },
-            };
-            return Promise.reject(error);
-          }
-        } else if (isZonesRead || isZoneDetailRead) {
-          const adminUser = getAdminUser();
-          const adminType = String(adminUser?.adminType || "").trim().toLowerCase();
-          const isAllowed =
-            adminType === "super_admin" ||
-            hasAdminAction(adminUser, "dashboard", "view") ||
-            hasAdminAction(adminUser, "seller_management", "view") ||
-            hasAdminAction(adminUser, "point_of_sale", "view") ||
-            hasAdminAction(adminUser, "product_management", "view") ||
-            hasAdminAction(adminUser, "delivery_management", "view") ||
-            hasAdminAction(adminUser, "report_management", "view");
-          if (!isAllowed) {
-            const error = new Error("Insufficient permissions for this action");
-            error.response = {
-              status: 403,
-              data: { message: "Insufficient permissions for this action" },
-            };
-            return Promise.reject(error);
-          }
-        } else if (isOrdersRead) {
-          const adminUser = getAdminUser();
-          const adminType = String(adminUser?.adminType || "").trim().toLowerCase();
-          const isAllowed =
-            adminType === "super_admin" ||
-            hasAdminAction(adminUser, "order_management", "view") ||
-            hasAdminAction(adminUser, "report_management", "view");
-          if (!isAllowed) {
-            const error = new Error("Insufficient permissions for this action");
-            error.response = {
-              status: 403,
-              data: { message: "Insufficient permissions for this action" },
-            };
-            return Promise.reject(error);
-          }
-        } else if (isCustomersRead) {
-          const adminUser = getAdminUser();
-          const adminType = String(adminUser?.adminType || "").trim().toLowerCase();
-          const isAllowed =
-            adminType === "super_admin" ||
-            hasAdminAction(adminUser, "customer_management", "view") ||
-            hasAdminAction(adminUser, "report_management", "view");
-          if (!isAllowed) {
-            const error = new Error("Insufficient permissions for this action");
-            error.response = {
-              status: 403,
-              data: { message: "Insufficient permissions for this action" },
-            };
-            return Promise.reject(error);
-          }
-        } else {
-          const section = resolveAdminSectionByApiPath(path, config?.method);
-          if (!isAdminAllowedForAction(section, action)) {
-            const error = new Error("Insufficient permissions for this action");
-            error.response = {
-              status: 403,
-              data: { message: "Insufficient permissions for this action" },
-            };
-            return Promise.reject(error);
-          }
-        }
-      }
-    }
+    // No client-side admin RBAC here. The standalone app read per-section
+    // permissions from its own admin_user shape; the platform's admin_user has a
+    // different one, so every platform admin was refused before the request
+    // left the browser. The server decides (servicesAccess + the module's
+    // permission check).
 
     // If sending FormData, let the browser set proper multipart boundary.
     if (config.data instanceof FormData) {
@@ -391,6 +203,10 @@ apiClient.interceptors.response.use(
     if (err?.response?.status !== 401 || !original || original._retry) {
       return Promise.reject(err);
     }
+    // A failed sign-in is a wrong code or password, not an expired session.
+    if (/\/auth\/[^?]*(request-otp|verify-otp|login)/.test(String(original.url || ""))) {
+      return Promise.reject(err);
+    }
     const module = original.contextModule || getModuleFromUrl(original.url);
     const refreshToken = getRefreshToken(module);
     if (!refreshToken) {
@@ -415,9 +231,14 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      // Use relative URL so this works both with an explicit baseURL and with a dev proxy.
-      // Use plain axios to avoid interceptor recursion.
-      const refreshUrl = baseURL ? `${baseURL}/auth/refresh-token` : "/api/v1/auth/refresh-token";
+      // Plain axios to avoid interceptor recursion.
+      //
+      // Customer and admin sessions are the platform's, so they refresh where
+      // they were issued (the rest of the platform uses /food/auth). A seller's
+      // session was issued by this module, so it refreshes here.
+      const refreshUrl = module === "seller"
+        ? `${baseURL}/auth/refresh-token`
+        : `${platformRoot}/food/auth/refresh-token`;
       const { data } = await axios.post(refreshUrl, { refreshToken }, { timeout: 10000 });
       const newAccessToken = data?.data?.accessToken || data?.accessToken;
       if (newAccessToken) {
@@ -432,8 +253,18 @@ apiClient.interceptors.response.use(
         original.headers.Authorization = `Bearer ${newAccessToken}`;
         return apiClient(original);
       }
-    } catch (_) {
-      onRefreshFailed(module);
+    } catch (refreshError) {
+      // Sign out ONLY when the server rejected the refresh token. A 502 while
+      // the API restarts, a dropped connection or a 429 is not a reason to throw
+      // away a still-valid session -- the rest of the platform learned this
+      // the hard way (services/api/axios.js).
+      const status = refreshError?.response?.status;
+      if (status === 400 || status === 401 || status === 403) {
+        onRefreshFailed(module);
+      } else {
+        refreshSubscribers.forEach((cb) => cb(null, module));
+        refreshSubscribers = [];
+      }
       return Promise.reject(err);
     } finally {
       isRefreshing = false;

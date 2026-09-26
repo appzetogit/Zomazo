@@ -2,8 +2,8 @@
  * Shared desktop storefront pieces (DESKTOP_THEME.md). Desktop-only: use them
  * inside lg+ layouts so mobile stays unchanged.
  */
-import { Link } from 'react-router-dom'
-import { useStoreMode } from '@store/context/StoreModeContext'
+import { Link } from '@shop/router'
+import { useStoreMode } from '@shop/context/StoreModeContext'
 import { formatDeliveryWindow, useQuickEta, useShopDeliveryEstimate } from './useDeliveryEstimates'
 
 const cx = (...a) => a.filter(Boolean).join(' ')

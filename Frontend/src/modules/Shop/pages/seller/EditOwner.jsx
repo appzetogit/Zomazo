@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import Lenis from "lenis"
 import {
   ArrowLeft,
@@ -8,8 +8,8 @@ import {
   Edit,
   Trash2,
 } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -17,16 +17,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@store/components/ui/dialog"
-import { sellerAPI } from "@store/api"
-import OptimizedImage from "@store/components/OptimizedImage"
-import { clearModuleAuth } from "@store/utils/auth"
-import { firebaseAuth, ensureFirebaseInitialized } from "@store/firebase"
+} from "@shop/components/ui/dialog"
+import { sellerAPI } from "@shop/api"
+import OptimizedImage from "@shop/components/OptimizedImage"
+import { clearModuleAuth } from "@shop/utils/auth"
+import { firebaseAuth, ensureFirebaseInitialized } from "@shop/firebase"
 
-import { ImageSourcePicker } from "@store/components/ImageSourcePicker"
-import { isFlutterBridgeAvailable } from "@store/utils/imageUploadUtils"
+import { ImageSourcePicker } from "@shop/components/ImageSourcePicker"
+import { isFlutterBridgeAvailable } from "@shop/utils/imageUploadUtils"
 import { toast } from "sonner"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

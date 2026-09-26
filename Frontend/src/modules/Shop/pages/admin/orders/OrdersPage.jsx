@@ -1,23 +1,24 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
-import { useSearchParams } from "react-router-dom"
+import { useSearchParams } from "@shop/router"
 import io from "socket.io-client"
+import { ecomSocketUrl } from "@shop/api/socketUrl"
 import { FileText, Package } from "lucide-react"
-import { adminAPI } from "@store/api"
-import { useAdminPanel } from "@store/components/admin/useAdminPanel"
-import { API_BASE_URL } from "@store/api/config"
+import { adminAPI } from "@shop/api"
+import { useAdminPanel } from "@shop/components/admin/useAdminPanel"
+import { API_BASE_URL } from "@shop/api/config"
 import { toast } from "sonner"
-import OrdersTopbar from "@store/components/admin/orders/OrdersTopbar"
-import OrdersTable from "@store/components/admin/orders/OrdersTable"
-import FilterPanel from "@store/components/admin/orders/FilterPanel"
-import ViewOrderDialog from "@store/components/admin/orders/ViewOrderDialog"
-import SettingsDialog from "@store/components/admin/orders/SettingsDialog"
-import RefundModal from "@store/components/admin/orders/RefundModal"
-import { useOrdersManagement } from "@store/components/admin/orders/useOrdersManagement"
+import OrdersTopbar from "@shop/components/admin/orders/OrdersTopbar"
+import OrdersTable from "@shop/components/admin/orders/OrdersTable"
+import FilterPanel from "@shop/components/admin/orders/FilterPanel"
+import ViewOrderDialog from "@shop/components/admin/orders/ViewOrderDialog"
+import SettingsDialog from "@shop/components/admin/orders/SettingsDialog"
+import RefundModal from "@shop/components/admin/orders/RefundModal"
+import { useOrdersManagement } from "@shop/components/admin/orders/useOrdersManagement"
 import { Loader2 } from "lucide-react"
-import { OrdersDashboardSkeleton } from "@store/components/ui/loading-skeletons"
-import { useDelayedLoading } from "@store/hooks/useDelayedLoading"
-import alertSound from "@store/assets/audio/alert.mp3"
-import originalSound from "@store/assets/audio/original.mp3"
+import { OrdersDashboardSkeleton } from "@shop/components/ui/loading-skeletons"
+import { useDelayedLoading } from "@shop/hooks/useDelayedLoading"
+import alertSound from "@shop/assets/audio/alert.mp3"
+import originalSound from "@shop/assets/audio/original.mp3"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -872,13 +873,12 @@ export default function OrdersPage({ statusKey = "all" }) {
   useEffect(() => {
     if (statusKey !== "all") return undefined
 
-    const backendUrl = API_BASE_URL.replace(/\/api\/?$/, "")
-    // Backend disconnected - do not open Socket.IO (new backend in progress)
-    if (!API_BASE_URL || !backendUrl || !backendUrl.startsWith("http")) {
-      return undefined
-    }
+    if (!API_BASE_URL) return undefined
 
-    const socket = io(backendUrl, {
+    // The Shop's namespace. The standalone page sent no token, which the
+    // socket auth refuses -- so it never connected.
+    const socket = io(ecomSocketUrl(), {
+      auth: { token: localStorage.getItem("admin_accessToken") || "" },
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: Infinity,

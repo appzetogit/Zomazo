@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react"
-import { useLocation } from "react-router-dom"
+import { useLocation } from "@shop/router"
 
 // The customer site has two storefronts with separate carts:
 //   /        -> "shop"  (e-commerce, courier-shipped, fulfilmentMode "standard")

@@ -1,9 +1,9 @@
 import { memo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@shop/router";
 import { ShoppingCart } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { useCart } from "@store/context/CartContext";
-import useActiveOrderTracking from "@store/hooks/useActiveOrderTracking";
+import { useCart } from "@shop/context/CartContext";
+import useActiveOrderTracking from "@shop/hooks/useActiveOrderTracking";
 import OrderTrackingRow from "./OrderTrackingRow";
 
 const DOCK_BOTTOM_WITH_NAV = "calc(5.75rem + env(safe-area-inset-bottom, 0px))";

@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "@shop/router"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, Clock, Edit2, Trash2, ChevronDown, AlertTriangle, X } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { Checkbox } from "@store/components/ui/checkbox"
+import { Button } from "@shop/components/ui/button"
+import { Checkbox } from "@shop/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -11,21 +11,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@store/components/ui/dialog"
+} from "@shop/components/ui/dialog"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@store/components/ui/select"
+} from "@shop/components/ui/select"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@store/components/ui/popover"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import { sellerAPI } from "@store/api"
+} from "@shop/components/ui/popover"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import { sellerAPI } from "@shop/api"
 import { toast } from "sonner"
 
 // The server keeps slots as 24h "HH:mm"; this page edits 12h time + am/pm.

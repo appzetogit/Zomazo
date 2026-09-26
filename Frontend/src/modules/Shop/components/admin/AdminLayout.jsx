@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react"
-import { Outlet, useLocation } from "react-router-dom"
+import { Outlet, useLocation } from "@shop/router"
 import AdminSidebar from "./AdminSidebar"
 import AdminNavbar from "./AdminNavbar"
 import { useAdminPanel } from "./useAdminPanel"
-import { API_BASE_URL } from "@store/api/config"
+import { API_BASE_URL } from "@shop/api/config"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

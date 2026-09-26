@@ -18,3 +18,10 @@ const on = (value) => String(value ?? '').trim().toLowerCase() === 'true';
  * tab in both panel switchers. Off unless VITE_ENABLE_SERVICE_PROVIDER=true.
  */
 export const SERVICE_PROVIDER_ENABLED = on(import.meta.env.VITE_ENABLE_SERVICE_PROVIDER);
+
+/**
+ * The Shop (e-commerce): /shop, /shop/seller and /admin/shop, and its entry
+ * points in the customer app and the admin panel switcher.
+ * Off unless VITE_ENABLE_ECOMMERCE=true.
+ */
+export const ECOMMERCE_ENABLED = on(import.meta.env.VITE_ENABLE_ECOMMERCE);

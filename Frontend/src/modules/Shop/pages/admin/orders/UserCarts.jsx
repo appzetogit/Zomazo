@@ -11,13 +11,13 @@ import {
   Mail,
   Clock,
 } from "lucide-react"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { resolveDeliveryFeeGst, formatDeliveryFeeBreakdownSubtext, getDeliveryFeeTotal } from "@store/utils/deliveryFeeDisplay"
-import { getCartCompareItemTotal } from "@store/utils/productVariants"
-import { DualMoney } from "@store/components/user/ProductPriceDisplay"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { resolveDeliveryFeeGst, formatDeliveryFeeBreakdownSubtext, getDeliveryFeeTotal } from "@shop/utils/deliveryFeeDisplay"
+import { getCartCompareItemTotal } from "@shop/utils/productVariants"
+import { DualMoney } from "@shop/components/user/ProductPriceDisplay"
 
 const PAGE_SIZE = 20
 const RUPEE = "\u20B9"

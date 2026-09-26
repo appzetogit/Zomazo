@@ -1,5 +1,5 @@
 import SellerCMSPage from "./SellerCMSPage"
-import { API_ENDPOINTS } from "@store/api/config"
+import { API_ENDPOINTS } from "@shop/api/config"
 
 export default function SellerPrivacy() {
   return (

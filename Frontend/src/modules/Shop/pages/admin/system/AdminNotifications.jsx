@@ -1,6 +1,6 @@
 import { Bell, Clock, Loader2, Trash2, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import useAdminNotifications from "@store/hooks/useAdminNotifications";
+import { useNavigate } from "@shop/router";
+import useAdminNotifications from "@shop/hooks/useAdminNotifications";
 
 export default function AdminNotifications() {
   const navigate = useNavigate();

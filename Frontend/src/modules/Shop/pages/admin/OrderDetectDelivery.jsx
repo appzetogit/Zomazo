@@ -1,12 +1,12 @@
 import { useMemo, useState, useEffect } from "react"
 import { Package, Truck, CheckCircle, Clock, XCircle, Loader2 } from "lucide-react"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
-import OrdersTopbar from "@store/components/admin/orders/OrdersTopbar"
-import OrderDetectDeliveryTable from "@store/components/admin/orders/OrderDetectDeliveryTable"
-import ViewOrderDetectDeliveryDialog from "@store/components/admin/orders/ViewOrderDetectDeliveryDialog"
-import SettingsDialog from "@store/components/admin/orders/SettingsDialog"
-import { useGenericTableManagement } from "@store/components/admin/orders/useGenericTableManagement"
+import OrdersTopbar from "@shop/components/admin/orders/OrdersTopbar"
+import OrderDetectDeliveryTable from "@shop/components/admin/orders/OrderDetectDeliveryTable"
+import ViewOrderDetectDeliveryDialog from "@shop/components/admin/orders/ViewOrderDetectDeliveryDialog"
+import SettingsDialog from "@shop/components/admin/orders/SettingsDialog"
+import { useGenericTableManagement } from "@shop/components/admin/orders/useGenericTableManagement"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

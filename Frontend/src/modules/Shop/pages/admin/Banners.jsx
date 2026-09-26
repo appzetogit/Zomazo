@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { Search, Download, ChevronDown, Plus, Edit, Trash2, Upload, Image as ImageIcon, Info, Loader2 } from "lucide-react"
-import api from "@store/api"
-import { emptyBanners } from "@store/utils/adminFallbackData"
+import api from "@shop/api"
+import { emptyBanners } from "@shop/utils/adminFallbackData"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

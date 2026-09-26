@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "@shop/router"
 import { Check, ChevronRight, Package, RotateCcw, Store, Truck, Zap } from "lucide-react"
-import { orderAPI } from "@/services/api"
+import { orderAPI } from "@shop/api"
 import { mediaUrl } from "../desktop/desktopCart"
 import MobileTopBar from "./MobileTopBar"
 

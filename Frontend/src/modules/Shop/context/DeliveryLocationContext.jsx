@@ -6,18 +6,18 @@ import {
   useMemo,
   useState,
 } from "react"
-import { useNavigate } from "react-router-dom"
-import { useLocation } from "@store/hooks/useLocation"
-import { useStoreMode, QUICK_BASE } from "@store/context/StoreModeContext"
-import { useZone } from "@store/hooks/useZone"
-import { useProfile } from "@store/context/ProfileContext"
+import { useNavigate } from "@shop/router"
+import { useLocation } from "@shop/hooks/useLocation"
+import { useStoreMode, QUICK_BASE } from "@shop/context/StoreModeContext"
+import { useZone } from "@shop/hooks/useZone"
+import { useProfile } from "@shop/context/ProfileContext"
 import {
   buildDisplayAddressText,
   buildEffectiveLocation,
   formatSavedAddress,
   getDeliveryAddressMode,
   notifyUserLocationChanged,
-} from "@store/utils/deliveryLocationUtils"
+} from "@shop/utils/deliveryLocationUtils"
 
 const defaultDeliveryLocationContext = {
   liveLocation: null,

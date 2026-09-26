@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
-import { adminAPI } from "@store/api";
-import { getCachedSettings, setCachedSettings } from "@store/utils/businessSettings";
+import { adminAPI } from "@shop/api";
+import { getCachedSettings, setCachedSettings } from "@shop/utils/businessSettings";
 
 const MODULES = [
   { key: "user", label: "User Module", fallbackColor: "#FD920B" },

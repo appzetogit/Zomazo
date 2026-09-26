@@ -1,20 +1,20 @@
 import { useState, useEffect, useRef } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useNavigate, useLocation } from "@shop/router"
 import { motion, useReducedMotion } from "framer-motion"
-import { adminAPI } from "@store/api"
-import { setAuthData } from "@store/utils/auth"
+import { adminAPI } from "@shop/api"
+import { setAuthData } from "@shop/utils/auth"
 import {
   loadBusinessSettings,
   applyModulePowerScanning,
   getModulePowerScanning,
-} from "@store/utils/businessSettings"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { Label } from "@store/components/ui/label"
-import AdminAuthHero from "@store/components/admin/auth/AdminAuthHero"
+} from "@shop/utils/businessSettings"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { Label } from "@shop/components/ui/label"
+import AdminAuthHero from "@shop/components/admin/auth/AdminAuthHero"
 import { Eye, EyeOff, Shield, Loader2 } from "lucide-react"
-import brandMark from "@/config/brandMark"
+import brandMark from "@shop/platform/config/brandMark"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

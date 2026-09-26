@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../../services/api/config.js";
+import { API_BASE_URL } from "../api/config.js";
 
 const SIGNED_URL_PATTERN =
   /[?&](X-Amz-|Signature=|Expires=|AWSAccessKeyId=|GoogleAccessId=|token=|sig=|se=|sp=|sv=)/i;

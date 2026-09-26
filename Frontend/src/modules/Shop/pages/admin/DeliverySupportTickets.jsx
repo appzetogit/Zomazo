@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react"
 import { MessageSquare, Search, Clock, CheckCircle, XCircle, Loader2, Eye, Edit } from "lucide-react"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@store/components/ui/dialog"
-import { Textarea } from "@store/components/ui/textarea"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@shop/components/ui/dialog"
+import { Textarea } from "@shop/components/ui/textarea"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

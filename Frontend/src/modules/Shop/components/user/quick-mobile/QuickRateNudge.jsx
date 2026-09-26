@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { Star, X } from "lucide-react"
-import { orderAPI } from "@/services/api"
-import { isModuleAuthenticated } from "@store/utils/auth"
+import { orderAPI } from "@shop/api"
+import { isModuleAuthenticated } from "@shop/utils/auth"
 
 /**
  * "Rate your order experience" (QUICK_MOBILE_SPEC.md §1): after a delivered

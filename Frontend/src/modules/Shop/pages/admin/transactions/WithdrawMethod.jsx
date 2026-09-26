@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react"
 import { Search, Plus, Eye, Edit, Settings, ArrowUpDown, Check, Columns } from "lucide-react"
-import { emptyWithdrawMethods } from "@store/utils/adminFallbackData"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@store/components/ui/dialog"
+import { emptyWithdrawMethods } from "@shop/utils/adminFallbackData"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shop/components/ui/dialog"
 
 export default function WithdrawMethod() {
   const [searchQuery, setSearchQuery] = useState("")

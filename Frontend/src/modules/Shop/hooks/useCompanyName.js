@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { loadBusinessSettings, getCachedSettings, getCompanyName } from '@store/utils/businessSettings';
-import { APP_CONFIG } from '@/config/constants';
+import { loadBusinessSettings, getCachedSettings, getCompanyName } from '@shop/utils/businessSettings';
+import { APP_CONFIG } from '@shop/platform/config/constants';
 
 /**
  * Custom hook to get company name from business settings

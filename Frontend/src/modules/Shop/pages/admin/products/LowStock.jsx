@@ -4,11 +4,11 @@
  * stock). Filter by seller; each row links to the product's edit form.
  */
 import { useCallback, useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { AlertTriangle, Loader2, Pencil, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
-import { adminAPI } from "@store/api"
-import { useAdminBase, useAdminPanel } from "@store/components/admin/useAdminPanel"
+import { adminAPI } from "@shop/api"
+import { useAdminBase, useAdminPanel } from "@shop/components/admin/useAdminPanel"
 
 const PAGE_SIZE = 50
 

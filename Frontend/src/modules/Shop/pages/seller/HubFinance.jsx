@@ -1,9 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useNavigate, useSearchParams } from "@shop/router"
 import { motion, AnimatePresence } from "framer-motion"
 import { Bell, Menu, ChevronDown, Calendar, Download, FileText, Wallet, X, Info, ArrowUpRight, History, TrendingUp, Receipt } from "lucide-react"
-import BottomNavOrders from "@store/components/seller/BottomNavOrders"
-import { sellerAPI } from "@store/api"
+import BottomNavOrders from "@shop/components/seller/BottomNavOrders"
+import { sellerAPI } from "@shop/api"
 const debugLog = (...args) => { }
 const debugWarn = (...args) => { }
 const debugError = (...args) => { }

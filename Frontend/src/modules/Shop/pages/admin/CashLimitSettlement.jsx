@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect } from "react"
 import { Search, Receipt, Loader2, Package } from "lucide-react"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

@@ -1,13 +1,13 @@
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "@shop/router"
 import { useState, useEffect } from "react"
 import { ArrowLeft, Receipt, Loader2 } from "lucide-react"
 import { motion } from "framer-motion"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Button } from "@store/components/ui/button"
-import api from "@store/api"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
-import { API_ENDPOINTS } from "@store/api/config"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Button } from "@shop/components/ui/button"
+import api from "@shop/api"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
+import { API_ENDPOINTS } from "@shop/api/config"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 
 export default function Refund() {
   const companyName = useCompanyName()

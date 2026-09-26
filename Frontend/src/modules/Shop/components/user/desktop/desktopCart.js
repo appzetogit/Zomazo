@@ -3,11 +3,11 @@
  * resolving media URLs and adding a product to the current store's cart.
  * Kept in its own module so quick/* and ListingDesktop don't import each other.
  */
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { toast } from "sonner"
-import { useCart } from "@store/context/CartContext"
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { API_BASE_URL } from "@store/api/config"
+import { useCart } from "@shop/context/CartContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { API_BASE_URL } from "@shop/api/config"
 
 const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api(\/v\d+)?\/?$/, "")
 

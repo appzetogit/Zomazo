@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import {
   ArrowLeft,
   Search,
@@ -30,13 +30,13 @@ import {
   LogOut,
   Trash2,
 } from "lucide-react"
-import { Card, CardContent } from "@store/components/ui/card"
-import { DateRangeCalendar } from "@store/components/ui/date-range-calendar"
-import { getCurrentUser } from "@store/utils/auth"
-import { sellerAPI } from "@store/api"
-import { logoutSellerSession } from "@store/utils/sellerLogout"
-import BottomNavOrders from "@store/components/seller/BottomNavOrders"
-import DeleteAccountModal from "@store/components/DeleteAccountModal"
+import { Card, CardContent } from "@shop/components/ui/card"
+import { DateRangeCalendar } from "@shop/components/ui/date-range-calendar"
+import { getCurrentUser } from "@shop/utils/auth"
+import { sellerAPI } from "@shop/api"
+import { logoutSellerSession } from "@shop/utils/sellerLogout"
+import BottomNavOrders from "@shop/components/seller/BottomNavOrders"
+import DeleteAccountModal from "@shop/components/DeleteAccountModal"
 import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -505,7 +505,7 @@ export default function ExploreMore() {
       await sellerAPI.deleteAccount();
       toast.success("Account deleted successfully");
 
-      const { clearModuleAuth } = await import("@store/utils/auth");
+      const { clearModuleAuth } = await import("@shop/utils/auth");
       clearModuleAuth("seller");
       localStorage.removeItem("seller_authenticated");
       localStorage.removeItem("seller_refresh_token");

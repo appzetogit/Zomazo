@@ -8,7 +8,7 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { getSellerCookingNote } from "@store/utils/orderCookingNote";
+import { getSellerCookingNote } from "@shop/utils/orderCookingNote";
 
 const getOrderTotal = (orderLike) => {
   if (!orderLike) return 0;

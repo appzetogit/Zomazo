@@ -3,7 +3,7 @@ import {
   Search, Trash2, Building2, User, Phone, Mail, MapPin, Calendar, 
   UtensilsCrossed, ArrowUpDown, Loader2, RefreshCw, AlertCircle, Eye, X
 } from "lucide-react";
-import { adminAPI } from "@store/api";
+import { adminAPI } from "@shop/api";
 
 export default function UnregisteredSellers() {
   const [searchQuery, setSearchQuery] = useState("");

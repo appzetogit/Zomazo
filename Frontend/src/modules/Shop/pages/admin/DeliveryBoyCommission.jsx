@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from "react"
 import { Search, Edit, Trash2, IndianRupee, Settings, Check, Columns, MapPin, Loader2 } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@store/components/ui/dialog"
-import { adminAPI } from "@store/api"
-import { API_BASE_URL } from "@store/api/config"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@shop/components/ui/dialog"
+import { adminAPI } from "@shop/api"
+import { API_BASE_URL } from "@shop/api/config"
 import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from "react"
 import { Search, Download, ChevronDown, Eye, User, Star, ArrowUpDown, Settings, FileText, FileSpreadsheet, Loader2, Check, Columns, ExternalLink, Calendar, MapPin, CreditCard, Mail, Phone, Bike, FileCheck, Pencil, Save, Trash2, X, AlertTriangle } from "lucide-react"
-import { adminAPI } from "@store/api"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@store/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@store/components/ui/dialog"
+import { adminAPI } from "@shop/api"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@shop/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@shop/components/ui/dialog"
 import { toast } from "sonner"
 const debugError = () => {}
 
@@ -189,7 +189,7 @@ availableCashLimit: deliveryman.availableCashLimit || 0,
   }
 
   const loadDeliverymanExportUtils = () =>
-    import("@store/components/admin/deliveryman/deliverymanExportUtils")
+    import("@shop/components/admin/deliveryman/deliverymanExportUtils")
 
   const handleExportPDF = async () => {
     if (filteredDeliverymen.length === 0) {

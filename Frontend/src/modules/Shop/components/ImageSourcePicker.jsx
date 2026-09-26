@@ -5,8 +5,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@store/components/ui/dialog"
-import { isFlutterBridgeAvailable, openCamera, openGallery } from "@store/utils/imageUploadUtils"
+} from "@shop/components/ui/dialog"
+import { isFlutterBridgeAvailable, openCamera, openGallery } from "@shop/utils/imageUploadUtils"
 
 /**
  * ImageSourcePicker component to choose between Camera and Gallery

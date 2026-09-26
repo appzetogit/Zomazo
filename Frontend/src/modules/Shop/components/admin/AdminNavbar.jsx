@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "@shop/router";
 import { ADMIN_PANELS, getAdminSubPath, toPanelPath, useAdminPanel } from "./useAdminPanel";
-import { getAdminSidebarMenu } from "@store/utils/adminSidebarMenu";
+import { getAdminSidebarMenu } from "@shop/utils/adminSidebarMenu";
 import {
   Menu,
   Search,
@@ -31,7 +31,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@store/components/ui/dialog";
+} from "@shop/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,18 +39,18 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@store/components/ui/dropdown-menu";
-import { Input } from "@store/components/ui/input";
+} from "@shop/components/ui/dropdown-menu";
+import { Input } from "@shop/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@store/components/ui/popover";
-import brandMark from "@/config/brandMark"
-import { adminAPI } from "@store/api";
-import { clearModuleAuth } from "@store/utils/auth";
-import { getCachedSettings, loadBusinessSettings } from "@store/utils/businessSettings";
-import useAdminNotifications from "@store/hooks/useAdminNotifications";
+} from "@shop/components/ui/popover";
+import brandMark from "@shop/platform/config/brandMark"
+import { adminAPI } from "@shop/api";
+import { clearModuleAuth } from "@shop/utils/auth";
+import { getCachedSettings, loadBusinessSettings } from "@shop/utils/businessSettings";
+import useAdminNotifications from "@shop/hooks/useAdminNotifications";
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import Lenis from "lenis"
 import { ArrowLeft, Zap } from "lucide-react"
-import { RadioGroup, RadioGroupItem } from "@store/components/ui/radio-group"
-import { Label } from "@store/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@shop/components/ui/radio-group"
+import { Label } from "@shop/components/ui/label"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

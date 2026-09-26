@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { getGoogleMapsApiKeySync } from '@store/utils/googleMapsApiKey'
+import { getGoogleMapsApiKeySync } from '@shop/utils/googleMapsApiKey'
 import { 
   GoogleMap, 
   useJsApiLoader, 
@@ -10,9 +10,10 @@ import {
   Polyline
 } from '@react-google-maps/api';
 import io from 'socket.io-client';
-import { API_BASE_URL } from '@store/api/config';
-import bikeLogo from '@store/assets/bikelogo.png';
-import { subscribeOrderTracking } from '@store/realtimeTracking';
+import { ecomSocketUrl } from '@shop/api/socketUrl';
+import { API_BASE_URL } from '@shop/api/config';
+import bikeLogo from '@shop/assets/bikelogo.png';
+import { subscribeOrderTracking } from '@shop/realtimeTracking';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Navigation, Info, Circle } from 'lucide-react';
 
@@ -114,7 +115,7 @@ const DeliveryTrackingMap = ({
 
     // B. SOCKET.IO REALTIME
     const token = localStorage.getItem('user_accessToken') || localStorage.getItem('accessToken') || '';
-    socketRef.current = io(backendUrl, {
+    socketRef.current = io(ecomSocketUrl(), {
       transports: ['websocket'],
       auth: { token }
     });

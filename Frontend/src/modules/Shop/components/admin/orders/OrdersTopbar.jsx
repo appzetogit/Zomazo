@@ -6,7 +6,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@store/components/ui/dropdown-menu"
+} from "@shop/components/ui/dropdown-menu"
 import { FileSpreadsheet, FileText } from "lucide-react"
 
 export default function OrdersTopbar({

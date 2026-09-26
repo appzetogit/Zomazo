@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { ensureValidAccessToken, isModuleAuthenticated } from "@store/utils/auth";
+import { Navigate, useLocation } from "@shop/router";
+import { ensureValidAccessToken, isModuleAuthenticated } from "@shop/utils/auth";
 
 /**
  * Role-based Protected Route Component

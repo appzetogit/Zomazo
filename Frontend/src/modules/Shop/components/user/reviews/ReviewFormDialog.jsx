@@ -6,8 +6,8 @@
 import { useEffect, useRef, useState } from "react"
 import { ImagePlus, Loader2, X } from "lucide-react"
 import { toast } from "sonner"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@store/components/ui/dialog"
-import { userAPI, uploadAPI } from "@store/api"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@shop/components/ui/dialog"
+import { userAPI, uploadAPI } from "@shop/api"
 import { StarInput } from "./StarRating"
 
 const MAX_PHOTOS = 5

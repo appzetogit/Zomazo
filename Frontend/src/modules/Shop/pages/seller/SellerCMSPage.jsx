@@ -1,11 +1,11 @@
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { useState, useEffect } from "react"
 import { ArrowLeft, Lock, Loader2, Mail, Phone, MessageSquare, Clock, ShieldCheck } from "lucide-react"
 import { motion } from "framer-motion"
-import { Button } from "@store/components/ui/button"
-import api from "@store/api"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import { getSupportEmail } from "@store/utils/businessSettings"
+import { Button } from "@shop/components/ui/button"
+import api from "@shop/api"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import { getSupportEmail } from "@shop/utils/businessSettings"
 
 export default function SellerCMSPage({ endpoint, title: defaultTitle, module = "SELLER" }) {
   const companyName = useCompanyName()

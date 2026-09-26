@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "@store/utils/utils"
+import { cn } from "@shop/utils/utils"
 
 const RadioGroupContext = React.createContext<{
   value?: string

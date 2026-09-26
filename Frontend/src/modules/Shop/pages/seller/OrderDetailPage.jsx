@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useParams } from "react-router-dom"
+import { useParams } from "@shop/router"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   ArrowLeft, 
@@ -22,11 +22,11 @@ import {
   Truck,
   ExternalLink,
 } from "lucide-react"
-import { sellerAPI } from "@store/api"
+import { sellerAPI } from "@shop/api"
 import { toast } from "sonner"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
-import { getTimelineStatusLabel, getTimelineRoleLabel } from "@store/utils/orderStatus"
-import { getSellerCookingNote } from "@store/utils/orderCookingNote"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
+import { getTimelineStatusLabel, getTimelineRoleLabel } from "@shop/utils/orderStatus"
+import { getSellerCookingNote } from "@shop/utils/orderCookingNote"
 
 const formatMoney = (value) => `₹${Number(value || 0).toFixed(2)}`
 const toNumber = (value) => {

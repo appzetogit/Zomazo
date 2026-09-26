@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react"
-import { useParams, useNavigate } from "react-router-dom"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Card, CardHeader, CardTitle, CardContent } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { Label } from "@store/components/ui/label"
-import { useProfile } from "@store/context/ProfileContext"
+import { useParams, useNavigate } from "@shop/router"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Card, CardHeader, CardTitle, CardContent } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { Label } from "@shop/components/ui/label"
+import { useProfile } from "@shop/context/ProfileContext"
 
 export default function EditPayment() {
   const { id } = useParams()

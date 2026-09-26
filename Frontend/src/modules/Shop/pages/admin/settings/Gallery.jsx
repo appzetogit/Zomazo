@@ -1,7 +1,7 @@
 import { useState, useRef } from "react"
 import { Folder, Plus, ArrowLeft, HardDrive, Upload, File, Image, X, Search, MoreVertical, Download, Trash2 } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@store/components/ui/dialog"
-import { Input } from "@store/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shop/components/ui/dialog"
+import { Input } from "@shop/components/ui/input"
 
 export default function Gallery() {
   const [currentPath, setCurrentPath] = useState("")

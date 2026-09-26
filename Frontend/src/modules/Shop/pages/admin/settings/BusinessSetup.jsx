@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Info, Phone, Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { adminAPI } from "@store/api";
-import { setCachedSettings, updateFavicon, updateTitle } from "@store/utils/businessSettings";
+import { adminAPI } from "@shop/api";
+import { setCachedSettings, updateFavicon, updateTitle } from "@shop/utils/businessSettings";
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

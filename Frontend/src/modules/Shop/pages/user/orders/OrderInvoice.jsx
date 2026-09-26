@@ -1,15 +1,15 @@
-import { useParams, Link } from "react-router-dom"
+import { useParams, Link } from "@shop/router"
 
 import { Download, ArrowLeft, FileText, Printer } from "lucide-react"
 import { useRef, useState, useEffect } from "react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import ScrollReveal from "@store/components/user/ScrollReveal"
-import { Card, CardHeader, CardTitle, CardContent } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
-import { Badge } from "@store/components/ui/badge"
-import { useOrders } from "@store/context/OrdersContext"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import { orderAPI } from "@store/api"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import ScrollReveal from "@shop/components/user/ScrollReveal"
+import { Card, CardHeader, CardTitle, CardContent } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { Badge } from "@shop/components/ui/badge"
+import { useOrders } from "@shop/context/OrdersContext"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import { orderAPI } from "@shop/api"
 
 export default function OrderInvoice() {
   const companyName = useCompanyName()

@@ -1,12 +1,12 @@
 import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "@shop/router"
 import { ArrowLeft, Plus, Share2, UtensilsCrossed, Store, X } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
 
 // Import banner
-import collectionsBanner from "@store/assets/collectionspagebanner.png"
+import collectionsBanner from "@shop/assets/collectionspagebanner.png"
 
 // Gradient colors for collection cards
 const gradientColors = [

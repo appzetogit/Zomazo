@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { adminAPI } from '@/services/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@store/components/ui/card';
-import { Button } from '@store/components/ui/button';
-import { Switch } from '@store/components/ui/switch';
+import { adminAPI } from '@shop/api';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shop/components/ui/card';
+import { Button } from '@shop/components/ui/button';
+import { Switch } from '@shop/components/ui/switch';
 import { Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 

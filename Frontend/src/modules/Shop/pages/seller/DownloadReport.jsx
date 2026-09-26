@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { ArrowLeft, CheckCircle, Mail } from "lucide-react"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 
 const REPORT_VIEWS = [
   { id: "detailed", label: "Detailed report" },

@@ -1,15 +1,15 @@
 import { useState, useEffect, useMemo } from "react"
 import { Search, ArrowUpDown, Settings, Folder, ChevronDown, Eye, Trash2, AlertTriangle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { adminAPI } from "@store/api"
+import { adminAPI } from "@shop/api"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@store/components/ui/dialog"
-import { Button } from "@store/components/ui/button"
+} from "@shop/components/ui/dialog"
+import { Button } from "@shop/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +19,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@store/components/ui/dropdown-menu"
+} from "@shop/components/ui/dropdown-menu"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

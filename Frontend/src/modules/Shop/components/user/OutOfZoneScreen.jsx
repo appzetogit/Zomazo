@@ -1,9 +1,9 @@
 import React from "react";
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { MapPin, ChevronDown } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
-import { brandLogoOnDark } from "@/config/brandMark";
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import { Link, useLocation } from "@shop/router";
+import { brandLogoOnDark } from "@shop/platform/config/brandMark";
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 
 const OutOfZoneScreen = ({ location }) => {
   const { storePath } = useStoreMode()

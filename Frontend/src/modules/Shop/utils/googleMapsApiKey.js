@@ -1,4 +1,4 @@
-import { getCachedSettings, loadBusinessSettings } from "@store/utils/businessSettings";
+import { getCachedSettings, loadBusinessSettings } from "@shop/utils/businessSettings";
 
 /**
  * The Google Maps browser key, from business settings.

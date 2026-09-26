@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { ArrowLeft, Coins as CoinsIcon, Loader2, Lock, Clock } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { coinsAPI } from "@store/api"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { coinsAPI } from "@shop/api"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
 
 const PAGE_SIZE = 20
 

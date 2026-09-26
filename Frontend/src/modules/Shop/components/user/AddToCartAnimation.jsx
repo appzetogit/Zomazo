@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from '@shop/router';
 import { ShoppingCart } from 'lucide-react';
-import { useCart } from "@store/context/CartContext";
+import { useCart } from "@shop/context/CartContext";
 import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 const debugLog = (...args) => {}

@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, ArrowUpDown, Plus, Edit, Trash2, Megaphone, Filter, Settings, FileSpreadsheet, FileDown, FileText, Code } from "lucide-react"
-import { emptyBasicCampaigns } from "@store/utils/adminFallbackData"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@store/components/ui/dropdown-menu"
-import { exportCampaignsToCSV, exportCampaignsToExcel, exportCampaignsToPDF, exportCampaignsToJSON } from "@store/components/admin/campaigns/campaignsExportUtils"
-import AddEditBasicCampaignDialog from "@store/components/admin/campaigns/AddEditBasicCampaignDialog"
-import DeleteCampaignDialog from "@store/components/admin/campaigns/DeleteCampaignDialog"
-import CampaignFilterPanel from "@store/components/admin/campaigns/CampaignFilterPanel"
-import SettingsDialog from "@store/components/admin/orders/SettingsDialog"
+import { emptyBasicCampaigns } from "@shop/utils/adminFallbackData"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@shop/components/ui/dropdown-menu"
+import { exportCampaignsToCSV, exportCampaignsToExcel, exportCampaignsToPDF, exportCampaignsToJSON } from "@shop/components/admin/campaigns/campaignsExportUtils"
+import AddEditBasicCampaignDialog from "@shop/components/admin/campaigns/AddEditBasicCampaignDialog"
+import DeleteCampaignDialog from "@shop/components/admin/campaigns/DeleteCampaignDialog"
+import CampaignFilterPanel from "@shop/components/admin/campaigns/CampaignFilterPanel"
+import SettingsDialog from "@shop/components/admin/orders/SettingsDialog"
 
 export default function BasicCampaign() {
   const [searchQuery, setSearchQuery] = useState("")

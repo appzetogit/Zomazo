@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { orderAPI } from "@store/api"
-import { initRazorpayPayment } from "@store/utils/razorpay"
-import { getCompanyNameAsync } from "@store/utils/businessSettings"
+import { orderAPI } from "@shop/api"
+import { initRazorpayPayment } from "@shop/utils/razorpay"
+import { getCompanyNameAsync } from "@shop/utils/businessSettings"
 
 /** Matches the server's hold on an unpaid online checkout. */
 const HOLD_MS = 30 * 60 * 1000

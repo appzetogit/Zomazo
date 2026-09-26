@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Search, Wallet, Info, Calendar, Edit, Trash2 } from "lucide-react"
-import { emptyWalletBonuses } from "@store/utils/adminFallbackData"
+import { emptyWalletBonuses } from "@shop/utils/adminFallbackData"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

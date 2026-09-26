@@ -1,33 +1,33 @@
 import { useEffect, useRef, useState } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
-import { Input } from "@store/components/ui/input"
-import { Button } from "@store/components/ui/button"
-import { Label } from "@store/components/ui/label"
+import { useNavigate, useSearchParams } from "@shop/router"
+import { Input } from "@shop/components/ui/input"
+import { Button } from "@shop/components/ui/button"
+import { Label } from "@shop/components/ui/label"
 import { Image as ImageIcon, Upload, Clock, Calendar as CalendarIcon, Award, BadgeCheck, Wallet, Info, X } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@store/components/ui/popover"
-import { Calendar } from "@store/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@shop/components/ui/popover"
+import { Calendar } from "@shop/components/ui/calendar"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@store/components/ui/select"
-import { sellerAPI, zoneAPI, uploadAPI, api } from "@store/api"
+} from "@shop/components/ui/select"
+import { sellerAPI, zoneAPI, uploadAPI, api } from "@shop/api"
 import { MobileTimePicker } from "@mui/x-date-pickers/MobileTimePicker"
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"
-import { determineStepToShow } from "@store/utils/onboardingUtils"
+import { determineStepToShow } from "@shop/utils/onboardingUtils"
 import { toast } from "sonner"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import { getGoogleMapsApiKey } from "@store/utils/googleMapsApiKey"
-import { clearModuleAuth } from "@store/utils/auth"
-import { logoutSellerSession } from "@store/utils/sellerLogout"
-import { ImageSourcePicker } from "@store/components/ImageSourcePicker"
-import { resolveMediaUrl } from "@store/utils/common"
-import { initRazorpayPayment } from "@store/utils/razorpay"
-import { getCompanyNameAsync, loadBusinessSettings, getModuleLogoUrl } from "@store/utils/businessSettings"
-import SellerOnboardingShell from "@store/components/seller/SellerOnboardingShell"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import { getGoogleMapsApiKey } from "@shop/utils/googleMapsApiKey"
+import { clearModuleAuth } from "@shop/utils/auth"
+import { logoutSellerSession } from "@shop/utils/sellerLogout"
+import { ImageSourcePicker } from "@shop/components/ImageSourcePicker"
+import { resolveMediaUrl } from "@shop/utils/common"
+import { initRazorpayPayment } from "@shop/utils/razorpay"
+import { getCompanyNameAsync, loadBusinessSettings, getModuleLogoUrl } from "@shop/utils/businessSettings"
+import SellerOnboardingShell from "@shop/components/seller/SellerOnboardingShell"
 import {
   ONBOARDING_SECTION_FULL,
   ONBOARDING_SECTION_TITLE,
@@ -43,7 +43,7 @@ import {
   ONBOARDING_DAY_ACTIVE,
   ONBOARDING_DAY_INACTIVE,
   chipClass,
-} from "@store/components/seller/onboardingStyles"
+} from "@shop/components/seller/onboardingStyles"
 
 const SELLER_THEME = "#FD920B"
 

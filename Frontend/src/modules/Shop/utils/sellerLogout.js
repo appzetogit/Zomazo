@@ -3,4 +3,4 @@
  * Keeps existing `@store/utils/sellerLogout` imports working.
  */
 
-export { logoutSellerSession } from "@store/utils/moduleLogout";
+export { logoutSellerSession } from "@shop/utils/moduleLogout";

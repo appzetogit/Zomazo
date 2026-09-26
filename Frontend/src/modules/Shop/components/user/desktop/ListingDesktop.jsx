@@ -8,12 +8,12 @@
  * attr[...], minPrice, maxPrice, inStockOnly, sort, page, limit, facets).
  */
 import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { adminAPI } from "@store/api"
-import { searchAPI } from "@/services/api"
-import { channelAvailability, stockLabel } from "@store/utils/channelStock"
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { adminAPI } from "@shop/api"
+import { searchAPI } from "@shop/api"
+import { channelAvailability, stockLabel } from "@shop/utils/channelStock"
 import { ImagePlaceholder, isRealImage, DealBadge, DeliveryPromise, PriceTag, percentOff } from "./ui"
 import { mediaUrl, useDesktopAddToCart } from "./desktopCart"
 import { QuickGridSkeleton, QuickProductGrid } from "./quick/QuickRail"

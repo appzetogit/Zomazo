@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useEffect, useId, useRef, useState, useMemo } from "react"
-import { cn } from "@store/utils/utils"
+import { cn } from "@shop/utils/utils"
 
 /**
  *  DotPattern Component Props

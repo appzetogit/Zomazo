@@ -1,14 +1,14 @@
 import { useState, useMemo, useEffect } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "@shop/router"
 import { ArrowLeft, IndianRupee, Plus, ArrowDownCircle, ArrowUpCircle, RefreshCw, Loader2 } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { Card, CardContent } from "@store/components/ui/card"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import AddMoneyModal from "@store/components/user/AddMoneyModal"
-import { userAPI } from "@store/api"
+import { Button } from "@shop/components/ui/button"
+import { Card, CardContent } from "@shop/components/ui/card"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import AddMoneyModal from "@shop/components/user/AddMoneyModal"
+import { userAPI } from "@shop/api"
 import { toast } from "sonner"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

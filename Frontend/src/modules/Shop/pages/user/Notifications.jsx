@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { ArrowLeft, Bell, CheckCircle2, Clock, Tag, Gift, AlertCircle, Trash2, X } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Button } from "@store/components/ui/button"
-import { Card, CardContent } from "@store/components/ui/card"
-import { Badge } from "@store/components/ui/badge"
-import useNotificationInbox from "@store/hooks/useNotificationInbox"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Button } from "@shop/components/ui/button"
+import { Card, CardContent } from "@shop/components/ui/card"
+import { Badge } from "@shop/components/ui/badge"
+import useNotificationInbox from "@shop/hooks/useNotificationInbox"
 
 // Initial mock notification data (fallback if localStorage is empty)
 const DEFAULT_NOTIFICATIONS = [

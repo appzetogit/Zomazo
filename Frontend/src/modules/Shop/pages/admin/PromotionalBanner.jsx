@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react"
 import { Edit, Upload, Info, Trash2, Plus, Calendar, Link as LinkIcon, Save, X, Loader2, Image as ImageIcon } from "lucide-react"
-import api from "@store/api"
-import { resolveMediaUrl } from "../../../../shared/utils/mediaUrl.js"
-import { isVideoUrl } from "@store/utils/mediaType"
+import api from "@shop/api"
+import { resolveMediaUrl } from "@shop/platform/utils/mediaUrl"
+import { isVideoUrl } from "@shop/utils/mediaType"
 
 const debugError = (...args) => {}
 

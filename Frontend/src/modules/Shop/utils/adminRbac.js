@@ -1,4 +1,5 @@
-import { getCurrentUser } from "@store/utils/auth";
+import { getCurrentUser } from "@shop/utils/auth";
+import { isPlatformAdmin } from "@shop/utils/platformAdmin";
 
 export const ADMIN_ACTIONS = ["view", "create", "edit", "delete", "export"];
 
@@ -88,6 +89,7 @@ const ALWAYS_ALLOWED_FOR_SUB_ADMIN = new Set([
 ]);
 
 export function isSuperAdmin(adminUser) {
+  if (isPlatformAdmin(adminUser)) return true;
   const type = String(adminUser?.adminType || "").trim().toLowerCase();
   return type === "super_admin";
 }

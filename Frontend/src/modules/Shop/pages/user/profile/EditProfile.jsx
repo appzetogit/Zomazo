@@ -1,32 +1,32 @@
 import { useState, useEffect, useRef } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { ArrowLeft, X, Pencil, Loader2, Camera, Upload, Trash2, User } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { Label } from "@store/components/ui/label"
-import { Card, CardContent } from "@store/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { Label } from "@shop/components/ui/label"
+import { Card, CardContent } from "@shop/components/ui/card"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@store/components/ui/select"
-import { Avatar, AvatarFallback, AvatarImage } from "@store/components/ui/avatar"
+} from "@shop/components/ui/select"
+import { Avatar, AvatarFallback, AvatarImage } from "@shop/components/ui/avatar"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@store/components/ui/dialog"
-import { useProfile } from "@store/context/ProfileContext"
-import { userAPI } from "@store/api"
+} from "@shop/components/ui/dialog"
+import { useProfile } from "@shop/context/ProfileContext"
+import { userAPI } from "@shop/api"
 import { toast } from "sonner"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
-import { ImageSourcePicker } from "@store/components/ImageSourcePicker"
-import { isFlutterBridgeAvailable } from "@store/utils/imageUploadUtils"
-import { resolveMediaUrl } from "@store/utils/common"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
+import { ImageSourcePicker } from "@shop/components/ImageSourcePicker"
+import { isFlutterBridgeAvailable } from "@shop/utils/imageUploadUtils"
+import { resolveMediaUrl } from "@shop/utils/common"
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'

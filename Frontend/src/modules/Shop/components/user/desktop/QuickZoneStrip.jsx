@@ -1,4 +1,4 @@
-import { useDeliveryLocation } from "@store/context/DeliveryLocationContext"
+import { useDeliveryLocation } from "@shop/context/DeliveryLocationContext"
 import { useLocationSelector } from "../UserLayout"
 import { useQuickEta } from "./useDeliveryEstimates"
 

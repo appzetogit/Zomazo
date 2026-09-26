@@ -8,7 +8,7 @@ export {
   resolveMediaUrl,
   normalizeImageUrl,
   extractImages,
-} from "../../../shared/utils/mediaUrl.js";
+} from "@shop/platform/utils/mediaUrl";
 
 /**
  * Calculates distance between two coordinates in kilometers using Haversine formula.

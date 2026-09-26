@@ -5,7 +5,7 @@
  */
 import { useRef } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import QuickProductCard, { QuickProductCardSkeleton } from "./QuickProductCard"
 import { cx, focusRing, productId } from "./quickHelpers"
 

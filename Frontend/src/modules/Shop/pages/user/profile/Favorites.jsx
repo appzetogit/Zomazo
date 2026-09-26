@@ -1,14 +1,14 @@
-﻿import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { useState } from "react"
 
 import { Heart, Star, Clock, MapPin, ArrowRight, ArrowLeft, Bookmark } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import ScrollReveal from "@store/components/user/ScrollReveal"
-import { Card, CardHeader, CardTitle, CardContent } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
-import { useProfile } from "@store/context/ProfileContext"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import ScrollReveal from "@shop/components/user/ScrollReveal"
+import { Card, CardHeader, CardTitle, CardContent } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { useProfile } from "@shop/context/ProfileContext"
 import { toast } from "sonner"
-import { imagePlaceholder } from "@store/constants/images"
+import { imagePlaceholder } from "@shop/constants/images"
 
 export default function Favorites() {
   const { getFavorites, removeFavorite, getDishFavorites, removeDishFavorite } = useProfile()

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { ArrowLeft, Bell, RefreshCw, X } from "lucide-react"
-import { sellerAPI } from "@store/api"
-import useNotificationInbox from "@store/hooks/useNotificationInbox"
+import { sellerAPI } from "@shop/api"
+import useNotificationInbox from "@shop/hooks/useNotificationInbox"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

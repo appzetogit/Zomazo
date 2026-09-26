@@ -1,12 +1,12 @@
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@store/components/ui/dialog"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@shop/components/ui/dialog"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
 import { IndianRupee, Loader2, X } from "lucide-react"
-import { userAPI } from "@store/api"
-import { initRazorpayPayment } from "@store/utils/razorpay"
+import { userAPI } from "@shop/api"
+import { initRazorpayPayment } from "@shop/utils/razorpay"
 import { toast } from "sonner"
-import { getCompanyNameAsync } from "@store/utils/businessSettings"
+import { getCompanyNameAsync } from "@shop/utils/businessSettings"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}

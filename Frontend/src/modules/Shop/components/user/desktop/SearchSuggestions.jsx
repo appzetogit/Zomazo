@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Search, Tag } from "lucide-react"
-import { searchAPI } from "@store/api"
+import { searchAPI } from "@shop/api"
 import { mediaUrl } from "./desktopCart"
 
 /**

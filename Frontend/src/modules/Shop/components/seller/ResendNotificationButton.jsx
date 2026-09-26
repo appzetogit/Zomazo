@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Loader2, Volume2 } from "lucide-react";
 import { toast } from "sonner";
-import { sellerAPI } from "@store/api";
+import { sellerAPI } from "@shop/api";
 
 const debugError = (...args) => {};
 

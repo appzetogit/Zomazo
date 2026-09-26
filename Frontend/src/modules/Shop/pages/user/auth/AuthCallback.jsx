@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useNavigate, useSearchParams } from "@shop/router"
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
-import { setAuthData } from "@store/utils/auth"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { setAuthData } from "@shop/utils/auth"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

@@ -4,8 +4,8 @@
  * which is road distance (~7.7) not Haversine straight-line (~6.9).
  */
 
-import { getGoogleMapsApiKey } from "@store/utils/googleMapsApiKey"
-import { parseGeoPoint } from "@store/utils/geo"
+import { getGoogleMapsApiKey } from "@shop/utils/googleMapsApiKey"
+import { parseGeoPoint } from "@shop/utils/geo"
 
 let mapsLoadPromise = null
 

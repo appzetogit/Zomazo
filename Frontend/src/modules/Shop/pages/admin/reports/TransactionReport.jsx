@@ -1,21 +1,21 @@
 import { useState, useMemo, useEffect } from "react"
 import { BarChart3, ChevronDown, Info, Settings, FileText, FileSpreadsheet, Code, Loader2, Calendar } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@store/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@store/components/ui/dialog"
-import { exportTransactionReportToCSV, exportTransactionReportToExcel, exportTransactionReportToPDF, exportTransactionReportToJSON } from "@store/components/admin/reports/reportsExportUtils"
-import { adminAPI } from "@store/api"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@shop/components/ui/dropdown-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@shop/components/ui/dialog"
+import { exportTransactionReportToCSV, exportTransactionReportToExcel, exportTransactionReportToPDF, exportTransactionReportToJSON } from "@shop/components/admin/reports/reportsExportUtils"
+import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
 
 // Import icons from Transaction-report-icons
-import completedIcon from "@store/assets/Transaction-report-icons/trx1.png"
-import refundedIcon from "@store/assets/Transaction-report-icons/trx3.png"
-import adminEarningIcon from "@store/assets/Transaction-report-icons/admin-earning.png"
-import sellerEarningIcon from "@store/assets/Transaction-report-icons/store-earning.png"
-import deliverymanEarningIcon from "@store/assets/Transaction-report-icons/deliveryman-earning.png"
+import completedIcon from "@shop/assets/Transaction-report-icons/trx1.png"
+import refundedIcon from "@shop/assets/Transaction-report-icons/trx3.png"
+import adminEarningIcon from "@shop/assets/Transaction-report-icons/admin-earning.png"
+import sellerEarningIcon from "@shop/assets/Transaction-report-icons/store-earning.png"
+import deliverymanEarningIcon from "@shop/assets/Transaction-report-icons/deliveryman-earning.png"
 
 // Import search and export icons from Dashboard-icons
-import searchIcon from "@store/assets/Dashboard-icons/image8.png"
-import exportIcon from "@store/assets/Dashboard-icons/image9.png"
+import searchIcon from "@shop/assets/Dashboard-icons/image8.png"
+import exportIcon from "@shop/assets/Dashboard-icons/image9.png"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

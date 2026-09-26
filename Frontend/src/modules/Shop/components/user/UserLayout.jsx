@@ -1,12 +1,12 @@
-import { Outlet, useLocation, useNavigate } from "react-router-dom"
+import { Outlet, useLocation, useNavigate } from "@shop/router"
 import { useEffect, useState, createContext, useContext, useRef, useCallback } from "react"
-import { ProfileProvider } from "@store/context/ProfileContext"
-import { DeliveryLocationProvider } from "@store/context/DeliveryLocationContext"
+import { ProfileProvider } from "@shop/context/ProfileContext"
+import { DeliveryLocationProvider } from "@shop/context/DeliveryLocationContext"
 import LocationPrompt from "./LocationPrompt"
-import { CartProvider } from "@store/context/CartContext"
-import { getStoreModeFromPath, useStoreMode } from "@store/context/StoreModeContext"
-import AutoCouponController from "@store/components/user/AutoCouponController"
-import { OrdersProvider } from "@store/context/OrdersContext"
+import { CartProvider } from "@shop/context/CartContext"
+import { getStoreModeFromPath, useStoreMode } from "@shop/context/StoreModeContext"
+import AutoCouponController from "@shop/components/user/AutoCouponController"
+import { OrdersProvider } from "@shop/context/OrdersContext"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -25,7 +25,7 @@ import GeminiAssistantWidget from "./GeminiAssistantWidget"
 import SpinWheelModal from "./SpinWheelModal"
 import FloatingSpinWidget from "./FloatingSpinWidget"
 import { useUserNotifications } from "../../hooks/useUserNotifications"
-import { shouldSkipScrollResetForHome } from "@store/utils/homeScrollRestore"
+import { shouldSkipScrollResetForHome } from "@shop/utils/homeScrollRestore"
 
 // Create SearchOverlay context with default value
 const SearchOverlayContext = createContext({

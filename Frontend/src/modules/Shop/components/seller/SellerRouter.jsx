@@ -1,10 +1,10 @@
 import { Suspense, lazy, useEffect } from "react"
-import { Routes, Route, Outlet } from "react-router-dom"
-import ProtectedRoute from "@store/components/ProtectedRoute"
-import AuthRedirect from "@store/components/AuthRedirect"
-import Loader from "@store/components/Loader"
-import SellerLayout from "@store/components/seller/SellerLayout"
-import { applyModuleBranding, getCachedSettings, loadBusinessSettings } from "@store/utils/businessSettings"
+import { Routes, Route, Outlet } from "@shop/router"
+import ProtectedRoute from "@shop/components/ProtectedRoute"
+import AuthRedirect from "@shop/components/AuthRedirect"
+import Loader from "@shop/components/Loader"
+import SellerLayout from "@shop/components/seller/SellerLayout"
+import { applyModuleBranding, getCachedSettings, loadBusinessSettings } from "@shop/utils/businessSettings"
 
 const LayoutWrapper = () => (
   <SellerLayout>
@@ -13,51 +13,51 @@ const LayoutWrapper = () => (
 )
 
 // Lazy Loading Components
-const AllOrdersPage = lazy(() => import("@store/pages/seller/AllOrdersPage"))
-const OrdersMain = lazy(() => import("@store/pages/seller/OrdersMain"))
-const SellerNotifications = lazy(() => import("@store/pages/seller/Notifications"))
-const SellerOnboarding = lazy(() => import("@store/pages/seller/Onboarding"))
-const CouponListPage = lazy(() => import("@store/pages/seller/CouponListPage"))
-const AddCouponPage = lazy(() => import("@store/pages/seller/AddCouponPage"))
-const EditCouponPage = lazy(() => import("@store/pages/seller/EditCouponPage"))
-const MenuCategoriesPage = lazy(() => import("@store/pages/seller/MenuCategoriesPage"))
-const DeliverySettings = lazy(() => import("@store/pages/seller/DeliverySettings"))
-const RushHour = lazy(() => import("@store/pages/seller/RushHour"))
-const OutletTimings = lazy(() => import("@store/pages/seller/OutletTimings"))
-const DaySlots = lazy(() => import("@store/pages/seller/DaySlots"))
-const OutletInfo = lazy(() => import("@store/pages/seller/OutletInfo"))
-const RatingsReviews = lazy(() => import("@store/pages/seller/RatingsReviews"))
-const EditOwner = lazy(() => import("@store/pages/seller/EditOwner"))
-const EditSellerAddress = lazy(() => import("@store/pages/seller/EditSellerAddress"))
-const Inventory = lazy(() => import("@store/pages/seller/Inventory"))
-const Feedback = lazy(() => import("@store/pages/seller/Feedback"))
-const ShareFeedback = lazy(() => import("@store/pages/seller/ShareFeedback"))
-const DishRatings = lazy(() => import("@store/pages/seller/DishRatings"))
-const SellerSupport = lazy(() => import("@store/pages/seller/SellerSupport"))
-const FssaiDetails = lazy(() => import("@store/pages/seller/FssaiDetails"))
-const FssaiUpdate = lazy(() => import("@store/pages/seller/FssaiUpdate"))
-const ItemDetailsPage = lazy(() => import("@store/pages/seller/ItemDetailsPage"))
-const HubFinance = lazy(() => import("@store/pages/seller/HubFinance"))
-const FinanceDetailsPage = lazy(() => import("@store/pages/seller/FinanceDetailsPage"))
-const WithdrawalHistoryPage = lazy(() => import("@store/pages/seller/WithdrawalHistoryPage"))
-const PhoneNumbersPage = lazy(() => import("@store/pages/seller/PhoneNumbersPage"))
-const DownloadReport = lazy(() => import("@store/pages/seller/DownloadReport"))
-const ManageOutlets = lazy(() => import("@store/pages/seller/ManageOutlets"))
-const UpdateBankDetails = lazy(() => import("@store/pages/seller/UpdateBankDetails"))
-const ZoneSetup = lazy(() => import("@store/pages/seller/ZoneSetup"))
-const SellerStatus = lazy(() => import("@store/pages/seller/SellerStatus"))
-const ExploreMore = lazy(() => import("@store/pages/seller/ExploreMore"))
-const SellerPrivacy = lazy(() => import("@store/pages/seller/Privacy"))
-const SellerTerms = lazy(() => import("@store/pages/seller/Terms"))
-const SellerCMSHelpSupport = lazy(() => import("@store/pages/seller/CMSHelpSupport"))
-const OrderDetailPage = lazy(() => import("@store/pages/seller/OrderDetailPage"))
+const AllOrdersPage = lazy(() => import("@shop/pages/seller/AllOrdersPage"))
+const OrdersMain = lazy(() => import("@shop/pages/seller/OrdersMain"))
+const SellerNotifications = lazy(() => import("@shop/pages/seller/Notifications"))
+const SellerOnboarding = lazy(() => import("@shop/pages/seller/Onboarding"))
+const CouponListPage = lazy(() => import("@shop/pages/seller/CouponListPage"))
+const AddCouponPage = lazy(() => import("@shop/pages/seller/AddCouponPage"))
+const EditCouponPage = lazy(() => import("@shop/pages/seller/EditCouponPage"))
+const MenuCategoriesPage = lazy(() => import("@shop/pages/seller/MenuCategoriesPage"))
+const DeliverySettings = lazy(() => import("@shop/pages/seller/DeliverySettings"))
+const RushHour = lazy(() => import("@shop/pages/seller/RushHour"))
+const OutletTimings = lazy(() => import("@shop/pages/seller/OutletTimings"))
+const DaySlots = lazy(() => import("@shop/pages/seller/DaySlots"))
+const OutletInfo = lazy(() => import("@shop/pages/seller/OutletInfo"))
+const RatingsReviews = lazy(() => import("@shop/pages/seller/RatingsReviews"))
+const EditOwner = lazy(() => import("@shop/pages/seller/EditOwner"))
+const EditSellerAddress = lazy(() => import("@shop/pages/seller/EditSellerAddress"))
+const Inventory = lazy(() => import("@shop/pages/seller/Inventory"))
+const Feedback = lazy(() => import("@shop/pages/seller/Feedback"))
+const ShareFeedback = lazy(() => import("@shop/pages/seller/ShareFeedback"))
+const DishRatings = lazy(() => import("@shop/pages/seller/DishRatings"))
+const SellerSupport = lazy(() => import("@shop/pages/seller/SellerSupport"))
+const FssaiDetails = lazy(() => import("@shop/pages/seller/FssaiDetails"))
+const FssaiUpdate = lazy(() => import("@shop/pages/seller/FssaiUpdate"))
+const ItemDetailsPage = lazy(() => import("@shop/pages/seller/ItemDetailsPage"))
+const HubFinance = lazy(() => import("@shop/pages/seller/HubFinance"))
+const FinanceDetailsPage = lazy(() => import("@shop/pages/seller/FinanceDetailsPage"))
+const WithdrawalHistoryPage = lazy(() => import("@shop/pages/seller/WithdrawalHistoryPage"))
+const PhoneNumbersPage = lazy(() => import("@shop/pages/seller/PhoneNumbersPage"))
+const DownloadReport = lazy(() => import("@shop/pages/seller/DownloadReport"))
+const ManageOutlets = lazy(() => import("@shop/pages/seller/ManageOutlets"))
+const UpdateBankDetails = lazy(() => import("@shop/pages/seller/UpdateBankDetails"))
+const ZoneSetup = lazy(() => import("@shop/pages/seller/ZoneSetup"))
+const SellerStatus = lazy(() => import("@shop/pages/seller/SellerStatus"))
+const ExploreMore = lazy(() => import("@shop/pages/seller/ExploreMore"))
+const SellerPrivacy = lazy(() => import("@shop/pages/seller/Privacy"))
+const SellerTerms = lazy(() => import("@shop/pages/seller/Terms"))
+const SellerCMSHelpSupport = lazy(() => import("@shop/pages/seller/CMSHelpSupport"))
+const OrderDetailPage = lazy(() => import("@shop/pages/seller/OrderDetailPage"))
 
-const Welcome = lazy(() => import("@store/pages/seller/auth/Welcome"))
-const Login = lazy(() => import("@store/pages/seller/auth/Login"))
-const OTP = lazy(() => import("@store/pages/seller/auth/OTP"))
-const Signup = lazy(() => import("@store/pages/seller/auth/Signup"))
-const VerificationPending = lazy(() => import("@store/pages/seller/auth/VerificationPending"))
-const Subscription = lazy(() => import("@store/pages/seller/Subscription"))
+const Welcome = lazy(() => import("@shop/pages/seller/auth/Welcome"))
+const Login = lazy(() => import("@shop/pages/seller/auth/Login"))
+const OTP = lazy(() => import("@shop/pages/seller/auth/OTP"))
+const Signup = lazy(() => import("@shop/pages/seller/auth/Signup"))
+const VerificationPending = lazy(() => import("@shop/pages/seller/auth/VerificationPending"))
+const Subscription = lazy(() => import("@shop/pages/seller/Subscription"))
 
 export default function SellerRouter() {
   // Safely enforce light mode for the Seller app to prevent User dark mode bleeding

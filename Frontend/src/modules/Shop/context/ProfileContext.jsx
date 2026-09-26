@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react"
-import { authAPI, userAPI } from "@store/api"
+import { authAPI, userAPI } from "@shop/api"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}

@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from "react"
-import { getGoogleMapsApiKey } from "@store/utils/googleMapsApiKey"
-import { useNavigate } from "react-router-dom"
+import { getGoogleMapsApiKey } from "@shop/utils/googleMapsApiKey"
+import { useNavigate } from "@shop/router"
 import { Building2, Info, Tag, Upload, Calendar, FileText, MapPin, CheckCircle2, X, Image as ImageIcon, Clock, Loader2 } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@store/components/ui/dialog"
-import { Input } from "@store/components/ui/input"
-import { Label } from "@store/components/ui/label"
-import { Button } from "@store/components/ui/button"
-import { adminAPI, uploadAPI, zoneAPI } from "@store/api"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@shop/components/ui/dialog"
+import { Input } from "@shop/components/ui/input"
+import { Label } from "@shop/components/ui/label"
+import { Button } from "@shop/components/ui/button"
+import { adminAPI, uploadAPI, zoneAPI } from "@shop/api"
 import { toast } from "sonner"
-import { useAdminBase, useAdminPanel } from "@store/components/admin/useAdminPanel"
+import { useAdminBase, useAdminPanel } from "@shop/components/admin/useAdminPanel"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => { console.warn(...args) }
 const debugError = (...args) => { console.error(...args) }

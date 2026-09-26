@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { 
   ArrowLeft,
   Plus,
@@ -13,7 +13,7 @@ import {
   IndianRupee,
   Copy
 } from "lucide-react"
-import { sellerAPI } from "@store/api"
+import { sellerAPI } from "@shop/api"
 import { toast } from "sonner"
 
 export default function CouponListPage() {

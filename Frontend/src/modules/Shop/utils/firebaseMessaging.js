@@ -1,7 +1,8 @@
+import { toPlatformPath } from "@shop/router";
 import { toast } from "sonner";
-import { userAPI, sellerAPI, deliveryAPI, adminAPI, notificationAPI } from "@store/api";
+import { userAPI, sellerAPI, deliveryAPI, adminAPI, notificationAPI } from "@shop/api";
 import { initializeApp, getApp, getApps } from "firebase/app";
-import fallbackNotificationSound from "@store/assets/audio/alert.mp3";
+import fallbackNotificationSound from "@shop/assets/audio/alert.mp3";
 
 const pushNotificationSoundPath = "/notification.mp3";
 
@@ -382,7 +383,7 @@ async function playPushSound(payload = {}) {
     // Skip FCM one-shot beeps for those events to avoid duplicate / fighting audio.
     if (moduleName === "seller") {
       try {
-        const { isSellerAlertRinging } = await import("@store/utils/sellerAlertSession");
+        const { isSellerAlertRinging } = await import("@shop/utils/sellerAlertSession");
         if (eventType === "new_order" || isSellerAlertRinging()) {
           pushDebugLog(PUSH_DEBUG_PREFIX, "Skipping FCM push sound; seller alert session owns ringtone", {
             eventType,
@@ -570,7 +571,8 @@ async function getFirebasePublicEnv() {
 
 function resolveAbsoluteApiBase() {
   try {
-    const base = String(import.meta.env?.VITE_API_BASE_URL || "/api/v1").replace(/\/$/, "");
+    // The Shop's backend is the platform's /ecom mount.
+    const base = `${String(import.meta.env?.VITE_API_BASE_URL || "/api/v1").replace(/\/$/, "")}/ecom`;
     return new URL(base, window.location.origin).href.replace(/\/$/, "");
   } catch {
     return "";
@@ -835,7 +837,7 @@ export function reportPushOpen(data = {}) {
 function openTrackedPush(data = {}) {
   reportPushOpen(data);
   const link = String(data?.deepLink || data?.link || "");
-  if (link.startsWith("/") && !link.startsWith("//")) window.location.assign(link);
+  // Links in a push are the standalone app's paths; the Shop lives under /shop.`n  if (link.startsWith("/") && !link.startsWith("//")) window.location.assign(toPlatformPath(link));
 }
 
 function showForegroundNotification(payload = {}) {

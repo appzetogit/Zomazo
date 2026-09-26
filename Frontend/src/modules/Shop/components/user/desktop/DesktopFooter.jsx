@@ -1,8 +1,8 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { Facebook, Instagram, Linkedin, Mail, MessageCircle, Phone, Youtube } from "lucide-react"
-import { BRAND_LOGO_ON_DARK } from "@/config/brandMark"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { BRAND_LOGO_ON_DARK } from "@shop/platform/config/brandMark"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { useBusinessSettings } from "./useDesktopShell"
 
 const SOCIAL_LABELS = { facebook: "Facebook", instagram: "Instagram", twitter: "X (Twitter)", x: "X", youtube: "YouTube", linkedin: "LinkedIn", whatsapp: "WhatsApp" }

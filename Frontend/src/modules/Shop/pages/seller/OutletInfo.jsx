@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
-import { STORE_AVATAR_PLACEHOLDER, STORE_COVER_PLACEHOLDER } from '@store/utils/placeholders'
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { STORE_AVATAR_PLACEHOLDER, STORE_COVER_PLACEHOLDER } from '@shop/utils/placeholders'
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import {
   ArrowLeft,
   Plus,
@@ -16,14 +16,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@store/components/ui/dialog"
-import { Button } from "@store/components/ui/button"
-import { Input } from "@store/components/ui/input"
-import { sellerAPI, uploadAPI } from "@store/api"
+} from "@shop/components/ui/dialog"
+import { Button } from "@shop/components/ui/button"
+import { Input } from "@shop/components/ui/input"
+import { sellerAPI, uploadAPI } from "@shop/api"
 import { toast } from "sonner"
-import { ImageSourcePicker } from "@store/components/ImageSourcePicker"
-import { isFlutterBridgeAvailable } from "@store/utils/imageUploadUtils"
-import { resolveMediaUrl } from "@store/utils/common"
+import { ImageSourcePicker } from "@shop/components/ImageSourcePicker"
+import { isFlutterBridgeAvailable } from "@shop/utils/imageUploadUtils"
+import { resolveMediaUrl } from "@shop/utils/common"
 
 const debugLog = (...args) => {}
 const debugError = (...args) => {}

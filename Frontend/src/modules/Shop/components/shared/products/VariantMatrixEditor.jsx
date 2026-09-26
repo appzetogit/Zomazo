@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Loader2, Plus, Trash2, Wand2, Upload, X } from "lucide-react"
 import { toast } from "sonner"
-import { catalogAPI } from "@store/api"
+import { catalogAPI } from "@shop/api"
 
 /**
  * Variant matrix editor shared by the admin and seller product forms.

@@ -9,7 +9,7 @@ import {
   Store,
 } from "lucide-react";
 import { toast } from "sonner";
-import { adminAPI } from "@store/api";
+import { adminAPI } from "@shop/api";
 
 const statusClass = {
   open: "bg-orange-100 text-orange-700",

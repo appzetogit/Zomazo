@@ -6,8 +6,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@store/components/ui/dialog"
-import { Button } from "@store/components/ui/button"
+} from "@shop/components/ui/dialog"
+import { Button } from "@shop/components/ui/button"
 
 export default function RefundModal({ isOpen, onOpenChange, order, onConfirm, isProcessing }) {
   const [refundAmount, setRefundAmount] = useState("")

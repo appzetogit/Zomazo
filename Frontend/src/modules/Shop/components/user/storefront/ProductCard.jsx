@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link } from "@shop/router"
 import { Star } from "lucide-react"
-import { useStoreMode } from "@store/context/StoreModeContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
 import { ImagePlaceholder, isRealImage, percentOff } from "../desktop/ui"
 import { mediaUrl } from "../desktop/desktopCart"
 

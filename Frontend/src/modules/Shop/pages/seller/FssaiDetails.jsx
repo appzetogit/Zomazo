@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { ArrowLeft, Download } from "lucide-react"
 
 export default function FssaiDetails() {

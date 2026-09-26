@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from "react-router-dom"
+import { useParams, Link, useNavigate } from "@shop/router"
 import {
   ArrowLeft,
   Package,
@@ -16,13 +16,13 @@ import {
   MapPin,
   HelpCircle
 } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import ScrollReveal from "@store/components/user/ScrollReveal"
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@store/components/ui/card"
-import { Button } from "@store/components/ui/button"
-import { Badge } from "@store/components/ui/badge"
-import { useOrders } from "@store/context/OrdersContext"
-import { getSupportEmail } from "@store/utils/businessSettings"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import ScrollReveal from "@shop/components/user/ScrollReveal"
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@shop/components/ui/card"
+import { Button } from "@shop/components/ui/button"
+import { Badge } from "@shop/components/ui/badge"
+import { useOrders } from "@shop/context/OrdersContext"
+import { getSupportEmail } from "@shop/utils/businessSettings"
 
 const commonIssues = [
   {

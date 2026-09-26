@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react"
 import { Loader2, AlertTriangle, Save } from "lucide-react"
 import { toast } from "sonner"
-import { sellerAPI } from "@store/api"
+import { sellerAPI } from "@shop/api"
 import { CHANNELS, CHANNEL_INFO, productChannels, channelStock, toStockValue } from "./channels"
 
 const variantEnabled = (item, v, channel) => {

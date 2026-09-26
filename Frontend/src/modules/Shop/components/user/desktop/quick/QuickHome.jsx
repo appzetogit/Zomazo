@@ -6,9 +6,9 @@
  * fetched, and catalogAPI.getProductRecommendations for "You may also like".
  */
 import { useEffect, useMemo, useState } from "react"
-import { catalogAPI, orderAPI, searchAPI } from "@store/api"
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { isModuleAuthenticated } from "@store/utils/auth"
+import { catalogAPI, orderAPI, searchAPI } from "@shop/api"
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { isModuleAuthenticated } from "@shop/utils/auth"
 import { useLocationSelector } from "../../UserLayout"
 import { percentOff } from "../ui"
 import { useQuickEta } from "../useDeliveryEstimates"

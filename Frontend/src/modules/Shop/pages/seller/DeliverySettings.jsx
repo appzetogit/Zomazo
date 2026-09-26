@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import useSellerBackNavigation from "@store/hooks/useSellerBackNavigation"
+import { useNavigate } from "@shop/router"
+import useSellerBackNavigation from "@shop/hooks/useSellerBackNavigation"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
 import { ArrowLeft, Truck, X, CheckCircle, AlertCircle } from "lucide-react"
-import { Switch } from "@store/components/ui/switch"
-import { Card, CardContent } from "@store/components/ui/card"
-import { sellerAPI } from "@store/api"
+import { Switch } from "@shop/components/ui/switch"
+import { Card, CardContent } from "@shop/components/ui/card"
+import { sellerAPI } from "@shop/api"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -15,7 +15,7 @@ const debugError = (...args) => {}
 import {
   broadcastSellerOperationalStatus,
   getSellerOperationalStatus,
-} from "@store/utils/sellerOperationalStatus"
+} from "@shop/utils/sellerOperationalStatus"
 
 const DELIVERY_STATUS_KEY = "seller_delivery_status"
 

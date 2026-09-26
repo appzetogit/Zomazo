@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { toast } from "sonner"
 import { Layers, Loader2, Search } from "lucide-react"
-import { adminAPI } from "@store/api"
-import { useAdminBase, useAdminPanel } from "@store/components/admin/useAdminPanel"
+import { adminAPI } from "@shop/api"
+import { useAdminBase, useAdminPanel } from "@shop/components/admin/useAdminPanel"
 import { formatCurrency, formatDateTime, errorMessage } from "../reports/reportShared"
 
 const STATUSES = ["", "pending", "confirmed", "processing", "completed", "cancelled", "partial_cancelled"]

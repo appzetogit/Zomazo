@@ -1,59 +1,59 @@
 import { useState, useEffect, useRef, useMemo, useCallback, Fragment } from "react"
 import { createPortal } from "react-dom"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "@shop/router"
 import { Plus, Minus, ArrowLeft, ChevronRight, Clock, MapPin, Phone, FileText, Utensils, Tag, Percent, Share2, ChevronUp, ChevronDown, X, Check, Settings, CreditCard, Wallet, Building2, Sparkles, Banknote, Zap, CheckCircle2, MessageCircle, Send, Mail, Copy, Home, Briefcase, Pencil, Receipt, ShoppingCart, DoorOpen, PhoneOff, BellOff, Coins, Store, Truck, ShieldCheck, Trash2, ShoppingBag, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import confetti from "canvas-confetti"
 
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Button } from "@store/components/ui/button"
-import { isModuleAuthenticated } from "@store/utils/auth"
-import { useCart } from "@store/context/CartContext"
-import { useStoreMode } from "@store/context/StoreModeContext"
-import { useProfile } from "@store/context/ProfileContext"
-import { useOrders } from "@store/context/OrdersContext"
-import { useLocation as useUserLocation } from "@store/hooks/useLocation"
-import { useZone } from "@store/hooks/useZone"
-import { orderAPI, sellerAPI, adminAPI, userAPI, coinsAPI, API_ENDPOINTS } from "@store/api"
-import { API_BASE_URL } from "@store/api/config"
-import { catalogAPI } from "@/services/api"
-import { resolveMediaUrl } from "@/shared/utils/mediaUrl"
-import { CHANNEL_COPY, addToOtherStoreCart, channelAvailability, findUnavailableCartItem, otherChannel } from "@store/utils/channelStock"
-import { initRazorpayPayment } from "@store/utils/razorpay"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Button } from "@shop/components/ui/button"
+import { isModuleAuthenticated } from "@shop/utils/auth"
+import { useCart } from "@shop/context/CartContext"
+import { useStoreMode } from "@shop/context/StoreModeContext"
+import { useProfile } from "@shop/context/ProfileContext"
+import { useOrders } from "@shop/context/OrdersContext"
+import { useLocation as useUserLocation } from "@shop/hooks/useLocation"
+import { useZone } from "@shop/hooks/useZone"
+import { orderAPI, sellerAPI, adminAPI, userAPI, coinsAPI, API_ENDPOINTS } from "@shop/api"
+import { API_BASE_URL } from "@shop/api/config"
+import { catalogAPI } from "@shop/api"
+import { resolveMediaUrl } from "@shop/platform/utils/mediaUrl"
+import { CHANNEL_COPY, addToOtherStoreCart, channelAvailability, findUnavailableCartItem, otherChannel } from "@shop/utils/channelStock"
+import { initRazorpayPayment } from "@shop/utils/razorpay"
 import { toast } from "sonner"
-import { getCompanyNameAsync } from "@store/utils/businessSettings"
-import { getCachedFeeSettings, loadCorePublicAppConfig } from "@store/services/publicAppConfig"
-import { useCompanyName } from "@store/hooks/useCompanyName"
-import { getSellerAvailabilityStatus } from "@store/utils/sellerAvailability"
-import useAppBackNavigation from "@store/hooks/useAppBackNavigation"
+import { getCompanyNameAsync } from "@shop/utils/businessSettings"
+import { getCachedFeeSettings, loadCorePublicAppConfig } from "@shop/services/publicAppConfig"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
+import { getSellerAvailabilityStatus } from "@shop/utils/sellerAvailability"
+import useAppBackNavigation from "@shop/hooks/useAppBackNavigation"
 import {
   calculateDistanceKm,
   normalizeLocationForPricing,
   normalizeSellerLocation,
-} from "@store/utils/geo"
+} from "@shop/utils/geo"
 import {
   fetchDrivingDistanceKm,
   fetchDrivingDistancesMatrix,
   formatDistanceLabel,
-} from "@store/utils/roadDistance"
-import { computeDeliveryFeeGst, formatDeliveryFeeBreakdownSubtext, getDeliveryFeeTotal, resolveDeliveryFeeGst } from "@store/utils/deliveryFeeDisplay"
-import { getCartCompareItemTotal } from "@store/utils/productVariants"
-import { DualMoney } from "@store/components/user/ProductPriceDisplay"
+} from "@shop/utils/roadDistance"
+import { computeDeliveryFeeGst, formatDeliveryFeeBreakdownSubtext, getDeliveryFeeTotal, resolveDeliveryFeeGst } from "@shop/utils/deliveryFeeDisplay"
+import { getCartCompareItemTotal } from "@shop/utils/productVariants"
+import { DualMoney } from "@shop/components/user/ProductPriceDisplay"
 import {
   AUTO_COUPON_STATE_EVENT,
   getCartSignature,
   isManualCouponOptOut,
   markManualCouponOptOut,
   markUserSelectedCoupon,
-} from "@store/utils/autoCoupon"
-import CartAutoCouponBanner from "@store/components/user/CartAutoCouponBanner"
-import RecommendationRail from "@store/components/user/RecommendationRail"
-import CartSubtotalCard from "@store/components/user/desktop/CartSubtotalCard"
-import SavedForLater, { saveCartLineForLater } from "@store/components/user/cart/SavedForLater"
-import CartSwitch from "@store/components/user/cart/CartSwitch"
-import useIsDesktop from "@store/components/user/desktop/useIsDesktop"
-import { formatDeliveryWindow, useQuickEta, useShopDeliveryEstimate } from "@store/components/user/desktop/useDeliveryEstimates"
-import zoopSound from "@store/assets/audio/order-placed.mp3"
+} from "@shop/utils/autoCoupon"
+import CartAutoCouponBanner from "@shop/components/user/CartAutoCouponBanner"
+import RecommendationRail from "@shop/components/user/RecommendationRail"
+import CartSubtotalCard from "@shop/components/user/desktop/CartSubtotalCard"
+import SavedForLater, { saveCartLineForLater } from "@shop/components/user/cart/SavedForLater"
+import CartSwitch from "@shop/components/user/cart/CartSwitch"
+import useIsDesktop from "@shop/components/user/desktop/useIsDesktop"
+import { formatDeliveryWindow, useQuickEta, useShopDeliveryEstimate } from "@shop/components/user/desktop/useDeliveryEstimates"
+import zoopSound from "@shop/assets/audio/order-placed.mp3"
 const debugLog = (...args) => { }
 const debugWarn = (...args) => { }
 const debugError = (...args) => { }

@@ -3,8 +3,8 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from "@store/components/ui/dialog"
-import { Button } from "@store/components/ui/button"
+} from "@shop/components/ui/dialog"
+import { Button } from "@shop/components/ui/button"
 import { ArrowRight, ShoppingBag, Store } from "lucide-react"
 
 export default function CartReplaceDialog({

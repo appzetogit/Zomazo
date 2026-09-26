@@ -1,6 +1,6 @@
 import { ChevronLeft, LogOut, Sparkles, X } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import SellerPartnerHero from "@store/components/seller/auth/SellerPartnerHero"
+import { Button } from "@shop/components/ui/button"
+import SellerPartnerHero from "@shop/components/seller/auth/SellerPartnerHero"
 import {
   OnboardingProgressBarHorizontal,
   OnboardingProgressBarVertical,

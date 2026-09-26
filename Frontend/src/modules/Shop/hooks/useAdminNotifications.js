@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { adminAPI, supportAPI } from "@store/api";
-import { useAdminBase } from "@store/components/admin/useAdminPanel";
+import { adminAPI, supportAPI } from "@shop/api";
+import { useAdminBase } from "@shop/components/admin/useAdminPanel";
 
 const STORAGE_KEY = "admin_notifications_dismissed_v1";
 const UPDATE_EVENT = "adminNotificationsUpdated";

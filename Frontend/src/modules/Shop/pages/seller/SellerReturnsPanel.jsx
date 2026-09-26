@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { ChevronDown, PackageX } from "lucide-react"
-import { sellerAPI } from "@store/api"
+import { sellerAPI } from "@shop/api"
 
 const STATUS_CLS = {
   requested: "bg-amber-50 text-amber-700",

@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from "framer-motion"
 import { X, Sparkles, Coins, Clock, ArrowRight, LogIn, CheckCircle2 } from "lucide-react"
 import confetti from "canvas-confetti"
 import { toast } from "sonner"
-import { useNavigate } from "react-router-dom"
-import { spinAPI } from "@store/api"
-import { isModuleAuthenticated } from "@store/utils/auth"
+import { useNavigate } from "@shop/router"
+import { spinAPI } from "@shop/api"
+import { isModuleAuthenticated } from "@shop/utils/auth"
 
 const DEFAULT_SEGMENTS = [
   { id: 1, label: "10 Coins", type: "coins", value: 10, color: "#f59e0b" },

@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "@shop/router"
 import { ArrowLeft, Loader2, AlertCircle, Smartphone } from "lucide-react"
-import AnimatedPage from "@store/components/user/AnimatedPage"
-import { Input } from "@store/components/ui/input"
-import { Button } from "@store/components/ui/button"
-import apiClient, { authAPI } from "@store/api"
-import { setAuthData as setUserAuthData } from "@store/utils/auth"
-import { resolveDeviceFcmToken, registerWebPushForCurrentModule } from "@store/utils/firebaseMessaging"
+import AnimatedPage from "@shop/components/user/AnimatedPage"
+import { Input } from "@shop/components/ui/input"
+import { Button } from "@shop/components/ui/button"
+import apiClient, { authAPI } from "@shop/api"
+import { setAuthData as setUserAuthData } from "@shop/utils/auth"
+import { resolveDeviceFcmToken, registerWebPushForCurrentModule } from "@shop/utils/firebaseMessaging"
 import { motion, AnimatePresence } from "framer-motion"
-import { useCompanyName } from "@store/hooks/useCompanyName"
+import { useCompanyName } from "@shop/hooks/useCompanyName"
 
 const FULL_NAME_REGEX = /^[A-Za-z ]+$/
 

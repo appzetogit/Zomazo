@@ -1,6 +1,6 @@
 import { Plus, Minus } from "lucide-react"
-import { Button } from "@store/components/ui/button"
-import { useCart } from "@store/context/CartContext"
+import { Button } from "@shop/components/ui/button"
+import { useCart } from "@shop/context/CartContext"
 import { toast } from "sonner"
 
 export default function AddToCartButton({ item, className = "" }) {

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useCompanyName } from '@store/hooks/useCompanyName'
+import { useCompanyName } from '@shop/hooks/useCompanyName'
 
 const DEFAULT_DESCRIPTION = 'Shop from multiple sellers — groceries, fashion, electronics & more. Fast delivery with real-time tracking and coins on every order.'
 
