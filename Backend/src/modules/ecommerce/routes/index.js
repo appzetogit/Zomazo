@@ -1,6 +1,18 @@
+// E-commerce module router.
+//
+// Mounted by the platform at /api/v1/ecom, so every path below is relative to
+// that. As a standalone app these sat at /v1/* -- the prefix is stripped rather
+// than kept, since /v1/orders, /v1/user and /v1/admin already mean something
+// else at the platform level.
+//
+// Not mounted, on purpose (the code is still in the tree):
+//   /delivery      -- this vertical ships by courier; the platform owns riders.
+//   /ai, /chat     -- later; not in the first release.
+//   /notifications/opened -- push campaigns are later too.
+//
+
 import express from 'express';
 import authRoutes from '../core/auth/auth.routes.js';
-import deliveryRoutes from '../modules/commerce/delivery/routes/delivery.routes.js';
 import sellerRoutes from '../modules/commerce/seller/routes/seller.routes.js';
 import landingRoutes from '../modules/commerce/landing/routes/landing.routes.js';
 import uploadRoutes from '../modules/uploads/routes/upload.routes.js';
@@ -15,69 +27,52 @@ import * as businessSettingsController from '../modules/commerce/admin/controlle
 import * as adminController from '../modules/commerce/admin/controllers/admin.controller.js';
 import { requireRoles } from '../core/roles/role.middleware.js';
 import { getQueuesController } from '../controllers/admin.controller.js';
-import webhookRoutes from '../core/payments/routes/webhook.routes.js';
 import catalogRoutes from '../modules/commerce/catalog/routes/catalog.routes.js';
-import chatRoutes from '../modules/commerce/chat/routes/chat.routes.js';
-import aiRoutes from '../modules/commerce/ai/routes/ai.routes.js';
 import { getCashbackSettingsPublicController } from '../modules/commerce/user/controllers/cashback.controller.js';
-import { config } from '../config/env.js';
-import { getRateLimitSummary } from '../middleware/rateLimit.js';
-import { recordOpen as recordCampaignPushOpen } from '../modules/commerce/campaigns/controllers/pushCampaign.controller.js';
+// Platform-level vertical gate: a platform admin reaches this panel only when
+// their servicesAccess names e-commerce.
+import { requireServiceAccess } from '../../../core/roles/serviceAccess.middleware.js';
 
 const router = express.Router();
 
-router.get('/v1/health', (req, res) => {
+router.get('/health', (req, res) => {
     res.status(200).json({ status: 'UP', message: 'Server is healthy' });
 });
 
-if (config.nodeEnv !== 'production') {
-    router.get('/v1/health/rate-limit', (_req, res) => {
-        res.status(200).json({ success: true, data: getRateLimitSummary() });
-    });
-}
-
-// Paths are grouped by who calls them, not by business line: quick and standard
-// delivery share these, told apart by parameters rather than separate trees.
-
-router.use('/v1/auth', authRoutes);
-router.use('/v1/uploads', uploadRoutes);
+// Sellers sign in here. Customers sign in on the platform and are bridged by
+// authMiddleware; admins sign in on the platform panel.
+router.use('/auth', authRoutes);
+router.use('/uploads', uploadRoutes);
 
 // Anyone browsing, signed in or not.
-router.use('/v1/catalog', catalogRoutes);
-router.use('/v1/content', landingRoutes);
-router.use('/v1/ai', aiRoutes);
-router.get('/v1/settings/business', businessSettingsController.getBusinessSettings);
-router.get('/v1/settings/power-scanning', businessSettingsController.getPowerScanningSettings);
-router.get('/v1/settings/seller-subscription', adminController.getSellerSubscriptionSettings);
-router.get('/v1/settings/features', adminController.getFeatureSettings);
-router.get('/v1/settings/fees', adminController.getFeeSettings);
-router.get('/v1/settings/cashback', getCashbackSettingsPublicController);
+router.use('/catalog', catalogRoutes);
+router.use('/content', landingRoutes);
+router.get('/settings/business', businessSettingsController.getBusinessSettings);
+router.get('/settings/power-scanning', businessSettingsController.getPowerScanningSettings);
+router.get('/settings/seller-subscription', adminController.getSellerSubscriptionSettings);
+router.get('/settings/features', adminController.getFeatureSettings);
+router.get('/settings/fees', adminController.getFeeSettings);
+router.get('/settings/cashback', getCashbackSettingsPublicController);
 
 // Customers.
-router.use('/v1/user', authMiddleware, requireRoles('USER'), userRoutes);
-router.use('/v1/orders', authMiddleware, requireRoles('USER'), orderUserRoutes);
+router.use('/user', authMiddleware, requireRoles('USER'), userRoutes);
+router.use('/orders', authMiddleware, requireRoles('USER'), orderUserRoutes);
 
-// Payments. The gateway's webhook is unauthenticated, so it is mounted before
-// the authenticated router that shares its prefix.
-router.use('/v1/payments/webhook', webhookRoutes);
-router.use('/v1/payments', authMiddleware, paymentRoutes);
+// Payments. There is deliberately no /payments/webhook here: Razorpay delivers
+// each event to ONE url, the platform's /v1/payments/webhook/razorpay, which
+// hands e-commerce events to core/payments/controllers/razorpayWebhook.controller.js
+// in this module.
+router.use('/payments', authMiddleware, paymentRoutes);
 
-// Sellers and riders; each router guards its own routes.
-router.use('/v1/seller', sellerRoutes);
-router.use('/v1/delivery', deliveryRoutes);
+// Sellers; the router guards its own routes.
+router.use('/seller', sellerRoutes);
 
-// A campaign push was tapped. Unauthenticated (the push carries a signed open
-// token), so it is registered before the signed-in notifications router.
-router.post('/v1/notifications/opened', recordCampaignPushOpen);
-
-// Shared by every signed-in role.
-router.use('/v1/notifications', authMiddleware, requireRoles('USER', 'SELLER', 'DELIVERY_PARTNER'), notificationRoutes);
-router.use('/v1/chat', authMiddleware, requireRoles('USER', 'SELLER', 'DELIVERY_PARTNER', 'ADMIN'), chatRoutes);
-router.use('/v1/fcm-tokens', fcmRoutes);
+router.use('/notifications', authMiddleware, requireRoles('USER', 'SELLER'), notificationRoutes);
+router.use('/fcm-tokens', fcmRoutes);
 
 // Admin. The queue view is registered first so the admin router's section
 // permissions never see it.
-router.get('/v1/admin/queues', authMiddleware, requireRoles('ADMIN'), getQueuesController);
-router.use('/v1/admin', authMiddleware, requireRoles('ADMIN'), adminRoutes);
+router.get('/admin/queues', authMiddleware, requireRoles('ADMIN'), requireServiceAccess('ecommerce'), getQueuesController);
+router.use('/admin', authMiddleware, requireRoles('ADMIN'), requireServiceAccess('ecommerce'), adminRoutes);
 
 export default router;

@@ -1,58 +1,36 @@
 import express from 'express';
 import {
-    requestUserOtpController,
-    verifyUserOtpController,
-    adminLoginController,
     refreshTokenController,
     requestSellerOtpController,
     verifySellerOtpController,
-    requestDeliveryOtpController,
-    verifyDeliveryOtpController,
     logoutController,
-    getMeController,
-    updateAdminProfileController,
-    changeAdminPasswordController,
-    requestAdminForgotPasswordOtpController,
-    resetAdminPasswordWithOtpController
+    getMeController
 } from './auth.controller.js';
-import { authMiddleware, requireAdmin } from './auth.middleware.js';
+import { authMiddleware } from './auth.middleware.js';
 import { authRateLimiter } from '../../middleware/rateLimit.js';
 
 const router = express.Router();
 
-// router.use(authRateLimiter); // Removed global application to avoid rate-limiting /me or /refresh-token too strictly
-
-// User OTP login
-router.post('/user/request-otp', authRateLimiter, requestUserOtpController);
-router.post('/user/verify-otp', authRateLimiter, verifyUserOtpController);
+// Only sellers sign in through this module.
+//
+// The source app also had user, delivery and admin logins here. Inside the
+// platform those would be a second front door: a customer OTP'd in here would
+// get an ecom_users account unlinked from their one platform identity, and an
+// ecom_admins login would skip servicesAccess entirely. Customers use the
+// platform's unified login (bridged by authMiddleware), admins the platform
+// panel, and this vertical has no riders of its own.
 
 // Seller OTP login
 router.post('/seller/request-otp', authRateLimiter, requestSellerOtpController);
 router.post('/seller/verify-otp', authRateLimiter, verifySellerOtpController);
 
-// Delivery partner OTP login
-router.post('/delivery/request-otp', authRateLimiter, requestDeliveryOtpController);
-router.post('/delivery/verify-otp', authRateLimiter, verifyDeliveryOtpController);
-
-// Admin login
-router.post('/admin/login', authRateLimiter, adminLoginController);
-
-// Admin forgot password (no auth required)
-router.post('/admin/forgot-password/request-otp', authRateLimiter, requestAdminForgotPasswordOtpController);
-router.post('/admin/forgot-password/reset', authRateLimiter, resetAdminPasswordWithOtpController);
-
-// Refresh token
+// Refresh token (sellers' own refresh tokens)
 router.post('/refresh-token', refreshTokenController);
 
 // Logout (invalidates refresh token)
 router.post('/logout', logoutController);
 
-// Authenticated user profile (requires Bearer token)
+// Authenticated profile (requires Bearer token)
 router.get('/me', authMiddleware, getMeController);
 
-// Admin-only: profile update & change password (Bearer + ADMIN role)
-router.patch('/admin/profile', authMiddleware, requireAdmin, updateAdminProfileController);
-router.post('/admin/change-password', authMiddleware, requireAdmin, changeAdminPasswordController);
-
 export default router;
-

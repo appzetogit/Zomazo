@@ -99,7 +99,10 @@ export async function calculateCheckoutPricing(userId, dto = {}) {
     const items = Array.isArray(dto.items) ? dto.items : [];
     if (!items.length) throw new ValidationError('Checkout must contain at least one item');
 
-    const fulfilmentMode = dto.fulfilmentMode === 'standard' ? 'standard' : 'quick';
+    // Always courier ('standard') inside the platform: quick delivery is the
+    // quick-commerce vertical's, and this one has no riders. Whatever the client
+    // sends is ignored rather than rejected, so an older app build still checks out.
+    const fulfilmentMode = 'standard';
     const deliveryAddress = normalizeDeliveryAddress(dto.deliveryAddress || dto.address || {});
     const deliveryMode = fulfilmentMode === 'quick' ? 'quick' : 'basic';
     // Quote what can be ordered: Quick is bounded by delivery zones (the same

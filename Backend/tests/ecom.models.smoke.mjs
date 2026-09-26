@@ -57,6 +57,9 @@ for (const m of ecomModels) {
     if (platformCollections.has(coll)) fail(`${m.modelName}: collection ${coll} is also used by the platform`);
 }
 
+// Deliberate links out to the platform: the satellite -> shared identity.
+const PLATFORM_REFS = new Set(['EcomUser.platformUserId:FoodUser']);
+
 const refsOf = (schema, prefix = '') => {
     const out = [];
     schema.eachPath((path, type) => {
@@ -69,7 +72,7 @@ const refsOf = (schema, prefix = '') => {
 for (const m of ecomModels) {
     for (const [path, ref] of refsOf(m.schema)) {
         if (!mongoose.models[ref]) fail(`${m.modelName}.${path} refs unknown model '${ref}'`);
-        else if (!ref.startsWith('Ecom')) fail(`${m.modelName}.${path} refs platform model '${ref}'`);
+        else if (!ref.startsWith('Ecom') && !PLATFORM_REFS.has(`${m.modelName}.${path}:${ref}`)) fail(`${m.modelName}.${path} refs platform model '${ref}'`);
     }
 }
 

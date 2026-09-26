@@ -148,7 +148,16 @@ const userSchema = new mongoose.Schema(
          * signing in on a new device silently invalidates every older device
          * rather than leaving the account live in two places at once.
          */
-        tokenVersion: { type: Number, default: 0 }
+        tokenVersion: { type: Number, default: 0 },
+        // The customer's ONE platform identity (shared `users` collection). This
+        // row is a satellite of it, created on first use by the auth middleware,
+        // the same way quick-commerce's qc_users are.
+        platformUserId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'FoodUser',
+            default: null,
+            index: true
+        }
     },
     {
         collection: 'users',

@@ -1,18 +1,6 @@
-import { sendError } from '../../utils/response.js';
-
-export const requireRoles = (...allowedRoles) => {
-    return (req, res, next) => {
-        if (!req.user || !req.user.role) {
-            return sendError(res, 401, 'Not authenticated');
-        }
-
-        const userRole = String(req.user.role).toUpperCase();
-        const allowedSet = new Set(allowedRoles.map((r) => String(r).toUpperCase()));
-        if (!allowedSet.has(userRole)) {
-            return sendError(res, 403, 'Forbidden: insufficient permissions');
-        }
-
-        next();
-    };
-};
-
+// The platform's role gate, re-exported rather than kept as a copy.
+//
+// The copy this app shipped with did not let SUPER_ADMIN through an 'ADMIN'
+// gate, so a platform super admin -- the only admin kind this module sees until
+// it has its own -- got 403 on every e-commerce admin call.
+export { requireRoles } from '../../../../core/roles/role.middleware.js';

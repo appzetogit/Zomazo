@@ -1,4 +1,8 @@
 import { sendError } from '../../utils/response.js';
+import { ADMIN_LEVELS } from '../admin/adminHierarchy.constants.js';
+import { resolveAdminLevel } from '../admin/adminHierarchy.service.js';
+
+export const isPlatformSuperadmin = (admin) => resolveAdminLevel(admin) === ADMIN_LEVELS.PLATFORM_SUPERADMIN;
 
 /**
  * Server-side enforcement of per-vertical admin access.
@@ -26,7 +30,9 @@ export const requireServiceAccess = (vertical) => async (req, res, next) => {
         if (!userId) return sendError(res, 401, 'Not authenticated');
 
         const { FoodAdmin } = await import('../admin/admin.model.js');
-        const admin = await FoodAdmin.findById(userId).select('servicesAccess isActive isDeleted').lean();
+        const admin = await FoodAdmin.findById(userId)
+            .select('servicesAccess isActive isDeleted adminLevel admin_type role parentAdminId module permissions')
+            .lean();
 
         // Not in the platform admins collection: a vertical-native admin (e.g. one
         // that lives in qc_admins). Those are scoped to their own vertical by
@@ -49,6 +55,14 @@ export const requireServiceAccess = (vertical) => async (req, res, next) => {
         }
 
         const access = Array.isArray(admin.servicesAccess) ? admin.servicesAccess : [];
+
+        // E-commerce arrived after every owner account was created, and owners carry
+        // an explicit list (platformAdmins.service), so without this each of them
+        // would be locked out of the new panel until someone ran a grant script.
+        // The platform superadmin passes everything by policy (adminAccessPolicy.js).
+        // Scoped to e-commerce so no existing vertical's access changes.
+        if (vertical === 'ecommerce' && isPlatformSuperadmin(admin)) return next();
+
         // The quick-commerce API also serves the Medical panel (a pharmacy is a
         // quick-commerce seller), so Medical access admits an admin to it; what
         // they may see there is narrowed by enforceAdminAccess.

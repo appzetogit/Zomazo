@@ -473,6 +473,20 @@ async function expireUnacceptedOrders(filter = {}) {
   return docs.length;
 }
 
+/**
+ * Both order sweeps, for the platform's in-process scheduler (jobs/scheduler.js).
+ *
+ * The standalone app ran these lazily -- on every order list or order read --
+ * plus one BullMQ job per order at its acceptance deadline. Inside the platform
+ * those BullMQ workers do not run, so an order no one happened to open sat past
+ * its deadline with the customer's money held and the stock reserved.
+ */
+export async function sweepExpiredOrders() {
+  const payments = await expireStalePendingPaymentOrders();
+  const unaccepted = await expireUnacceptedOrders();
+  return { payments, unaccepted };
+}
+
 export async function expireUnacceptedOrderById(orderMongoId) {
   if (!orderMongoId || !mongoose.Types.ObjectId.isValid(String(orderMongoId))) {
     return 0;
@@ -583,7 +597,7 @@ export async function createOrder(userId, dto, options = {}) {
 
     // Zones bound rider delivery only; a Shop (courier) order ships anywhere.
     const serviceableZone =
-      (checkout?.fulfilmentMode || dto.fulfilmentMode || "quick") === "quick"
+      ("standard" /* courier only in the platform; see orderSplit.service */) === "quick"
         ? await resolveServiceableZone(seller, deliveryAddress)
         : null;
 
@@ -608,7 +622,7 @@ export async function createOrder(userId, dto, options = {}) {
         deliveryAddress,
         couponCode: dto.pricing?.couponCode || undefined,
         deliveryMode: dto.deliveryMode || "basic",
-        fulfilmentMode: checkout?.fulfilmentMode || dto.fulfilmentMode || "quick",
+        fulfilmentMode: "standard" /* courier only in the platform; see orderSplit.service */,
         deviceId: dto.deviceId,
       },
       { at: orderAt, seller, skipAvailabilityCheck: true, skipCoupons: Boolean(checkout) },
@@ -730,7 +744,7 @@ export async function createOrder(userId, dto, options = {}) {
     // report measures against it: the checkout quote, else the same
     // packing-plus-ride estimate, else the store's advertised delivery time.
     // Standard orders are measured against shipment.etd instead.
-    const orderFulfilmentMode = checkout?.fulfilmentMode || dto.fulfilmentMode || "quick";
+    const orderFulfilmentMode = "standard" /* courier only in the platform; see orderSplit.service */;
     const promisedEtaMinutes =
       orderFulfilmentMode === "quick"
         ? [

@@ -1,8 +1,7 @@
-import { Server } from 'socket.io';
-import { config } from './env.js';
 import { logger } from '../utils/logger.js';
 import { verifyAccessToken } from '../core/auth/token.util.js';
 import { getFirebaseDB } from './firebase.js';
+import { User } from '../core/users/user.model.js';
 
 let io = null;
 
@@ -21,13 +20,6 @@ function getTokenFromHandshake(socket) {
     return null;
 }
 
-function maskToken(token) {
-    if (!token || typeof token !== 'string') return null;
-    const trimmed = token.trim();
-    if (!trimmed) return null;
-    return `${trimmed.slice(0, 12)}...${trimmed.slice(-6)}`;
-}
-
 const roomNames = {
     seller: (id) => `seller:${String(id)}`,
     user: (id) => `user:${String(id)}`,
@@ -37,80 +29,61 @@ const roomNames = {
 };
 
 /**
- * Initializes Socket.IO with the provided HTTP server.
- * When REDIS_ENABLED=true and REDIS_URL is set, attaches Redis adapter for horizontal scaling.
- * @param {import('http').Server} server
- * @returns {Promise<Server>}
+ * Attaches the e-commerce socket handlers to the /ecom NAMESPACE of the
+ * platform's one Socket.IO server.
+ *
+ * The source app built `new Server(server)` of its own; a second server on the
+ * same HTTP server fights the platform's for /socket.io. Same conversion
+ * quick-commerce got (see modules/quickCommerce/config/socket.js), including its
+ * finding that a namespace inherits the root server's adapter -- so no Redis
+ * adapter is attached here, and none should be. CORS is inherited too.
+ *
+ * Rooms are namespace-scoped, so this module's `user:<id>` cannot collide with
+ * food's or quick-commerce's.
+ *
+ * Clients connect with:  io(BASE_URL + '/ecom', { auth: { token } })
+ *
+ * @param {import('socket.io').Server} rootIo  the platform's io instance
  */
-export const initSocket = async (server) => {
-    io = new Server(server, {
-        cors: {
-            origin: config.socketCorsOrigin,
-            methods: ['GET', 'POST']
-        }
-    });
+export const initSocket = async (rootIo) => {
+    if (!rootIo) {
+        logger.warn('[Ecom Socket] no root io provided; e-commerce realtime is disabled');
+        return null;
+    }
+    if (io) return io;
+    io = rootIo.of('/ecom');
 
-    // Socket auth middleware (Bearer token).
-    io.use((socket, next) => {
+    io.use(async (socket, next) => {
+        const token = getTokenFromHandshake(socket);
+        if (!token) return next(new Error('AUTH_MISSING'));
+        let decoded;
         try {
-            const token = getTokenFromHandshake(socket);
-            if (!token) {
-                logger.warn(`Socket auth failed: token missing for socket ${socket.id}`);
-                logger.warn(`[DeliverySocket] Handshake auth missing`, {
-                    socketId: socket.id,
-                    origin: socket?.handshake?.headers?.origin || null,
-                    host: socket?.handshake?.headers?.host || null,
-                    userAgent: socket?.handshake?.headers?.['user-agent'] || null,
-                    hasAuthToken: Boolean(socket?.handshake?.auth?.token),
-                    hasAuthorizationHeader: Boolean(
-                        socket?.handshake?.headers?.authorization || socket?.handshake?.headers?.Authorization
-                    ),
-                    hasQueryToken: Boolean(socket?.handshake?.query?.token),
-                });
-                return next(new Error('AUTH_MISSING'));
-            }
-            logger.info(`[DeliverySocket] Handshake token received`, {
-                socketId: socket.id,
-                origin: socket?.handshake?.headers?.origin || null,
-                host: socket?.handshake?.headers?.host || null,
-                transport: socket?.handshake?.query?.transport || null,
-                tokenPreview: maskToken(token),
-            });
-            const decoded = verifyAccessToken(token);
-            socket.user = { userId: decoded.userId, role: decoded.role };
-            logger.info(`Socket auth success: ${decoded.role}:${decoded.userId} for socket ${socket.id}`);
-            return next();
+            decoded = verifyAccessToken(token);
         } catch (err) {
-            logger.error(`Socket auth failed for socket ${socket.id}: ${err.message}`);
-            logger.error(`[DeliverySocket] Handshake auth invalid`, {
-                socketId: socket.id,
-                origin: socket?.handshake?.headers?.origin || null,
-                host: socket?.handshake?.headers?.host || null,
-                transport: socket?.handshake?.query?.transport || null,
-                tokenPreview: maskToken(getTokenFromHandshake(socket)),
-                errorMessage: err.message,
-                errorName: err.name || null,
-            });
+            logger.warn(`[Ecom Socket] auth invalid for ${socket.id}: ${err.message}`);
             return next(new Error('AUTH_INVALID'));
         }
-    });
+        const role = String(decoded.role || '').toUpperCase();
+        let userId = decoded.userId || decoded.sub;
 
-    if (config.redisEnabled && config.redisUrl) {
-        try {
-            const { createAdapter } = await import('@socket.io/redis-adapter');
-            const { createClient } = await import('redis');
-            const pubClient = createClient({ url: config.redisUrl });
-            const subClient = pubClient.duplicate();
-            pubClient.on('error', (err) => logger.error(`Socket.IO Redis pub client: ${err.message}`));
-            subClient.on('error', (err) => logger.error(`Socket.IO Redis sub client: ${err.message}`));
-            await Promise.all([pubClient.connect(), subClient.connect()]);
-            io.adapter(createAdapter(pubClient, subClient));
-            logger.info('Socket.IO Redis adapter attached for horizontal scaling');
-        } catch (err) {
-            logger.warn(`Socket.IO Redis adapter skipped (using in-memory): ${err.message}`);
+        // A customer signs in on the platform, so the token carries the platform
+        // id -- but every emit here targets user:<ecom_users id>. Translated once
+        // on connect, as the REST middleware does; a customer who has never used
+        // the shop has no satellite and nothing to be told about yet.
+        if (role === 'USER' && userId) {
+            try {
+                const doc = await User.findOne({ $or: [{ _id: userId }, { platformUserId: userId }] })
+                    .select('_id')
+                    .lean();
+                if (doc) userId = String(doc._id);
+            } catch {
+                return next(new Error('AUTH_INVALID'));
+            }
         }
-    }
 
+        socket.user = { userId, role };
+        return next();
+    });
     io.on('connection', (socket) => {
         const userId = socket.user?.userId;
         const role = socket.user?.role;
@@ -128,7 +101,7 @@ export const initSocket = async (server) => {
                     room: roomNames.delivery(userId),
                 });
             }
-            if (role === 'ADMIN') socket.join(roomNames.admin());
+            if (role === 'ADMIN' || role === 'SUPER_ADMIN') socket.join(roomNames.admin());
         }
 
         // ─── Chat: typing indicator relay (messages themselves go over REST) ───

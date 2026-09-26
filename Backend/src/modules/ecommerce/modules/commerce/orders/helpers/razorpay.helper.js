@@ -8,22 +8,26 @@ try {
     Razorpay = null;
 }
 
-import { config } from '../../../../config/env.js';
+// The platform's Razorpay account, read per call like food's helper does. The
+// standalone app read env once at import; the platform keeps the keys in the
+// admin-editable profile, so a key rotated in the panel would never reach the
+// shop until a restart -- and one set ONLY in the panel, never at all.
+import { razorpayKeyId, razorpayKeySecret } from '../../../../../../core/settings/platformProfile.service.js';
 
-const KEY_ID = config.razorpayKeyId || process.env.RAZORPAY_KEY_ID || '';
-const KEY_SECRET = config.razorpayKeySecret || process.env.RAZORPAY_KEY_SECRET || '';
+const keyId = () => razorpayKeyId() || '';
+const keySecret = () => razorpayKeySecret() || '';
 
 export function isRazorpayConfigured() {
-    return Boolean(KEY_ID && KEY_SECRET && Razorpay);
+    return Boolean(keyId() && keySecret() && Razorpay);
 }
 
 export function getRazorpayKeyId() {
-    return KEY_ID;
+    return keyId();
 }
 
 export function getRazorpayInstance() {
     if (!isRazorpayConfigured()) return null;
-    return new Razorpay({ key_id: KEY_ID, key_secret: KEY_SECRET });
+    return new Razorpay({ key_id: keyId(), key_secret: keySecret() });
 }
 
 export function createRazorpayOrder(amountPaise, currency = 'INR', receipt = '', notes = undefined) {
@@ -64,9 +68,9 @@ export function createPaymentLink({ amountPaise, currency = 'INR', description, 
 }
 
 export function verifyPaymentSignature(orderId, paymentId, signature) {
-    if (!KEY_SECRET) return false;
+    if (!keySecret()) return false;
     const body = `${orderId}|${paymentId}`;
-    const expected = crypto.createHmac('sha256', KEY_SECRET).update(body).digest('hex');
+    const expected = crypto.createHmac('sha256', keySecret()).update(body).digest('hex');
     return expected === signature;
 }
 

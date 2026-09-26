@@ -26,6 +26,7 @@ export const MODULES = Object.freeze({
     TAXI: 'taxi',
     QUICK_COMMERCE: 'quickCommerce',
     SERVICE_PROVIDER: 'serviceProvider',
+    ECOMMERCE: 'ecommerce',
 });
 
 export const ALL_MODULES = Object.freeze(Object.values(MODULES));

@@ -358,6 +358,18 @@ export async function updateDispatchSettings(dispatchMode, adminId) {
 
 export async function tryAutoAssign(orderId, options = {}) {
   const attempt = options.attempt || 1;
+
+  // Riders carry QUICK orders only. A standard order ships by courier (its
+  // shipment is booked by the seller or admin), but the seller-accept and
+  // auto-accept paths call this without looking at the mode, so standard orders
+  // were being offered to riders too. Inside the platform this vertical is
+  // courier-only and has no riders of its own, so this is the gate that keeps a
+  // shop order from ever reaching one.
+  const mode = await Order.findById(orderId).select('fulfilmentMode').lean();
+  if (!mode || mode.fulfilmentMode !== 'quick') {
+    return null;
+  }
+
   // Small buffer above the accept window so an in-flight offer isn't reclaimed early.
   const lockTimeout = DRIVER_ACCEPT_WINDOW_MS + 5000; // 50s
 

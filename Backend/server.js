@@ -36,6 +36,7 @@ let expireOffersInterval = null;
 let fssaiExpiryInterval = null;
 let spScheduler = null;
 let ledgerNightlyInterval = null;
+let stopEcomJobs = null;
 
 const gracefulShutdown = async (signal) => {
     logger.info(`${signal} received, starting graceful shutdown`);
@@ -52,6 +53,7 @@ const gracefulShutdown = async (signal) => {
             if (fssaiExpiryInterval) clearInterval(fssaiExpiryInterval);
             if (spScheduler) spScheduler.stop();
             if (ledgerNightlyInterval) clearInterval(ledgerNightlyInterval);
+            if (stopEcomJobs) stopEcomJobs();
             logger.info('Graceful shutdown complete');
             process.exit(0);
         } catch (err) {
@@ -124,6 +126,12 @@ const startServer = async () => {
         // feature (order tracking, chat, emergency alerts) was silently dead.
         const { initSocket: initQCSocket } = await import('./src/modules/quickCommerce/config/socket.js');
         await initQCSocket(getIO());
+
+        // 3e. E-commerce (Shop) socket handlers, on namespace /ecom. Same shape as
+        // quick-commerce: the ported app built its own Server, which would have
+        // fought the platform's for /socket.io.
+        const { initSocket: initEcomSocket } = await import('./src/modules/ecommerce/config/socket.js');
+        await initEcomSocket(getIO());
 
         if (config.redisEnabled) {
             await connectRedis();
@@ -351,6 +359,12 @@ const startServer = async () => {
 
             runFssaiExpirySync();
             fssaiExpiryInterval = setInterval(runFssaiExpirySync, 60 * 60 * 1000);
+
+            // E-commerce's order sweeps, offer expiry and courier tracking. Its own
+            // BullMQ workers are separate processes this server does not start.
+            import('./src/modules/ecommerce/jobs/scheduler.js')
+                .then(({ startEcomJobs }) => { stopEcomJobs = startEcomJobs(); })
+                .catch((err) => logger.error(`E-commerce jobs failed to start: ${err.message}`));
         };
 
         if (mongoose.connection.readyState === 1) {

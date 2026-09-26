@@ -29,7 +29,7 @@ const router = express.Router();
 const requireOrderParty = async (req, res, next) => {
     try {
         const { role, userId } = req.user || {};
-        if (role === 'ADMIN') return next();
+        if (role === 'ADMIN' || role === 'SUPER_ADMIN') return next();
         const { orderId } = req.params;
         if (!mongoose.Types.ObjectId.isValid(String(orderId))) {
             return sendError(res, 404, 'Order not found');
@@ -53,7 +53,7 @@ const requireOrderParty = async (req, res, next) => {
 
 /** A seller or rider may only read their own wallet; admins may read any. */
 const requireSelfOrAdmin = (role, param) => (req, res, next) => {
-    if (req.user?.role === 'ADMIN') return next();
+    if (req.user?.role === 'ADMIN' || req.user?.role === 'SUPER_ADMIN') return next();
     if (req.user?.role === role && String(req.params[param]) === String(req.user.userId)) return next();
     return sendError(res, 403, 'Forbidden: insufficient permissions');
 };

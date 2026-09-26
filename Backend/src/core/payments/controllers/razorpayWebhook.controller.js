@@ -61,6 +61,26 @@ const resolveOrderSource = async (filter) => {
     return null;
 };
 
+/**
+ * E-commerce (the Shop) is offered an event only after food and quick-commerce
+ * have both missed it, so their payments pay for no extra lookup.
+ *
+ * It is not a third ORDER_SOURCES entry because its orders do not follow the
+ * flow below: one payment can cover a split checkout of several stores' orders,
+ * and a paid order is released by the module's own releasePaidOrder rather than
+ * set to 'created'. So the module handles the event itself and says whether it
+ * was its to handle.
+ *
+ * A failure there is NOT swallowed: it reaches the handler's catch and answers
+ * 500, so Razorpay retries. Acknowledging it instead would drop the only
+ * delivery of that event, and a shop order paid by a customer who closed the
+ * app would never go live.
+ */
+const offerToEcommerce = async (event, payload) => {
+    const { handleEcomRazorpayEvent } = await import('../../../modules/ecommerce/core/payments/controllers/razorpayWebhook.controller.js');
+    return handleEcomRazorpayEvent(event, payload);
+};
+
 export const handleRazorpayWebhook = async (req, res) => {
     const signature = req.headers['x-razorpay-signature'];
     const secret = razorpayWebhookSecret();
@@ -114,6 +134,7 @@ export const handleRazorpayWebhook = async (req, res) => {
              */
             const source = await resolveOrderSource({ "payment.razorpay.orderId": rzOrderId });
             if (!source) {
+                if (await offerToEcommerce(event, payload)) return res.status(200).json({ status: 'ok' });
                 logger.warn(`Webhook [payment.captured]: no order in any vertical for RZ-Order: ${rzOrderId}`);
                 return res.status(200).json({ status: 'ok' });
             }
@@ -259,6 +280,7 @@ export const handleRazorpayWebhook = async (req, res) => {
             // Sync refund fields in the order
             const refundSource = await resolveOrderSource({ "payment.razorpay.paymentId": rzPaymentId });
             if (!refundSource) {
+                if (await offerToEcommerce(event, payload)) return res.status(200).json({ status: 'ok' });
                 logger.warn(`Webhook [refund.processed]: no order in any vertical for RZ-Payment: ${rzPaymentId}`);
                 return res.status(200).json({ status: 'ok' });
             }

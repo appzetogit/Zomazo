@@ -342,10 +342,11 @@ export const requestSellerOtp = async (phone) => {
     throw new ValidationError("Phone is required");
   }
   const otp = await createOrUpdateOtp(phone);
-  // Only expose OTP in response when in default/dev mode — never in production with real SMS
-  const shouldExposeOtp =
-    config.nodeEnv !== "production" || config.useDefaultOtp;
-  return shouldExposeOtp ? { otp } : {};
+  // Returned to the client outside production only. The source app also returned
+  // it in production whenever USE_DEFAULT_OTP was on -- the coupling the
+  // platform removed (tests/security.bypass.smoke.mjs): one stray env flag on a
+  // live box and every seller's code is in the HTTP response.
+  return config.nodeEnv !== "production" ? { otp } : {};
 };
 
 export const verifySellerOtpAndLogin = async (phone, otp, fcmToken, platform) => {

@@ -26,6 +26,7 @@ export const ADMIN_SERVICES = [
   { key: 'quickCommerce', label: 'Quick Commerce' },
   { key: 'medical', label: 'Medical' },
   { key: 'taxi', label: 'Taxi' },
+  { key: 'ecommerce', label: 'Shop' },
 ];
 export const ADMIN_SERVICE_KEYS = ADMIN_SERVICES.map((s) => s.key);
 

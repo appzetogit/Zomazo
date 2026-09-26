@@ -63,7 +63,8 @@ export function validateCalculateOrderDto(body) {
         couponCode: z.string().optional(),
         deliveryFleet: z.string().optional(),
         deliveryMode: z.enum(['basic', 'quick']).optional(),
-        fulfilmentMode: z.enum(['quick', 'standard']).optional(),
+        // Accepted for older clients, always stored as courier ('standard').
+        fulfilmentMode: z.enum(['quick', 'standard']).optional().transform(() => 'standard'),
         deliveryAddress: z
             .object({
                 location: z
@@ -99,7 +100,8 @@ export function validateCreateOrderDto(body) {
         note: z.string().optional(),
         deliveryInstructions: z.string().optional(),
         deliveryMode: z.enum(['basic', 'quick']).optional(),
-        fulfilmentMode: z.enum(['quick', 'standard']).optional(),
+        // Accepted for older clients, always stored as courier ('standard').
+        fulfilmentMode: z.enum(['quick', 'standard']).optional().transform(() => 'standard'),
         // 'cash' is true COD, collected as notes at the door.
         // 'razorpay_qr' is the same pay-at-delivery flow, collected by QR instead.
         // 'cash' is accepted here regardless so the service can return the friendly

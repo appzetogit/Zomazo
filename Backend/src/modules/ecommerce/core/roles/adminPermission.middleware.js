@@ -9,18 +9,51 @@ const hasAction = (permissions, section, action) => {
     return actions.includes(action);
 };
 
+const isAdminRole = (role) => role === 'ADMIN' || role === 'SUPER_ADMIN';
+
 const hydrateAdmin = async (req) => {
     if (req.adminAccess) return req.adminAccess;
     const admin = await Admin.findById(req.user?.userId)
         .select('adminType permissions isActive isDeleted')
         .lean();
-    req.adminAccess = admin;
-    return admin;
+    if (admin) {
+        req.adminAccess = admin;
+        return admin;
+    }
+
+    // Not an e-commerce-native admin. Platform admins live in the shared `admins`
+    // collection, not ecom_admins; without this every one of them read as
+    // "inactive" and the whole panel 403'd. Same bridge quick-commerce uses: a
+    // platform admin is admitted when servicesAccess names this vertical, and an
+    // empty list means unrestricted.
+    const { FoodAdmin: PlatformAdmin } = await import('../../../../core/admin/admin.model.js');
+    const platform = await PlatformAdmin.findById(req.user?.userId)
+        .select('servicesAccess isActive isDeleted adminLevel admin_type role parentAdminId module permissions')
+        .lean();
+    if (!platform) return null;
+
+    // Same rule as the platform's requireServiceAccess('ecommerce'), including its
+    // superadmin pass: owner accounts predate this vertical and their explicit
+    // servicesAccess lists do not name it.
+    const { isPlatformSuperadmin } = await import('../../../../core/roles/serviceAccess.middleware.js');
+    const access = Array.isArray(platform.servicesAccess) ? platform.servicesAccess : [];
+    if (access.length > 0 && !access.includes('ecommerce') && !isPlatformSuperadmin(platform)) return null;
+
+    const bridged = {
+        // Full e-commerce access for admitted platform admins. Per-section
+        // permissions only exist on ecom_admins documents.
+        adminType: 'super_admin',
+        permissions: {},
+        isActive: platform.isActive !== false,
+        isDeleted: platform.isDeleted === true
+    };
+    req.adminAccess = bridged;
+    return bridged;
 };
 
 export const requireAdminPermission = (section, action = 'view') => async (req, res, next) => {
     try {
-        if (!req.user?.userId || req.user?.role !== 'ADMIN') {
+        if (!req.user?.userId || !isAdminRole(req.user?.role)) {
             return sendError(res, 401, 'Not authenticated');
         }
 
@@ -45,7 +78,7 @@ export const requireAdminPermission = (section, action = 'view') => async (req, 
 
 export const requireAnyAdminPermission = (rules = []) => async (req, res, next) => {
     try {
-        if (!req.user?.userId || req.user?.role !== 'ADMIN') {
+        if (!req.user?.userId || !isAdminRole(req.user?.role)) {
             return sendError(res, 401, 'Not authenticated');
         }
 

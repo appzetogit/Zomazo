@@ -1,6 +1,10 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { config } from '../../config/env.js';
+// The platform's config, not this module's: every vertical signs and verifies
+// with ONE secret, so a customer's single login works here. This module's own
+// env has no fallback when JWT_* is unset and would verify against `undefined`
+// while the platform had generated a random secret -- every token rejected.
+import { config } from '../../../../config/env.js';
 
 export const signAccessToken = (payload) => {
     return jwt.sign(payload, config.jwtAccessSecret, {

@@ -33,6 +33,9 @@ import spRouter from '../modules/serviceProvider/routes/index.js';
 // were identical. Its models are renamed QC* on qc_* collections so nothing shares a
 // collection with food, and its routes are mounted here rather than on /v1/food.
 import qcRouter from '../modules/quickCommerce/routes/index.js';
+// E-commerce (the Shop) is a port of the standalone warehouses app. Its models are
+// renamed Ecom* on ecom_* collections, the same treatment quick-commerce got.
+import ecomRouter from '../modules/ecommerce/routes/index.js';
 // Platform module kill-switch: lets one vertical be taken out of service without
 // restarting the process the other three share.
 import platformModuleRoutes from '../core/modules/module.routes.js';
@@ -199,6 +202,11 @@ router.get('/v1/me/spend', authMiddleware, getMySpendController);
 // /v1/food/*, which master's own food module already owns. Aliasing them would hand
 // food traffic to quick-commerce.
 router.use('/v1/qc', requireModuleEnabled(MODULES.QUICK_COMMERCE), qcRouter);
+
+// ─── E-commerce (Shop) ─────────────────────────────────────────────────────
+// No legacy aliases: the standalone app's paths were bare /v1/*, which the
+// platform already owns.
+router.use('/v1/ecom', requireModuleEnabled(MODULES.ECOMMERCE), ecomRouter);
 
 // ─── Service-Provider (Homster) ────────────────────────────────────────────
 // Canonical prefix.
