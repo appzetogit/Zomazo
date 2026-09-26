@@ -56,6 +56,7 @@ import {
   Pill,
   Percent,
   ShieldCheck,
+  Store,
 } from "lucide-react"
 import { cn } from "@food/utils/utils"
 import { Input } from "@food/components/ui/input"
@@ -67,7 +68,7 @@ import { getCachedSettings, loadBusinessSettings } from "@food/utils/businessSet
 import quickSpicyLogo from "@food/assets/k9-logo.jpg"
 import { useSettings } from "../../../Taxi/shared/context/SettingsContext"
 import { useAdminAccess, filterMenuForAccess, hasPanel, isRestricted } from "@food/utils/adminAccess"
-import { SERVICE_PROVIDER_ENABLED } from "@/config/features"
+import { SERVICE_PROVIDER_ENABLED, ECOMMERCE_ENABLED } from "@/config/features"
 /**
  * Which service tabs this admin may see.
  *
@@ -78,7 +79,7 @@ import { SERVICE_PROVIDER_ENABLED } from "@/config/features"
  */
 const useServiceAccess = () =>
   useMemo(() => {
-    const showAll = { food: true, taxi: true, serviceProvider: true, quickCommerce: true }
+    const showAll = { food: true, taxi: true, serviceProvider: true, quickCommerce: true, ecommerce: true }
     try {
       const raw = localStorage.getItem("admin_user") || sessionStorage.getItem("admin_user")
       if (!raw) return showAll
@@ -91,6 +92,7 @@ const useServiceAccess = () =>
         taxi: access.includes("taxi"),
         serviceProvider: access.includes("serviceProvider"),
         quickCommerce: access.includes("quickCommerce"),
+        ecommerce: access.includes("ecommerce"),
       }
     } catch {
       return showAll
@@ -429,6 +431,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
         serviceProvider: SERVICE_PROVIDER_ENABLED && hasPanel(access, "serviceProvider"),
         quickCommerce: hasPanel(access, "quickCommerce"),
         medical: hasPanel(access, "medical"),
+        ecommerce: ECOMMERCE_ENABLED && hasPanel(access, "ecommerce"),
       }
     : {
         ...storedAccess,
@@ -436,6 +439,8 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
         // Off on a site that has not switched the module on, whatever the
         // stored session says -- the tab would lead to a route that is absent.
         serviceProvider: SERVICE_PROVIDER_ENABLED && storedAccess.serviceProvider !== false,
+        // Same rule for the Shop (VITE_ENABLE_ECOMMERCE).
+        ecommerce: ECOMMERCE_ENABLED && storedAccess.ecommerce !== false,
       }
   const [searchQuery, setSearchQuery] = useState("")
   const [badges, setBadges] = useState({})
@@ -1268,6 +1273,28 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                   )}
                 />
                 Medical
+              </button>
+              )}
+              {/* SHOP TAB -- the e-commerce panel at /admin/shop (its own admin UI,
+                  like Services). Gated by the same flag as its route. */}
+              {serviceAccess.ecommerce && (
+              <button
+                type="button"
+                onClick={() => navigate("/admin/shop")}
+                className={cn(
+                  "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  location.pathname.startsWith("/admin/shop")
+                    ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
+                    : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
+                )}
+              >
+                <Store
+                  className={cn(
+                    "w-3.5 h-3.5",
+                    location.pathname.startsWith("/admin/shop") ? "text-[var(--sb-active-ink)]" : "text-[var(--sb-ink-faint)]"
+                  )}
+                />
+                Shop
               </button>
               )}
             </div>
