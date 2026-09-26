@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, MapPin, FastForward, Clock, Phone, ChefHat, ChevronDown } from 'lucide-react';
 import { ActionSlider } from '@/modules/DeliveryV2/components/ui/ActionSlider';
@@ -12,15 +12,24 @@ import { getHaversineDistance, calculateETA } from '@/modules/DeliveryV2/utils/g
 export const NewOrderModal = ({ order, onAccept, onReject, onMinimize }) => {
   const { riderLocation } = useDeliveryStore();
   const [timeLeft, setTimeLeft] = useState(30);
+  // One answer per offer: the timer and the button must not both tell the
+  // server, and a re-render at zero must not send the pass twice.
+  const answeredRef = useRef(false);
+  const pass = (timedOut) => {
+    if (answeredRef.current) return;
+    answeredRef.current = true;
+    onReject(order, { timedOut });
+  };
 
   useEffect(() => {
     if (timeLeft <= 0) {
-      onReject();
+      pass(true);
       return;
     }
     const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, onReject]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft]);
 
   const { distanceKm, etaMins } = useMemo(() => {
     if (!order) return { distanceKm: null, etaMins: null };
@@ -263,7 +272,7 @@ export const NewOrderModal = ({ order, onAccept, onReject, onMinimize }) => {
           />
 
           <button 
-            onClick={onReject}
+            onClick={() => pass(false)}
             className="w-full text-gray-400 font-black text-[11px] uppercase tracking-[0.2em] hover:text-red-500 transition-colors active:scale-95 py-2"
           >
             Pass this task

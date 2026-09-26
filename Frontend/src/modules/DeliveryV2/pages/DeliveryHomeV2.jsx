@@ -487,6 +487,26 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
 
   useEffect(() => { setIncomingOrder(newOrder); }, [newOrder]);
 
+  /**
+   * Pass on the offer (button) or let it lapse (timer). The sheet closes at
+   * once so the rider is never stuck waiting on the network; the server is
+   * told afterwards so it can mark the pass and offer the order to someone
+   * else instead of waiting out its own timer.
+   */
+  const handleRejectOffer = useCallback((order, { timedOut = false } = {}) => {
+    setIncomingOrder(null);
+    clearNewOrder();
+    const orderId = order?.orderMongoId || order?._id || order?.orderId || order?.id;
+    if (!orderId) return;
+    deliveryAPI.rejectOrder(orderId, { reason: timedOut ? 'timeout' : 'rider_passed' }).catch((err) => {
+      // Once another rider has taken it, or the order is gone, the pass has
+      // nothing left to do; anything else is worth telling a rider who tapped.
+      const status = err?.response?.status;
+      if (timedOut || status === 403 || status === 404) return;
+      toast.error(err?.response?.data?.message || 'Could not pass this order. It may be offered to you again.');
+    });
+  }, [clearNewOrder]);
+
   useEffect(() => {
     if (activeOrder && incomingOrder) {
       setIncomingOrder(null);
@@ -824,10 +844,13 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
             >
               <div className="w-full pointer-events-auto relative">
                 {incomingOrder && (
-                  <NewOrderModal 
-                    order={incomingOrder} 
+                  <NewOrderModal
+                    // A fresh sheet per offer, so the timer and the one-pass
+                    // guard never carry over from the offer before it.
+                    key={String(incomingOrder.orderMongoId || incomingOrder._id || incomingOrder.orderId || incomingOrder.id || '')}
+                    order={incomingOrder}
                     onAccept={(o) => { acceptOrder(o); setIncomingOrder(null); clearNewOrder(); }}
-                    onReject={() => { setIncomingOrder(null); clearNewOrder(); }}
+                    onReject={handleRejectOffer}
                     onMinimize={() => setIsModalMinimized(true)}
                   />
                 )}
