@@ -17,6 +17,8 @@ const PartnerApp = lazy(() => import('../modules/partner/PartnerApp'))
 // Shop (e-commerce): customer store + seller panel at /shop, its admin at /admin/shop.
 const ShopApp = lazy(() => import('../modules/Shop/ShopApp'))
 const ShopAdminApp = lazy(() => import('../modules/Shop/ShopAdminApp'))
+// Quick commerce for customers (groceries in minutes) on the /qc backend.
+const QuickApp = lazy(() => import('../modules/Quick/QuickApp'))
 import ProtectedRoute from '@food/components/ProtectedRoute'
 import { ECOMMERCE_ENABLED } from '../config/features'
 
@@ -158,6 +160,9 @@ const AppRoutes = () => {
 
         {/* Taxi Module */}
         <Route path="/taxi/*" element={<TaxiAppWrapper />} />
+
+        {/* Quick commerce customer app */}
+        <Route path="/quick/*" element={<Suspense fallback={<PageLoader />}><QuickApp /></Suspense>} />
 
         {/* Shop (e-commerce). /admin/shop/* is more specific than /admin/*, so the
             Shop panel is matched ahead of the platform admin below. */}

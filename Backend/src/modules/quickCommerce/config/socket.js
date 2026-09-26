@@ -91,6 +91,21 @@ export const initSocket = async (rootIo) => {
             const decoded = verifyAccessToken(token);
             socket.user = { userId: decoded.userId, role: decoded.role };
             logger.info(`Socket auth success: ${decoded.role}:${decoded.userId} for socket ${socket.id}`);
+
+            // A customer signed in on the platform carries the PLATFORM id, but
+            // every QC emit targets user:<qc_users id> and join-tracking compares
+            // against it -- so such a customer joined an empty room and was refused
+            // tracking. Translated to the satellite once, here, as the REST
+            // middleware does; a customer with no satellite yet has no QC orders.
+            if (String(decoded.role || '').toUpperCase() === 'USER' && decoded.userId) {
+                return import('../core/users/user.model.js')
+                    .then(({ FoodUser: QCUser }) => QCUser.findOne({ $or: [{ _id: decoded.userId }, { platformUserId: decoded.userId }] }).select('_id').lean())
+                    .then((doc) => {
+                        if (doc) socket.user.userId = String(doc._id);
+                        next();
+                    })
+                    .catch(() => next(new Error('AUTH_INVALID')));
+            }
             return next();
         } catch (err) {
             logger.error(`Socket auth failed for socket ${socket.id}: ${err.message}`);
