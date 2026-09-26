@@ -41,3 +41,6 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# GitHub config (kept locally, not tracked)
+.github/
