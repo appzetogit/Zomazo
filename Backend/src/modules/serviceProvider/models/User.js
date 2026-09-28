@@ -157,6 +157,13 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: 0
+  },
+
+  // Services the customer saved to book again (routes/user-routes/favourite.routes.js).
+  // Oldest first; capped there.
+  favouriteServices: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SPUserService' }],
+    default: []
   }
 
 }, {

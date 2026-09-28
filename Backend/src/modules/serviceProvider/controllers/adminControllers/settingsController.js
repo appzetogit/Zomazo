@@ -1,5 +1,6 @@
 const Settings = require('../../models/Settings');
 const Vendor = require('../../models/Vendor');
+const { slotRules } = require('../../utils/bookingSlots');
 
 /*
  * Master settings (core/settings/platformProfile.service.js) win where set:
@@ -95,11 +96,36 @@ exports.updateSettings = async (req, res, next) => {
       supportPageContent
     } = req.body;
 
+    // Appointment slots: checked together, since the hours only make sense as a pair.
+    const SLOT_FIELDS = ['slotStartHour', 'slotEndHour', 'slotLengthHours', 'slotLeadMinutes', 'bookingWindowDays', 'timezoneOffsetMinutes'];
+    const slotUpdate = {};
+    for (const f of SLOT_FIELDS) {
+      if (req.body[f] === undefined || req.body[f] === null || req.body[f] === '') continue;
+      const n = Number(req.body[f]);
+      if (!Number.isFinite(n)) {
+        return res.status(400).json({ success: false, message: `${f} must be a number` });
+      }
+      slotUpdate[f] = Math.round(n);
+    }
+
     let settings = await Settings.findOne({ type: 'global' });
+
+    if (Object.keys(slotUpdate).length) {
+      const start = slotUpdate.slotStartHour ?? settings?.slotStartHour ?? 8;
+      const end = slotUpdate.slotEndHour ?? settings?.slotEndHour ?? 20;
+      const length = slotUpdate.slotLengthHours ?? settings?.slotLengthHours ?? 2;
+      if (!(end > start) || length > end - start) {
+        return res.status(400).json({
+          success: false,
+          message: 'Slot hours must end after they start, with room for at least one slot'
+        });
+      }
+    }
 
     if (!settings) {
       settings = await Settings.create({
         type: 'global',
+        ...slotUpdate,
         visitedCharges,
         serviceGstPercentage,
         partsGstPercentage,
@@ -165,6 +191,7 @@ exports.updateSettings = async (req, res, next) => {
       if (termsAndConditions !== undefined) settings.termsAndConditions = termsAndConditions;
       if (privacyPolicy !== undefined) settings.privacyPolicy = privacyPolicy;
       if (supportPageContent !== undefined) settings.supportPageContent = supportPageContent;
+      Object.assign(settings, slotUpdate);
 
       await settings.save();
     }
@@ -206,6 +233,9 @@ exports.updateSettings = async (req, res, next) => {
       settings
     });
   } catch (error) {
+    if (error?.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     console.error('Error updating settings:', error);
     res.status(500).json({
       success: false,
@@ -216,7 +246,9 @@ exports.updateSettings = async (req, res, next) => {
 // Get Public Settings (Visited Charges, GST, Legal)
 exports.getPublicSettings = async (req, res, next) => {
   try {
-    let settings = await Settings.findOne({ type: 'global' }).select('visitedCharges serviceGstPercentage partsGstPercentage supportEmail supportPhone supportWhatsapp cancellationPenalty companyName companyAddress companyCity companyState companyPincode companyPhone companyEmail isOnlinePaymentEnabled termsAndConditions privacyPolicy supportPageContent');
+    let settings = await Settings.findOne({ type: 'global' }).select('visitedCharges serviceGstPercentage partsGstPercentage supportEmail supportPhone supportWhatsapp cancellationPenalty companyName companyAddress companyCity companyState companyPincode companyPhone companyEmail isOnlinePaymentEnabled termsAndConditions privacyPolicy supportPageContent slotStartHour slotEndHour slotLengthHours slotLeadMinutes bookingWindowDays timezoneOffsetMinutes').lean();
+    // The appointment slots the booking endpoint accepts, so the app offers the same ones.
+    const bookingSlots = slotRules(settings);
 
     // Default if not found (fallback values)
     if (!settings) {
@@ -226,7 +258,10 @@ exports.getPublicSettings = async (req, res, next) => {
     res.status(200).json({
       success: true,
       // ?app=provider for the provider/worker app; the customer app by default.
-      settings: await overlayMaster(settings, ['provider', 'vendor', 'worker'].includes(String(req.query?.app || '').toLowerCase()) ? 'services_provider' : 'services_user')
+      settings: {
+        ...(await overlayMaster(settings, ['provider', 'vendor', 'worker'].includes(String(req.query?.app || '').toLowerCase()) ? 'services_provider' : 'services_user')),
+        bookingSlots
+      }
     });
   } catch (error) {
     console.error('Error fetching public settings:', error);

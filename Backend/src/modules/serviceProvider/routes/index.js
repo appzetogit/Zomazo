@@ -27,6 +27,7 @@ router.use('/users', require('./user-routes/cart.routes'));
 router.use('/users/fcm-tokens', require('./user-routes/fcmToken.routes'));
 router.use('/users', require('./user-routes/coupon.routes'));
 router.use('/users', require('./user-routes/referral.routes'));
+router.use('/users', require('./user-routes/favourite.routes'));
 
 // ─── Scrap ─────────────────────────────────────────────────────────────────
 router.use('/scrap', require('./scrap.routes'));

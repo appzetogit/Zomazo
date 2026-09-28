@@ -178,6 +178,14 @@ const settingsSchema = new mongoose.Schema({
     enum: ['vendor', 'worker'],
     default: 'worker'
   },
+  // Appointment slots the customer app offers and the booking endpoint accepts
+  // (utils/bookingSlots.js). Wall-clock hours in the business timezone.
+  slotStartHour: { type: Number, default: 8, min: 0, max: 23 },
+  slotEndHour: { type: Number, default: 20, min: 1, max: 24 },
+  slotLengthHours: { type: Number, default: 2, min: 1, max: 12 },
+  slotLeadMinutes: { type: Number, default: 60, min: 0, max: 1440 },
+  bookingWindowDays: { type: Number, default: 7, min: 1, max: 60 },
+  timezoneOffsetMinutes: { type: Number, default: 330, min: -720, max: 840 },
   termsAndConditions: {
     type: String,
     default: `1. Acceptance of Terms

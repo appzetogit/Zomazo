@@ -13,6 +13,7 @@ const { BOOKING_STATUS, PAYMENT_STATUS, PREPAID_PAYMENT_METHODS, refundableAmoun
 const { createNotification } = require('../notificationControllers/notificationController');
 const { sendNotificationToUser, sendNotificationToVendor, sendNotificationToWorker } = require('../../services/firebaseAdmin');
 const couponService = require('../../services/couponService');
+const { slotProblem, currentSlotRules } = require('../../utils/bookingSlots');
 
 /**
  * Create a new booking
@@ -58,6 +59,18 @@ const createBooking = async (req, res) => {
       requirementText,
       requirementImages
     } = req.body;
+
+    // A date in the past, outside the hours visits run, or too soon for anyone
+    // to get there is refused before anything is priced or dispatched.
+    const slotRefusal = slotProblem({
+      scheduledDate,
+      timeSlot,
+      rules: await currentSlotRules(),
+      instant: bookingType === 'instant'
+    });
+    if (slotRefusal) {
+      return res.status(400).json({ success: false, code: 'SLOT_UNAVAILABLE', message: slotRefusal });
+    }
 
     let visitingCharges = reqVisitingCharges ?? reqVisitationFee;
 
@@ -1235,6 +1248,20 @@ const rescheduleBooking = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Booking not found'
+      });
+    }
+
+    const slotRefusal = slotProblem({ scheduledDate, timeSlot, rules: await currentSlotRules() });
+    if (slotRefusal) {
+      return res.status(400).json({ success: false, code: 'SLOT_UNAVAILABLE', message: slotRefusal });
+    }
+
+    // Once the professional has set out, the visit is under way; moving it
+    // now would strand them at the door.
+    if ([BOOKING_STATUS.JOURNEY_STARTED, BOOKING_STATUS.VISITED, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.WORK_DONE].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'The professional is already on the way, so this booking can no longer be moved'
       });
     }
 

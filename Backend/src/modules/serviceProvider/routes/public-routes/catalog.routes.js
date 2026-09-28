@@ -10,7 +10,8 @@ const {
 } = require('../../controllers/publicControllers/catalogController');
 const {
   getPublicServiceDetail,
-  getPublicProviders
+  getPublicProviders,
+  getPublicProviderProfile
 } = require('../../controllers/publicControllers/customerCatalogController');
 
 // Public routes - no authentication required
@@ -22,6 +23,7 @@ router.get('/services', getPublicServices); // New services
 // and the professionals who work a category. See customerCatalogController.
 router.get('/services/:id', getPublicServiceDetail);
 router.get('/providers', getPublicProviders);
+router.get('/providers/:id', getPublicProviderProfile);
 router.get('/home-content', getPublicHomeContent);
 router.get('/home-data', getPublicHomeData);
 
