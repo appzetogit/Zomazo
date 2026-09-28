@@ -257,15 +257,20 @@ export default function UnifiedOTPFastLogin({ viewType = "auth" }) {
             }
           } catch (_) {}
         }
-        if (!fcmToken) {
-          throw new Error("Unable to fetch mobile FCM token from app bridge")
-        }
+        // No token from the app shell: sign in anyway, just without pushes.
       } else {
+        // Push is a nice-to-have. Sign-in must not depend on it: browsers
+        // without web push (iPhone Safari outside an installed app), a customer
+        // who blocks notifications, or a build without Firebase settings would
+        // otherwise never get past this screen.
         fcmToken = await withTimeout(
           getWebFcmTokenForLogin(),
           FCM_FETCH_TIMEOUT_MS,
           "FCM token fetch",
-        )
+        ).catch((err) => {
+          console.warn("[Auth] Signing in without push notifications:", err?.message || err)
+          return ""
+        })
       }
 
       console.log("[Auth] FCM token for login:", {
