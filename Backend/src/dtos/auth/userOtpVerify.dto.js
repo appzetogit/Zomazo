@@ -13,6 +13,9 @@ const schema = z.object({
     .length(4, "OTP must be exactly 4 digits")
     .regex(/^\d{4}$/, "OTP must be numeric and exactly 4 digits"),
   ref: z.string().trim().max(64).optional().or(z.literal("")),
+  // Whose referral programme `ref` belongs to. Loose on purpose: an unknown
+  // value is treated as Food rather than failing the sign-in.
+  refService: z.string().trim().max(20).optional(),
   fcmToken: z.string().optional(),
   platform: z.enum(["web", "mobile"]).optional(),
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100).optional(),

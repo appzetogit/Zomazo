@@ -1175,7 +1175,9 @@ const creditUserWalletByReference = async ({ userId, amount, title, referenceKey
   return 'credited';
 };
 
-const processSignupReferralRewards = async ({ user, referrer }) => {
+// Exported for the platform sign-in, which redeems Taxi invites too
+// (core/referral/signupReferral.service.js).
+export const processSignupReferralRewards = async ({ user, referrer }) => {
   if (!user?._id || !referrer?._id) {
     return;
   }

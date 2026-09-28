@@ -1,0 +1,185 @@
+/**
+ * Every service's invite link is redeemed at the one platform sign-in.
+ *
+ * Run: node tests/invite-links.smoke.mjs
+ *
+ * All customer apps sign in on /login now, so Food's, Taxi's and the Shop's
+ * invite links all land there with ?ref=<code>&via=<service>, and the sign-in
+ * passes both on (ref, refService). What this guards:
+ *   - Food (the default): a new account with a friend's account id pays Food's
+ *     reward, once; the referral code on the account works too;
+ *   - Taxi: the friend's Taxi code sets referredBy on the new account, counts
+ *     for the friend and pays Taxi's sign-up reward into the shared wallet;
+ *   - Shop: a Shop row is made for the new customer and the friend's Shop row
+ *     is paid the Shop's reward, within its limit; nothing while the Shop's
+ *     module is switched off;
+ *   - an existing customer signing in again redeems nothing; one's own code
+ *     never pays; an unknown `refService` falls back to Food, and a bad code
+ *     never fails the sign-in;
+ *   - Master > Referral lists the Shop only while its module is on.
+ */
+import assert from 'node:assert/strict';
+import mongoose from 'mongoose';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
+
+process.env.NODE_ENV = 'test';
+process.env.MONGOMS_STARTUP_TIMEOUT ||= '180000';
+
+let failed = 0;
+const check = async (label, fn) => {
+  try {
+    await fn();
+    console.log(`  PASS  ${label}`);
+  } catch (err) {
+    failed += 1;
+    console.log(`  FAIL  ${label}\n        ${err.stack || err.message}`);
+  }
+};
+
+const replSet = await MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: 'wiredTiger' } });
+await mongoose.connect(replSet.getUri(), { dbName: 'invite_links' });
+const db = mongoose.connection;
+
+const { requestUserOtp, verifyUserOtpAndLogin } = await import('../src/core/auth/auth.service.js');
+const { validateUserOtpVerifyDto } = await import('../src/dtos/auth/userOtpVerify.dto.js');
+const { FoodReferralSettings } = await import('../src/modules/food/admin/models/referralSettings.model.js');
+const { FoodReferralLog } = await import('../src/modules/food/admin/models/referralLog.model.js');
+const { AdminBusinessSetting } = await import('../src/modules/taxi/admin/models/AdminBusinessSetting.js');
+const { CustomerWallet } = await import('../src/core/wallet/customerWallet.model.js');
+const { ReferralSettings: ShopReferralSettings } = await import('../src/modules/ecommerce/modules/commerce/admin/models/referralSettings.model.js');
+const { ReferralLog: ShopReferralLog } = await import('../src/modules/ecommerce/modules/commerce/admin/models/referralLog.model.js');
+const { User: ShopUser } = await import('../src/modules/ecommerce/core/users/user.model.js');
+const { setModuleEnabled } = await import('../src/core/modules/moduleState.service.js');
+const { referralOverview } = await import('../src/core/referral/referralSettings.service.js');
+for (const M of [FoodReferralLog, ShopReferralLog, ShopUser, CustomerWallet]) {
+  await M.createCollection().catch(() => {});
+  await M.init().catch(() => {});
+}
+
+await FoodReferralSettings.create({ referralRewardUser: 25, referralLimitUser: 5, isActive: true });
+await AdminBusinessSetting.create({
+  scope: 'default',
+  referral: { user: { enabled: true, type: 'instant_referrer', amount: 40, ride_count: 0 } },
+});
+await ShopReferralSettings.create({ referralRewardUser: 30, referralLimitUser: 1, isActive: true });
+
+// Ravi invites: one platform account, and his own Shop row.
+const ravi = new mongoose.Types.ObjectId();
+await db.collection('users').insertOne({ _id: ravi, phone: '9000000001', name: 'Ravi', isActive: true, referralCode: 'USR0001ABCDEF' });
+const raviShop = new mongoose.Types.ObjectId();
+await db.collection('ecom_users').insertOne({ _id: raviShop, phone: '9000000001', platformUserId: ravi, referralCode: String(raviShop), referralCount: 0, isActive: true });
+
+let nextPhone = 9100000000;
+/** A brand-new customer signing in on /login through an invite. */
+const signUp = async (body = {}) => {
+  const phone = String(nextPhone++);
+  const { otp } = await requestUserOtp(phone);
+  const dto = validateUserOtpVerifyDto({ phone, otp, ...body });
+  const out = await verifyUserOtpAndLogin(dto.phone, dto.otp, dto.ref, dto.fcmToken, dto.platform, dto.name, dto.refService);
+  return { phone, id: out.user._id, isNewUser: out.isNewUser };
+};
+const walletRows = async (userId) => (await CustomerWallet.findOne({ userId }).lean())?.transactions || [];
+
+console.log('\nFood (the default)');
+await check('a friend\'s account id pays Food\'s reward and records who invited', async () => {
+  const me = await signUp({ ref: String(ravi) });
+  assert.equal(me.isNewUser, true);
+  const log = await FoodReferralLog.findOne({ refereeId: me.id }).lean();
+  assert.equal(log?.status, 'credited');
+  assert.equal(log.rewardAmount, 25);
+  const doc = await db.collection('users').findOne({ _id: me.id });
+  assert.equal(String(doc.referredBy), String(ravi));
+});
+await check('the referral code on the account works as a Food invite too', async () => {
+  const me = await signUp({ ref: 'usr0001abcdef' });
+  assert.equal((await FoodReferralLog.findOne({ refereeId: me.id }).lean())?.status, 'credited');
+});
+await check('an unknown refService is Food, never a failed sign-in', async () => {
+  const me = await signUp({ ref: String(ravi), refService: 'spaceships' });
+  assert.equal((await FoodReferralLog.findOne({ refereeId: me.id }).lean())?.status, 'credited');
+});
+await check('a code nobody has is ignored and the sign-in still works', async () => {
+  const me = await signUp({ ref: 'NOPE123', refService: 'taxi' });
+  assert.ok(me.id);
+  const doc = await db.collection('users').findOne({ _id: me.id });
+  assert.ok(!doc.referredBy);
+});
+
+console.log('\nTaxi');
+await check('Taxi\'s code sets referredBy, counts for Ravi and pays Taxi\'s reward', async () => {
+  const before = (await db.collection('users').findOne({ _id: ravi })).referralCount || 0;
+  const me = await signUp({ ref: 'USR0001ABCDEF', refService: 'taxi' });
+  const doc = await db.collection('users').findOne({ _id: me.id });
+  assert.equal(String(doc.referredBy), String(ravi));
+  assert.equal((await db.collection('users').findOne({ _id: ravi })).referralCount, before + 1);
+  const paid = (await walletRows(ravi)).find((t) => t.referenceKey === `user-referral:signup:${me.id}:referrer`);
+  assert.ok(paid, 'no taxi reward in the wallet');
+  assert.equal(paid.amount, 40);
+  // Taxi's invite is not also paid as a Food one.
+  assert.equal(await FoodReferralLog.countDocuments({ refereeId: me.id }), 0);
+});
+
+console.log('\nShop');
+await check('a Shop invite makes the new customer\'s Shop row and pays Ravi\'s', async () => {
+  const me = await signUp({ ref: String(raviShop), refService: 'shop' });
+  const mine = await ShopUser.findOne({ platformUserId: me.id }).lean();
+  assert.ok(mine, 'no Shop row made');
+  assert.equal(String(mine.referredBy), String(raviShop));
+  const log = await ShopReferralLog.findOne({ refereeId: mine._id }).lean();
+  assert.equal(log?.status, 'credited');
+  assert.equal(log.rewardAmount, 30);
+  assert.equal((await ShopUser.findById(raviShop).lean()).referralCount, 1);
+  assert.equal(await FoodReferralLog.countDocuments({ refereeId: me.id }), 0);
+});
+await check('past the Shop\'s limit the invite is recorded, not paid', async () => {
+  const me = await signUp({ ref: String(ravi), refService: 'shop' }); // his platform id works too
+  const mine = await ShopUser.findOne({ platformUserId: me.id }).lean();
+  const log = await ShopReferralLog.findOne({ refereeId: mine._id }).lean();
+  assert.equal(log?.status, 'rejected');
+  assert.equal(log.reason, 'limit_reached');
+  assert.equal((await ShopUser.findById(raviShop).lean()).referralCount, 1);
+});
+await check('nothing is redeemed for the Shop while its module is off', async () => {
+  await setModuleEnabled('ecommerce', false, { reason: 'test' });
+  try {
+    const me = await signUp({ ref: String(raviShop), refService: 'shop' });
+    assert.equal(await ShopUser.countDocuments({ platformUserId: me.id }), 0);
+  } finally {
+    await setModuleEnabled('ecommerce', true);
+  }
+});
+
+console.log('\nWho is never paid');
+await check('an existing customer signing in again redeems nothing', async () => {
+  const phone = '9000000001';
+  const { otp } = await requestUserOtp(phone);
+  const before = await FoodReferralLog.countDocuments({});
+  const out = await verifyUserOtpAndLogin(phone, otp, String(new mongoose.Types.ObjectId()), undefined, undefined, undefined, 'food');
+  assert.equal(out.isNewUser, false);
+  assert.equal(await FoodReferralLog.countDocuments({}), before);
+});
+await check('one\'s own Shop code never pays', async () => {
+  const { creditShopSignupReferral } = await import('../src/modules/ecommerce/modules/commerce/user/services/userReferral.service.js');
+  const res = await creditShopSignupReferral({ refereeId: raviShop, ref: String(ravi) });
+  assert.equal(res.credited, false);
+});
+
+console.log('\nMaster > Referral');
+await check('lists the Shop while its module is on, and not when it is off', async () => {
+  let { services } = await referralOverview();
+  const shop = services.find((s) => s.vertical === 'ecommerce');
+  assert.ok(shop, 'no Shop row');
+  assert.equal(shop.customerReward.value, 30);
+  await setModuleEnabled('ecommerce', false, { reason: 'test' });
+  try {
+    ({ services } = await referralOverview());
+    assert.equal(services.some((s) => s.vertical === 'ecommerce'), false);
+  } finally {
+    await setModuleEnabled('ecommerce', true);
+  }
+});
+
+await mongoose.disconnect();
+await replSet.stop();
+console.log(failed ? `\n${failed} FAILED` : '\nall passed');
+process.exit(failed ? 1 : 0);

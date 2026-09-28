@@ -94,6 +94,18 @@ const resolveSessionAccount = async (model, decoded) => {
     }
 };
 
+/**
+ * The Shop customer row for a platform account, made on the spot if the
+ * customer has never opened the Shop -- exactly as their first Shop request
+ * would. Used when a Shop invite is redeemed at the platform sign-in, before
+ * the new customer has been anywhere near the Shop. Null when there is no
+ * such (active) platform account.
+ */
+export const ensureShopCustomer = async (platformUserId) => {
+    const doc = await resolveSessionAccount(User, { userId: String(platformUserId || ''), role: 'USER' });
+    return doc?._id ? String(doc._id) : null;
+};
+
 export const authMiddleware = (req, res, next) => {
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;

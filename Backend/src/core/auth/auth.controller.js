@@ -45,7 +45,7 @@ export const requestUserOtpController = async (req, res, next) => {
 export const verifyUserOtpController = async (req, res, next) => {
   const startedAt = Date.now();
   try {
-    const { phone, otp, ref, fcmToken, platform, name } = validateUserOtpVerifyDto(
+    const { phone, otp, ref, fcmToken, platform, name, refService } = validateUserOtpVerifyDto(
       req.body,
     );
     console.log(`[Auth Verify Controller] START phone=${phone}`);
@@ -56,6 +56,7 @@ export const verifyUserOtpController = async (req, res, next) => {
       fcmToken,
       platform,
       name,
+      refService,
     );
     console.log(
       `[Auth Verify Controller] SUCCESS phone=${phone} duration=${Date.now() - startedAt}ms`,

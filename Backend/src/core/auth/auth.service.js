@@ -18,6 +18,7 @@ import mongoose from "mongoose";
 import { creditReferralReward } from "../../modules/food/user/services/userWallet.service.js";
 
 import { referralSettingsFor } from '../../core/referral/referralSettings.service.js';
+import { normalizeReferralVia, redeemServiceInvite, resolvePlatformReferrer } from '../referral/signupReferral.service.js';
 const ROLES = {
   USER: "USER",
   RESTAURANT: "RESTAURANT",
@@ -85,6 +86,7 @@ export const verifyUserOtpAndLogin = async (
   fcmToken,
   platform,
   name,
+  refService,
 ) => {
   const loginStart = Date.now();
   logger.info(`[Auth Verify] Start verifyUserOtpAndLogin phone=${phone}`);
@@ -155,12 +157,19 @@ export const verifyUserOtpAndLogin = async (
     await userDoc.save();
   }
 
-  // Referral crediting: only for brand new accounts.
+  // Referral crediting: only for brand new accounts. Every service's invite
+  // link lands on this one sign-in; `refService` says whose programme the code
+  // belongs to (core/referral/signupReferral.service.js). Food's is below.
   const refRaw = typeof ref === "string" ? String(ref).trim() : "";
-  if (isNewUser && refRaw) {
+  const refVia = normalizeReferralVia(refService);
+  if (isNewUser && refRaw && refVia !== "food") {
+    await redeemServiceInvite({ userId: String(userDoc._id), ref: refRaw, via: refVia });
+  } else if (isNewUser && refRaw) {
     try {
-      if (mongoose.Types.ObjectId.isValid(refRaw)) {
-        const referrerId = new mongoose.Types.ObjectId(refRaw);
+      // The account id Food's link carries, or the referral code on the
+      // account (what Taxi's screen shows) when a Food invite quotes that.
+      const referrerId = await resolvePlatformReferrer(refRaw);
+      if (referrerId) {
         if (String(referrerId) !== String(userDoc._id)) {
           const [referrer, settingsDoc] = await Promise.all([
             FoodUser.findById(referrerId).select("_id referralCount").lean(),

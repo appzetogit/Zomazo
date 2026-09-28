@@ -25,8 +25,9 @@ const KEYS = {
 };
 
 // serviceProvider has no referral screen of its own: Master is its only source
-// (modules/serviceProvider/services/referralService.js).
-export const REFERRAL_VERTICALS = ['food', 'quickCommerce', 'taxi', 'serviceProvider'];
+// (modules/serviceProvider/services/referralService.js). ecommerce is the Shop,
+// which keeps its own settings like Food and Quick.
+export const REFERRAL_VERTICALS = ['food', 'quickCommerce', 'taxi', 'serviceProvider', 'ecommerce'];
 
 const NONE = Object.freeze({ customerReward: null, customerLimit: null, partnerReward: null, partnerLimit: null });
 
@@ -61,14 +62,14 @@ export async function resolveMasterReferral(vertical) {
 const anySet = (m) => Object.values(m).some((v) => v !== null);
 
 /**
- * Food's or Quick's referral settings document, with Master's values in place.
+ * Food's, Quick's or the Shop's referral settings document, with Master's values in place.
  *
  * Returns the same shape every existing caller reads (referralRewardUser,
  * referralLimitUser, referralRewardDelivery, referralLimitDelivery, plus the
  * link templates), so a call site changes only where the document comes from.
  * Null only when neither the service nor Master has anything -- as before.
  *
- * @param {'food'|'quickCommerce'} vertical
+ * @param {'food'|'quickCommerce'|'ecommerce'} vertical
  * @param {import('mongoose').Model} Model  that service's referral settings model
  */
 export async function referralSettingsFor(vertical, Model) {
@@ -166,12 +167,25 @@ export async function referralOverview() {
     };
   };
 
-  return {
-    services: await Promise.all([
-      storeRow('food', FoodReferralSettings),
-      storeRow('quickCommerce', QuickReferralSettings),
-      taxiRow(),
-      servicesRow(),
-    ]),
+  // The Shop only while its module is switched on (Master > Modules).
+  const shopRow = async () => {
+    const [{ isModuleEnabled }, { MODULES }] = await Promise.all([
+      import('../modules/moduleState.service.js'),
+      import('../modules/moduleRegistry.js'),
+    ]);
+    if (!(await isModuleEnabled(MODULES.ECOMMERCE))) return null;
+    const { ReferralSettings: ShopReferralSettings } = await import(
+      '../../modules/ecommerce/modules/commerce/admin/models/referralSettings.model.js'
+    );
+    return storeRow('ecommerce', ShopReferralSettings);
   };
+
+  const rows = await Promise.all([
+    storeRow('food', FoodReferralSettings),
+    storeRow('quickCommerce', QuickReferralSettings),
+    taxiRow(),
+    servicesRow(),
+    shopRow(),
+  ]);
+  return { services: rows.filter(Boolean) };
 }
