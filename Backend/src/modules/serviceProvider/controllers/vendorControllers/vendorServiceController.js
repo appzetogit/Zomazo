@@ -1,4 +1,6 @@
+const mongoose = require('mongoose');
 const Service = require('../../models/UserService');
+const VendorService = require('../../models/VendorService');
 const { validationResult } = require('express-validator');
 const { SERVICE_STATUS } = require('../../utils/constants');
 
@@ -39,9 +41,25 @@ const getVendorServices = async (req, res) => {
       status: SERVICE_STATUS.ACTIVE
     });
 
+    // Lay this vendor's own availability and price over each catalog row, so the
+    // vendor app shows what the vendor set rather than only the platform default.
+    const overrides = await VendorService.find({
+      vendorId,
+      serviceId: { $in: services.map((s) => s._id) }
+    }).lean();
+    const byService = new Map(overrides.map((o) => [String(o.serviceId), o]));
+    const data = services.map((s) => {
+      const o = byService.get(String(s._id));
+      return {
+        ...s.toObject(),
+        vendorAvailable: o ? o.isAvailable !== false : true,
+        vendorPrice: o && o.customPrice != null ? o.customPrice : null
+      };
+    });
+
     res.status(200).json({
       success: true,
-      data: services,
+      data,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -58,8 +76,28 @@ const getVendorServices = async (req, res) => {
   }
 };
 
+/*
+ * Availability and price are the vendor's OWN overrides, kept per vendor in
+ * sp_vendor_services (models/VendorService.js).
+ *
+ * Both handlers below used to write straight to the shared catalog row, so any
+ * approved vendor could switch a service off, or reprice it, for every customer
+ * and every other vendor on the platform (the old TODOs admitted as much). The
+ * catalog belongs to the admin panel; a vendor only records how THEY offer it.
+ */
+const upsertVendorOverride = async (vendorId, serviceId, fields) => {
+  if (!mongoose.Types.ObjectId.isValid(serviceId)) return null;
+  const service = await Service.findById(serviceId).select('_id').lean();
+  if (!service) return null;
+  return VendorService.findOneAndUpdate(
+    { vendorId, serviceId },
+    { $set: fields },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  ).lean();
+};
+
 /**
- * Update service availability (enable/disable)
+ * Update service availability (enable/disable) for this vendor only
  */
 const updateServiceAvailability = async (req, res) => {
   try {
@@ -74,33 +112,20 @@ const updateServiceAvailability = async (req, res) => {
 
     const vendorId = req.user.id;
     const { serviceId } = req.params;
-    const { isAvailable } = req.body;
+    const isAvailable = req.body.isAvailable === true || req.body.isAvailable === 'true';
 
-    // TODO: Verify vendor owns this service
-    // For now, just update the service
-
-    const service = await Service.findById(serviceId);
-
-    if (!service) {
+    const override = await upsertVendorOverride(vendorId, serviceId, { isAvailable });
+    if (!override) {
       return res.status(404).json({
         success: false,
         message: 'Service not found'
       });
     }
 
-    // Update availability (using status field)
-    if (isAvailable) {
-      service.status = SERVICE_STATUS.ACTIVE;
-    } else {
-      service.status = SERVICE_STATUS.INACTIVE;
-    }
-
-    await service.save();
-
     res.status(200).json({
       success: true,
       message: 'Service availability updated successfully',
-      data: service
+      data: override
     });
   } catch (error) {
     console.error('Update service availability error:', error);
@@ -127,34 +152,25 @@ const setServicePricing = async (req, res) => {
 
     const vendorId = req.user.id;
     const { serviceId } = req.params;
+    // The discounted price is what the vendor actually charges when both are sent.
+    // An empty value clears the override, falling back to the catalog price.
     const { basePrice, discountPrice } = req.body;
+    const isSet = (v) => v !== undefined && v !== null && v !== '';
+    const raw = isSet(discountPrice) ? discountPrice : basePrice;
+    const customPrice = isSet(raw) ? Number(raw) : null;
 
-    // TODO: Create VendorService model for vendor-specific pricing
-    // For now, update the service directly (not ideal for multi-vendor scenario)
-
-    const service = await Service.findById(serviceId);
-
-    if (!service) {
+    const override = await upsertVendorOverride(vendorId, serviceId, { customPrice });
+    if (!override) {
       return res.status(404).json({
         success: false,
         message: 'Service not found'
       });
     }
 
-    // Update pricing
-    if (basePrice !== undefined) {
-      service.basePrice = basePrice;
-    }
-    if (discountPrice !== undefined) {
-      service.discountPrice = discountPrice;
-    }
-
-    await service.save();
-
     res.status(200).json({
       success: true,
       message: 'Service pricing updated successfully',
-      data: service
+      data: override
     });
   } catch (error) {
     console.error('Set service pricing error:', error);
