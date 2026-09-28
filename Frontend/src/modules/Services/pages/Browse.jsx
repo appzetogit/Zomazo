@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { useParams, useSearchParams } from "react-router-dom"
+import { Link, useParams, useSearchParams } from "react-router-dom"
 import { BadgeCheck, SlidersHorizontal, Star } from "lucide-react"
 import { servicesAPI } from "../api"
 import { useCatalogIndex, useLoad } from "../hooks"
@@ -78,7 +78,11 @@ function Providers({ categoryId }) {
       </p>
       <ul className="grid gap-3 md:grid-cols-2">
         {providers.map((p) => (
-          <li key={p.id} className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <li key={p.id}>
+            <Link
+              to={`/services/pro/${p.id}`}
+              className={cx("flex h-full gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm hover:border-violet-200", focusRing)}
+            >
             <Thumb src={p.photo} name={p.name} className="h-14 w-14 shrink-0 rounded-full" />
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1 font-extrabold text-gray-900">
@@ -99,6 +103,7 @@ function Providers({ categoryId }) {
             {p.isOnline ? (
               <span className="self-start rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Online</span>
             ) : null}
+            </Link>
           </li>
         ))}
       </ul>

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { Check, KeyRound, MapPin, Navigation, Phone, Star } from "lucide-react"
+import { Check, KeyRound, LifeBuoy, MapPin, Navigation, Phone, Star } from "lucide-react"
+import { SUPPORT_PATH } from "../../../shared/superapp/services"
 import { servicesAPI, errorMessage } from "../api"
 import { useLoad } from "../hooks"
 import useBookingLive from "../useBookingLive"
@@ -201,10 +202,16 @@ function ReviewForm({ booking, onDone }) {
   )
 }
 
-function Row({ label, value, strong }) {
+function Row({ label, value, strong, tone }) {
   return (
-    <div className={cx("flex justify-between gap-4", strong && "border-t border-gray-100 pt-2 text-base font-extrabold")}>
-      <dt className={strong ? "" : "text-gray-600"}>{label}</dt>
+    <div
+      className={cx(
+        "flex justify-between gap-4",
+        strong && "border-t border-gray-100 pt-2 text-base font-extrabold",
+        tone === "green" && "text-emerald-700"
+      )}
+    >
+      <dt className={strong || tone ? "" : "text-gray-600"}>{label}</dt>
       <dd>{value}</dd>
     </div>
   )
@@ -308,7 +315,8 @@ export default function BookingDetail() {
         ) : null}
         {booking.status === "no_vendors" ? (
           <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-800">
-            No professional was free for this slot. Try another time, or cancel{booking.paymentStatus === "success" ? " for a full refund" : ""}.
+            No professional was free for this slot. Cancel it{booking.paymentStatus === "success" ? " for a full refund" : ""} and
+            book again for another time.
           </p>
         ) : null}
         {booking.status === "cancelled" ? (
@@ -353,7 +361,13 @@ export default function BookingDetail() {
           <div className="mt-3 flex items-center gap-3">
             <Thumb src={pro.profilePhoto} name={proName} className="h-12 w-12 shrink-0 rounded-full" />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-bold text-gray-900">{proName}</p>
+              {pro._id ? (
+                <Link to={`/services/pro/${pro._id}`} className={cx("block truncate rounded font-bold text-gray-900 hover:underline", focusRing)}>
+                  {proName}
+                </Link>
+              ) : (
+                <p className="truncate font-bold text-gray-900">{proName}</p>
+              )}
               {pro.rating ? (
                 <p className="flex items-center gap-1 text-xs text-gray-600">
                   <Stars value={pro.rating} size={11} /> {Number(pro.rating).toFixed(1)}
@@ -442,6 +456,9 @@ export default function BookingDetail() {
             ))}
             {bill.visitingCharges ? <Row label="Visiting charges" value={formatMoney(bill.visitingCharges)} /> : null}
             {bill.transportCharges ? <Row label="Transport" value={formatMoney(bill.transportCharges)} /> : null}
+            {bill.couponDiscount ? (
+              <Row label={`Coupon${booking.promoCode ? ` ${booking.promoCode}` : ""}`} value={`- ${formatMoney(bill.couponDiscount)}`} tone="green" />
+            ) : null}
             <Row label="Total" value={formatMoney(bill.grandTotal ?? booking.finalAmount)} strong />
           </dl>
         ) : (
@@ -450,6 +467,9 @@ export default function BookingDetail() {
             {booking.discount ? <Row label="Discount" value={`- ${formatMoney(booking.discount)}`} /> : null}
             {booking.tax ? <Row label="GST" value={formatMoney(booking.tax)} /> : null}
             {booking.visitingCharges ? <Row label="Visiting charges" value={formatMoney(booking.visitingCharges)} /> : null}
+            {booking.promoDiscount ? (
+              <Row label={`Coupon${booking.promoCode ? ` ${booking.promoCode}` : ""}`} value={`- ${formatMoney(booking.promoDiscount)}`} tone="green" />
+            ) : null}
             <Row label="Total" value={formatMoney(booking.finalAmount)} strong />
           </dl>
         )}
@@ -470,6 +490,17 @@ export default function BookingDetail() {
           </button>
         ) : null}
       </section>
+
+      <Link
+        to={SUPPORT_PATH}
+        className={cx("flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-4 text-sm shadow-sm hover:border-violet-200", focusRing)}
+      >
+        <LifeBuoy className="h-5 w-5 shrink-0 text-violet-600" aria-hidden="true" />
+        <span className="flex-1">
+          <span className="block font-bold text-gray-900">Need help with this booking?</span>
+          <span className="block text-xs text-gray-500">Raise a ticket with booking #{booking.bookingNumber}</span>
+        </span>
+      </Link>
 
       {dialog === "cancel" ? (
         <CancelDialog booking={booking} onClose={() => setDialog(null)} onDone={() => { setDialog(null); refresh() }} />

@@ -4,6 +4,7 @@ import { servicesAPI } from "../api"
 import { useLoad } from "../hooks"
 import { useBasket } from "../context/BasketContext"
 import ServiceCard, { AddButton } from "../components/ServiceCard"
+import SaveButton from "../components/SaveButton"
 import { EmptyState, Skeleton, Stars, Thumb, cx, focusRing, formatDate, formatMoney, withGst } from "../helpers"
 
 function RatingSummary({ rating }) {
@@ -89,7 +90,10 @@ export default function ServiceDetail() {
           ) : null}
         </nav>
         {service.brandName ? <p className="mt-2 text-xs font-bold uppercase tracking-wide text-violet-600">{service.brandName}</p> : null}
-        <h1 className="mt-1 text-2xl font-extrabold text-gray-900">{service.title}</h1>
+        <div className="mt-1 flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-extrabold text-gray-900">{service.title}</h1>
+          <SaveButton service={service} className="shrink-0" size="h-6 w-6" />
+        </div>
         {detail.data.rating?.total ? (
           <p className="mt-1 flex items-center gap-2 text-sm text-gray-600">
             <Stars value={detail.data.rating.average} />
@@ -124,7 +128,7 @@ export default function ServiceDetail() {
           </li>
           <li className="flex gap-3 rounded-2xl border border-gray-100 p-4">
             <CalendarClock className="h-5 w-5 shrink-0 text-violet-600" aria-hidden="true" />
-            <p className="text-sm text-gray-700">Choose a two-hour slot. Reschedule or cancel free until the professional sets out.</p>
+            <p className="text-sm text-gray-700">Choose a time slot that suits you. Reschedule or cancel free until the professional sets out.</p>
           </li>
         </ul>
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, Receipt } from "lucide-react"
+import { ALL_ORDERS_PATH } from "../../../shared/superapp/services"
 import { servicesAPI } from "../api"
 import { useLoad } from "../hooks"
 import { ACTIVE_STATUSES, EmptyState, Skeleton, StatusPill, Thumb, canReview, cx, focusRing, formatDate, formatMoney, isSignedIn, useRequireLogin } from "../helpers"
@@ -44,7 +45,16 @@ export default function Bookings() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-16 pt-4">
-      <h1 className="text-xl font-extrabold text-gray-900">My bookings</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-extrabold text-gray-900">My bookings</h1>
+        <Link
+          to={ALL_ORDERS_PATH}
+          className={cx("flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-bold text-violet-700 hover:bg-violet-50", focusRing)}
+        >
+          <Receipt className="h-4 w-4" aria-hidden="true" /> All orders
+        </Link>
+      </div>
+      <p className="mt-0.5 text-xs text-gray-500">Service bookings here; food, rides and shopping under All orders.</p>
       <div className="mt-3 flex gap-1 rounded-xl bg-gray-100 p-1" role="tablist">
         {TABS.map((t) => (
           <button
