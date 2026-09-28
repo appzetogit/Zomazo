@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom"
-import { ChevronRight, Gift, Heart, HelpCircle, LogIn, Package, Receipt, Store } from "lucide-react"
-import { ALL_ORDERS_PATH, SUPPORT_PATH } from "@/shared/superapp/services"
+import { ChevronRight, Gift, Heart, HelpCircle, LogIn, Package, Receipt, Store, UserRound } from "lucide-react"
+import { ACCOUNT_PATH, ALL_ORDERS_PATH, SUPPORT_PATH } from "@/shared/superapp/services"
 import SuperAppSwitcher from "@/shared/superapp/SuperAppSwitcher"
 import { cx, focusRing, isSignedIn } from "../helpers"
 
@@ -10,6 +10,7 @@ import { cx, focusRing, isSignedIn } from "../helpers"
  * help), and refer & earn.
  */
 const ITEMS = [
+  { to: ACCOUNT_PATH, icon: UserRound, label: "Your account", hint: "Profile, wallet, orders and help across the app" },
   { to: "/quick/orders", icon: Package, label: "Your quick orders", hint: "Track, rate and reorder" },
   { to: ALL_ORDERS_PATH, icon: Receipt, label: "All orders", hint: "Food, rides, services, shop and quick in one place" },
   { to: "/quick/favorites", icon: Heart, label: "Favourites", hint: "Products and stores you saved" },

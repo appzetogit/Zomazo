@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Briefcase, Target, Award, ShieldCheck } from 'lucide-react';
 import api from '../../../shared/api/axiosInstance';
+import Brand from "@/shared/superapp/Brand"
 
 const CareersPage = () => {
   const navigate = useNavigate();
@@ -9,7 +10,7 @@ const CareersPage = () => {
   const [loading, setLoading] = useState(true);
 
   const defaultContent = `
-    <h1>Careers at Quick Drop</h1>
+    <h1>Careers at <Brand /></h1>
     <p>Join our team and build the future of urban mobility. We are constantly looking for talented software engineers, product managers, driver relationship experts, and support specialists to join our journey.</p>
     <br/>
     <h2>Open Positions</h2>
@@ -74,7 +75,7 @@ const CareersPage = () => {
             Build the Future of <span className="text-[#F5D476]">Mobility</span>
           </h1>
           <p className="mt-6 max-w-3xl text-lg leading-relaxed text-stone-300">
-            Join the Quick Drop team and develop the technology, infrastructure, and relationships that power cities every day.
+            Join the <Brand /> team and develop the technology, infrastructure, and relationships that power cities every day.
           </p>
         </div>
       </section>

@@ -97,7 +97,7 @@ export default function Notifications() {
       <div className="max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Header */}
         <div className="flex items-center gap-3 sm:gap-4 mb-4 md:mb-6 lg:mb-8">
-          <Link to="/user">
+          <Link to="/home" aria-label="Back to home">
             <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 sm:h-10 sm:w-10">
               <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>

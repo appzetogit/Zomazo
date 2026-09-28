@@ -3,6 +3,8 @@ import Lenis from 'lenis'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import api from '../Taxi/shared/api/axiosInstance'
+import { getCompanyName } from "@food/utils/businessSettings"
+import { withBrand } from "@/shared/superapp/Brand"
 
 const Ecosystem = lazy(() => import('./components/Ecosystem'))
 const Services = lazy(() => import('./components/Services'))
@@ -19,7 +21,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     // Dynamic SEO Title & Meta tags for better discoverability
-    document.title = "Quick Drop - All-in-One Super-App for Rides, Food & Logistics"
+    document.title = `${getCompanyName()} - All-in-One Super-App for Rides, Food & Logistics`
 
     // Find or create meta description tag
     let metaDesc = document.querySelector('meta[name="description"]')
@@ -28,7 +30,7 @@ export default function LandingPage() {
       metaDesc.name = 'description'
       document.head.appendChild(metaDesc)
     }
-    metaDesc.setAttribute('content', 'Quick Drop is the ultimate multi-service super-app for Ride Hailing (Taxi & Shares), Food & Dining Delivery, secure Courier Parcels, Airport Transfers, Hourly rentals, and Logistics cargo.')
+    metaDesc.setAttribute('content', withBrand('Quick Drop is the ultimate multi-service super-app for Ride Hailing (Taxi & Shares), Food & Dining Delivery, secure Courier Parcels, Airport Transfers, Hourly rentals, and Logistics cargo.'))
 
     // Fetch dynamic landing settings
     const fetchLandingSettings = async () => {

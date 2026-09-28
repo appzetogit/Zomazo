@@ -7,6 +7,7 @@ import {
 import { deliveryAPI } from '@food/api';
 import { toast } from 'sonner';
 import useDeliveryBackNavigation from '../../hooks/useDeliveryBackNavigation';
+import Brand from "@/shared/superapp/Brand"
 
 /**
  * ViewSupportTicketV2 - Restored Old UI for Ticket Details.
@@ -105,7 +106,7 @@ export const ViewSupportTicketV2 = () => {
 
          <div className="mt-10 flex flex-col items-center justify-center opacity-20 gap-4">
             <Mail className="w-12 h-12" />
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-center">Quick Drop Support Fleet</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-center"><Brand /> Support Fleet</p>
          </div>
       </div>
     </div>

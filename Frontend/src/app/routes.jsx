@@ -26,6 +26,9 @@ const ServiceVendorApp = lazy(() => import('../modules/ServiceProvider/vendor/Ve
 const ServiceWorkerApp = lazy(() => import('../modules/ServiceProvider/worker/WorkerApp'))
 // Service booking for customers (home services) on the /sp backend.
 const ServicesApp = lazy(() => import('../modules/Services/ServicesApp'))
+// The super app's own home and the account every service shares.
+const SuperAppHome = lazy(() => import('../modules/SuperApp/SuperAppHome'))
+const AccountApp = lazy(() => import('../modules/SuperApp/AccountApp'))
 import ProtectedRoute from '@food/components/ProtectedRoute'
 import LoginRedirect from '../shared/superapp/LoginRedirect'
 
@@ -146,7 +149,19 @@ const AppRoutes = () => {
     <>
       <Routes>
         {/* Root → Master Landing Page */}
-        <Route path="/" element={<Suspense fallback={<PageLoader />}><LandingPage /></Suspense>} />
+        {/* A signed-in customer opening the site goes to their home, not the marketing page. */}
+        <Route
+          path="/"
+          element={
+            localStorage.getItem('user_accessToken')
+              ? <Navigate to="/home" replace />
+              : <Suspense fallback={<PageLoader />}><LandingPage /></Suspense>
+          }
+        />
+
+        {/* The super app: its home, and the customer's account across services */}
+        <Route path="/home" element={<Suspense fallback={<PageLoader />}><SuperAppHome /></Suspense>} />
+        <Route path="/account/*" element={<Suspense fallback={<PageLoader />}><AccountApp /></Suspense>} />
 
         {/* Auth Module */}
         <Route path="/login/*" element={<Suspense fallback={<PageLoader />}><AuthApp /></Suspense>} />

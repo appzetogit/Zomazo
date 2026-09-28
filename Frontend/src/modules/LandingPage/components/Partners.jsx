@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Car, Store, ArrowRight, CheckCircle2, Zap } from 'lucide-react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { withBrand } from "@/shared/superapp/Brand"
+import Brand from "@/shared/superapp/Brand"
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -75,7 +77,7 @@ export default function Partners() {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff5100] via-[#e11d48] via-[#1d4ed8] to-[#10b981]">
               Earn
             </span>{' '}
-            with Quick Drop
+            with <Brand />
           </h2>
           <p className="text-slate-400 text-sm leading-relaxed max-w-lg mx-auto">
             We support localized economic growth. Whether you are an independent driver or a local culinary business, our tools are built to scale your business.
@@ -150,12 +152,12 @@ export default function Partners() {
                     <IconComponent className="w-7 h-7" />
                   </div>
                   <div>
-                    <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white">{activePartner.title}</h3>
+                    <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white">{withBrand(activePartner.title)}</h3>
                     <p className="text-xs sm:text-sm font-semibold mt-0.5" style={{ color: activePartner.color }}>{activePartner.subtitle}</p>
                   </div>
                 </div>
 
-                <p className="text-slate-400 text-sm leading-relaxed">{activePartner.description}</p>
+                <p className="text-slate-400 text-sm leading-relaxed">{withBrand(activePartner.description)}</p>
 
                 {/* Benefits */}
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">

@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import Brand from "@/shared/superapp/Brand"
 
 const FeaturesHighlight = () => {
   const features = [
@@ -32,7 +33,7 @@ const FeaturesHighlight = () => {
   return (
     <div className="w-full mt-4 mb-8">
       <div className="px-5 mb-3">
-        <h2 className="text-[18px] font-black text-white tracking-tight">Why Quick Drop?</h2>
+        <h2 className="text-[18px] font-black text-white tracking-tight">Why <Brand />?</h2>
       </div>
 
       <div 

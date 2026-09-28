@@ -10,6 +10,7 @@ import { useCompanyName } from "@food/hooks/useCompanyName"
 import { motion, AnimatePresence } from "framer-motion"
 import { getDynamicLogo, loadBusinessSettings, getCachedSettings } from "@food/utils/businessSettings"
 import { useSettings } from "../../../../Taxi/shared/context/SettingsContext"
+import Brand from "@/shared/superapp/Brand"
 
 export default function OTP() {
   const navigate = useNavigate()
@@ -493,7 +494,7 @@ export default function OTP() {
 
           <footer className="mt-auto pt-10 text-center">
             <p className="text-[9px] text-zinc-300 dark:text-zinc-700 font-black uppercase tracking-[0.4em]">
-              Quick Drop Secure Network
+              <Brand /> Secure Network
             </p>
           </footer>
         </div>

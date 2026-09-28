@@ -5,6 +5,7 @@ import Lenis from "lenis"
 import { ArrowLeft, ChevronDown } from "lucide-react"
 import BottomPopup from "@delivery/components/BottomPopup"
 import { restaurantAPI } from "@food/api"
+import Brand from "@/shared/superapp/Brand"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -285,7 +286,7 @@ export default function EditRestaurantAddress() {
 
             {/* Informational Banner */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-800 leading-relaxed">
-              Customers and Quick Drop delivery riders will use this exact address and GPS pin to navigate to your outlet.
+              Customers and <Brand /> delivery riders will use this exact address and GPS pin to navigate to your outlet.
             </div>
 
             {/* Current Address Display */}

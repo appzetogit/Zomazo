@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react"
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom"
 import { CircleHelp, Loader2, Package } from "lucide-react"
+import Brand from "@/shared/superapp/Brand"
 
 const ChoosePartner = lazy(() => import("./pages/ChoosePartner"))
 const PartnerLogin = lazy(() => import("./pages/PartnerLogin"))
@@ -52,7 +53,7 @@ export default function PartnerApp() {
               <Package className="h-5 w-5" />
             </span>
             <span className="whitespace-nowrap text-lg font-bold tracking-tight sm:text-xl">
-              Quick Drop <span className="font-semibold text-emerald-600">Partner</span>
+              <Brand /> <span className="font-semibold text-emerald-600">Partner</span>
             </span>
           </Link>
           <nav className="flex items-center gap-3 md:gap-5">

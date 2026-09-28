@@ -4,6 +4,8 @@ import k9Logo from '../assets/k9-logo.png'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useSettings } from '../../Taxi/shared/context/SettingsContext'
+import Brand from "@/shared/superapp/Brand"
+import { getCompanyName } from "@food/utils/businessSettings"
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -55,7 +57,8 @@ export default function Footer({ settings }) {
 
   const playStoreUrl = settings?.play_store_url || 'https://play.google.com/store/apps/details?id=com.k9bharat.user'
   const appStoreUrl = settings?.app_store_url || 'https://www.apple.com/app-store/'
-  const contactAddress = settings?.contact_address || 'Quick Drop, Siliguri, West Bengal, India'
+  // Only an address the admin has set; a made-up office is worse than none.
+  const contactAddress = settings?.contact_address || ''
   const contactPhone = settings?.contact_phone || '+91 7358789910'
   const contactEmail = settings?.contact_email || 'k9bharatrides@gmail.com'
 
@@ -89,7 +92,7 @@ export default function Footer({ settings }) {
             <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
               Ready to ride? Download the app.
             </h3>
-            <p className="text-slate-500 text-sm mt-1">Join the Quick Drop community today.</p>
+            <p className="text-slate-500 text-sm mt-1">Join the <Brand /> community today.</p>
           </div>
           <div className="flex flex-wrap gap-3 shrink-0">
             <a href={playStoreUrl} className="transition-transform duration-200 hover:scale-[1.04]">
@@ -120,16 +123,16 @@ export default function Footer({ settings }) {
           <div className="lg:col-span-4 text-left space-y-6">
             <a href="#" className="flex items-center gap-3 group w-fit">
               {appLogo ? (
-                <img src={appLogo} alt="Quick Drop" className="h-11 w-auto object-contain bg-white/10 p-1 rounded-lg" loading="lazy" />
+                <img src={appLogo} alt={getCompanyName()} className="h-11 w-auto object-contain bg-white/10 p-1 rounded-lg" loading="lazy" />
               ) : (
                 <div className="flex flex-col text-left">
-                  <span className="font-black text-xl tracking-tight text-white block leading-none">Quick Drop</span>
+                  <span className="font-black text-xl tracking-tight text-white block leading-none"><Brand /></span>
                 </div>
               )}
             </a>
 
             <p className="text-sm leading-relaxed text-slate-400 max-w-sm">
-              Quick Drop is the leading on-demand super-app platform connecting passengers, diners, merchants, and cargo owners to drivers and logistics providers.
+              <Brand /> is the leading on-demand super-app platform connecting passengers, diners, merchants, and cargo owners to drivers and logistics providers.
             </p>
 
             {/* Social Icons */}
@@ -207,10 +210,12 @@ export default function Footer({ settings }) {
           <div className="lg:col-span-2 text-left space-y-5">
             <h4 className="text-xs font-black uppercase tracking-widest text-slate-200">Contact Us</h4>
             <ul className="space-y-4 text-sm text-slate-400">
-              <li className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-[#ff5100] shrink-0 mt-0.5" />
-                <span className="leading-relaxed">{contactAddress}</span>
-              </li>
+              {contactAddress ? (
+                <li className="flex items-start gap-3">
+                  <MapPin className="w-4 h-4 text-[#ff5100] shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{contactAddress}</span>
+                </li>
+              ) : null}
               <li className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-[#10b981] shrink-0" />
                 <span>{contactPhone}</span>
@@ -226,7 +231,7 @@ export default function Footer({ settings }) {
 
         {/* Copyright Bar */}
         <div className="border-t border-slate-900 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
-          <p>© {currentYear} Quick Drop Inc. All rights reserved.</p>
+          <p>© {currentYear} <Brand />. All rights reserved.</p>
           <div className="flex gap-6">
             <a href="/terms?tab=terms" className="hover:text-white transition-colors duration-200">Terms</a>
             <a href="/terms?tab=privacy" className="hover:text-white transition-colors duration-200">Privacy</a>

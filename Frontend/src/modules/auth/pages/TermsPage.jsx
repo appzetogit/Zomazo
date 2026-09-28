@@ -4,6 +4,8 @@ import { motion } from "framer-motion"
 import { ArrowLeft, FileText, Shield, Receipt, Truck, X, Loader2 } from "lucide-react"
 import api from "@food/api"
 import { API_ENDPOINTS } from "@food/api/config"
+import Brand from "@/shared/superapp/Brand"
+import { withBrand } from "@/shared/superapp/Brand"
 
 const DEFAULT_TERMS_CONTENT = `
 <h1>Terms of Service</h1>
@@ -13,7 +15,7 @@ const DEFAULT_TERMS_CONTENT = `
 <p>By downloading, installing, or using the Quick Drop mobile application or website (collectively, the "Services"), you agree to be bound by these Terms of Service. If you do not agree, please do not access or use the Services.</p>
 
 <h3>2. Description of Services</h3>
-<p>Quick Drop provides a unified platform connecting users with third-party service providers, including ride-hailing drivers and food delivery partners. Quick Drop acts as a technology platform and does not itself provide transportation or food preparation services.</p>
+<p><Brand /> provides a unified platform connecting users with third-party service providers, including ride-hailing drivers and food delivery partners. <Brand /> acts as a technology platform and does not itself provide transportation or food preparation services.</p>
 
 <h3>3. User Accounts</h3>
 <p>To use our Services, you must register using your phone number and confirm via a 4-digit verification code (OTP). You agree to provide accurate, current, and complete information during the registration process and keep your account details secure.</p>
@@ -22,10 +24,10 @@ const DEFAULT_TERMS_CONTENT = `
 <p>Fares and food orders are calculated based on distance, demand, and standard tariffs. You can pay digitally via UPI, card, net banking, or cash. All payments are securely encrypted. Refund eligibility is governed by our Refund Policy.</p>
 
 <h3>5. User Conduct and Restrictions</h3>
-<p>You agree not to use the Services for any illegal activities, harassment, or unauthorized access. Quick Drop reserves the right to terminate accounts that violate community safety guidelines or engage in fraudulent actions.</p>
+<p>You agree not to use the Services for any illegal activities, harassment, or unauthorized access. <Brand /> reserves the right to terminate accounts that violate community safety guidelines or engage in fraudulent actions.</p>
 
 <h3>6. Limitation of Liability</h3>
-<p>Quick Drop is not liable for direct, indirect, incidental, or consequential damages resulting from your use of the Services or interactions with third-party providers.</p>
+<p><Brand /> is not liable for direct, indirect, incidental, or consequential damages resulting from your use of the Services or interactions with third-party providers.</p>
 `
 
 export default function TermsPage({ defaultTab = "terms" }) {
@@ -218,7 +220,7 @@ export default function TermsPage({ defaultTab = "terms" }) {
                   [&_h3]:text-lg [&_h3]:font-black [&_h3]:text-slate-900 [&_h3]:mt-8 [&_h3]:mb-2
                   [&_p]:mb-3 [&_strong]:text-slate-800 [&_a]:text-[#F38F24] [&_a]:underline
                   [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_li]:mb-1.5"
-                dangerouslySetInnerHTML={{ __html: pageContent }}
+                dangerouslySetInnerHTML={{ __html: withBrand(pageContent) }}
               />
             </div>
           )}

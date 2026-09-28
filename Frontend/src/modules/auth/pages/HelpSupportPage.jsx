@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import api from "@food/api"
 import { API_ENDPOINTS } from "@food/api/config"
+import { withBrand } from "@/shared/superapp/Brand"
 
 // Default fallback FAQs for a premium out-of-the-box experience
 const DEFAULT_HELP_CONTENT = {
@@ -182,7 +183,7 @@ export default function HelpSupportPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
               <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">
-                {helpData.title}
+                {withBrand(helpData.title)}
               </h1>
               <p className="text-gray-400 text-base max-w-xl">
                 {helpData.description}
@@ -234,8 +235,8 @@ export default function HelpSupportPage() {
                 {filteredFaqs.map((faq, idx) => (
                   <FAQAccordionItem
                     key={idx}
-                    question={faq.question}
-                    answer={faq.answer}
+                    question={withBrand(faq.question)}
+                    answer={withBrand(faq.answer)}
                     categoryName={faq.categoryName}
                     isOpen={openFaqIndex === idx}
                     onToggle={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
@@ -302,8 +303,8 @@ export default function HelpSupportPage() {
                     {activeCategory.faqs.map((faq, idx) => (
                       <FAQAccordionItem
                         key={idx}
-                        question={faq.question}
-                        answer={faq.answer}
+                        question={withBrand(faq.question)}
+                        answer={withBrand(faq.answer)}
                         isOpen={openFaqIndex === idx}
                         onToggle={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
                       />

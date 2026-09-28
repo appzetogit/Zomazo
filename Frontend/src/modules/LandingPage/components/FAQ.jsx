@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Minus } from 'lucide-react'
+import { withBrand } from "@/shared/superapp/Brand"
 
 const defaultFaqs = [
   {
@@ -79,7 +80,7 @@ export default function FAQ({ settings }) {
 
                   {/* Question */}
                   <span className={`flex-1 font-bold text-base sm:text-lg leading-snug pr-4 transition-colors duration-300 ${isOpen ? 'text-slate-900' : 'text-slate-700 group-hover:text-slate-900'}`}>
-                    {faq.question}
+                    {withBrand(faq.question)}
                   </span>
 
                   {/* Toggle Icon */}
@@ -108,7 +109,7 @@ export default function FAQ({ settings }) {
                       <div className="pl-14 pr-12 pb-7 text-slate-500 text-sm sm:text-base leading-relaxed">
                         {/* Colored left accent */}
                         <div className="relative pl-5 border-l-2 border-[#ff5100]/30">
-                          {faq.answer}
+                          {withBrand(faq.answer)}
                         </div>
                       </div>
                     </motion.div>

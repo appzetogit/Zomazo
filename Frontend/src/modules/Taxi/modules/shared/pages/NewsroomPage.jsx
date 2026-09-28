@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Globe } from 'lucide-react';
 import api from '../../../shared/api/axiosInstance';
+import Brand from "@/shared/superapp/Brand"
 
 const NewsroomPage = () => {
   const navigate = useNavigate();
@@ -9,13 +10,13 @@ const NewsroomPage = () => {
   const [loading, setLoading] = useState(true);
 
   const defaultContent = `
-    <h1>Quick Drop Newsroom</h1>
-    <p>Stay updated with our latest press releases, company announcements, service launches, and regulatory breakthroughs. Quick Drop is growing quickly to serve more cities across Bharat.</p>
+    <h1><Brand /> Newsroom</h1>
+    <p>Stay updated with our latest press releases, company announcements, service launches, and regulatory breakthroughs. <Brand /> is growing quickly to serve more cities across Bharat.</p>
     <br/>
     <h2>Recent Announcements</h2>
     <ul>
-      <li><strong>June 2026</strong> - Quick Drop launches hourly rentals service in major commercial centers.</li>
-      <li><strong>April 2026</strong> - Quick Drop crosses 10,000 active partner rides across operating hubs.</li>
+      <li><strong>June 2026</strong> - <Brand /> launches hourly rentals service in major commercial centers.</li>
+      <li><strong>April 2026</strong> - <Brand /> crosses 10,000 active partner rides across operating hubs.</li>
       <li><strong>January 2026</strong> - Super-app platform launch and rollout in Siliguri, West Bengal.</li>
     </ul>
     <br/>
@@ -70,10 +71,10 @@ const NewsroomPage = () => {
             <Globe size={30} />
           </div>
           <h1 className="max-w-4xl text-4xl font-black tracking-tight md:text-6xl">
-            Latest from <span className="text-[#F5D476]">Quick Drop</span>
+            Latest from <span className="text-[#F5D476]"><Brand /></span>
           </h1>
           <p className="mt-6 max-w-3xl text-lg leading-relaxed text-stone-300">
-            Explore recent updates, service rollouts, and announcements from the Quick Drop super-app platform.
+            Explore recent updates, service rollouts, and announcements from the <Brand /> super-app platform.
           </p>
         </div>
       </section>

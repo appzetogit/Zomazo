@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 import { SERVICE_PROVIDER_ENABLED } from "@/config/features"
 import { PARTNER_TYPES } from "../partnerApi"
+import Brand from "@/shared/superapp/Brand"
 
 /*
  * Photos from Unsplash's CDN (free to use under the Unsplash licence), sized
@@ -132,11 +133,11 @@ export default function ChoosePartner() {
         {/* ---- hero ---- */}
         <section className="flex flex-col">
           <span className="inline-flex w-fit items-center gap-2 rounded-full bg-emerald-100/70 px-4 py-2 text-sm font-medium text-emerald-700">
-            <Zap className="h-4 w-4" /> Grow your business with Quick Drop
+            <Zap className="h-4 w-4" /> Grow your business with <Brand />
           </span>
           <h1 className="mt-6 text-5xl font-extrabold leading-[1.05] tracking-tight text-slate-900 md:text-6xl">
             Sell on
-            <span className="block text-emerald-600">Quick Drop</span>
+            <span className="block text-emerald-600"><Brand /></span>
           </h1>
           <p className="mt-5 max-w-md text-lg leading-7 text-slate-600">
             Sign in or register your business. New numbers go straight to registration.

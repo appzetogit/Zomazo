@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Target, Award, Users, ShieldCheck } from 'lucide-react';
 import api from '../../../shared/api/axiosInstance';
+import Brand from "@/shared/superapp/Brand"
 
 const AboutPage = () => {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ const AboutPage = () => {
                 Driving the <span className="text-[#FFB300]">Future</span> of Mobility
             </h1>
             <p className="text-xl text-gray-400 leading-relaxed max-w-2xl mx-auto">
-                Quick Drop is a leading transportation and logistics platform dedicated to providing safe, reliable, and affordable mobility solutions for everyone.
+                <Brand /> is a leading transportation and logistics platform dedicated to providing safe, reliable, and affordable mobility solutions for everyone.
             </p>
         </div>
       </div>

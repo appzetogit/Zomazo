@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Bike, Car, Receipt, ShoppingBag, Utensils, Wrench, Zap } from 'lucide-react'
-import { ALL_ORDERS_PATH, SUPERAPP_SERVICES, currentServiceKey } from './services'
+import { Bike, Car, House, Receipt, ShoppingBag, Utensils, Wrench, Zap } from 'lucide-react'
+import { ALL_ORDERS_PATH, HOME_PATH, SUPERAPP_SERVICES, currentServiceKey } from './services'
 
 const ICONS = { food: Utensils, rides: Car, quick: Zap, services: Wrench, shop: ShoppingBag, delivery: Bike }
 
@@ -26,6 +26,14 @@ export default function SuperAppSwitcher({ className = '', showOrders = false, a
 
   return (
     <nav ref={navRef} aria-label="Services" className={`flex items-center gap-1.5 overflow-x-auto no-scrollbar ${className}`}>
+      {/* Back to the super app's own home, from inside any service. */}
+      <Link
+        to={HOME_PATH}
+        aria-label="Home"
+        className="shrink-0 flex items-center justify-center p-1.5 rounded-full border bg-white text-gray-600 border-gray-200 hover:text-gray-900"
+      >
+        <House className="w-3.5 h-3.5" aria-hidden="true" />
+      </Link>
       {SUPERAPP_SERVICES.map((s) => {
         const Icon = ICONS[s.key]
         const active = s.key === current

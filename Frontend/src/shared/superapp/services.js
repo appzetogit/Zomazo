@@ -19,11 +19,18 @@ export const SUPERAPP_SERVICES = [
     : []),
 ]
 
-/** Every order, ride and booking the customer has, across all services. */
-export const ALL_ORDERS_PATH = '/food/user/orders/all'
+/** The super app's own home: every service, and what is on its way. */
+export const HOME_PATH = '/home'
 
-/** Help and tickets for any service. */
-export const SUPPORT_PATH = '/food/user/profile/support'
+/**
+ * The customer's account, shared by every service. These used to live under
+ * /food/user, which made Food the shell; the old addresses redirect here.
+ */
+export const ACCOUNT_PATH = '/account'
+export const ALL_ORDERS_PATH = '/account/orders'
+export const SUPPORT_PATH = '/account/help'
+export const INBOX_PATH = '/account/inbox'
+export const WALLET_PATH = '/account/wallet'
 
 /** The one sign-in for every customer app (modules/auth). */
 export const LOGIN_PATH = '/login'

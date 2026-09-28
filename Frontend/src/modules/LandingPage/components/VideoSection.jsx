@@ -4,6 +4,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize, Clock, Activity, Compass, Shop
 import { LANDING_THEME } from '../constants/theme'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import Brand from "@/shared/superapp/Brand"
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -163,7 +164,7 @@ export default function VideoSection() {
             </span>
           </h2>
           <p className="text-sm sm:text-base text-slate-400 max-w-xl mx-auto leading-relaxed">
-            Click through our specialized features to preview how Quick Drop delivers comfort, flavor, and freight.
+            Click through our specialized features to preview how <Brand /> delivers comfort, flavor, and freight.
           </p>
         </div>
 

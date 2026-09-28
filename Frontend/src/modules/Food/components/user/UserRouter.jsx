@@ -141,14 +141,8 @@ export default function UserRouter() {
             }
           />
           {/* Every service in one list; a static path, so it wins over orders/:orderId. */}
-          <Route
-            path="orders/all"
-            element={
-              <ProtectedRoute requiredRole="user" loginPath="/login">
-                <AllOrders />
-              </ProtectedRoute>
-            }
-          />
+          {/* Moved to the account every service shares (modules/SuperApp). */}
+          <Route path="orders/all" element={<Navigate to="/account/orders" replace />} />
           <Route
             path="orders/:orderId"
             element={
@@ -236,14 +230,8 @@ export default function UserRouter() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="profile/support"
-            element={
-              <ProtectedRoute requiredRole="user" loginPath="/login">
-                <Support />
-              </ProtectedRoute>
-            }
-          />
+          {/* Moved to the account every service shares (modules/SuperApp). */}
+          <Route path="profile/support" element={<Navigate to="/account/help" replace />} />
           <Route
             path="profile/coupons"
             element={
@@ -313,24 +301,12 @@ export default function UserRouter() {
           <Route path="help/orders/:orderId" element={<OrderHelp />} />
 
           {/* Notifications - Protected (user auth) */}
-          <Route
-            path="notifications"
-            element={
-              <ProtectedRoute requiredRole="user" loginPath="/login">
-                <Notifications />
-              </ProtectedRoute>
-            }
-          />
+          {/* Moved to the account every service shares (modules/SuperApp). */}
+          <Route path="notifications" element={<Navigate to="/account/inbox" replace />} />
 
           {/* Wallet - Protected (user auth) */}
-          <Route
-            path="wallet"
-            element={
-              <ProtectedRoute requiredRole="user" loginPath="/login">
-                <Wallet />
-              </ProtectedRoute>
-            }
-          />
+          {/* Moved to the account every service shares (modules/SuperApp). */}
+          <Route path="wallet" element={<Navigate to="/account/wallet" replace />} />
 
           {/* Complaints - Protected (user auth) */}
           <Route

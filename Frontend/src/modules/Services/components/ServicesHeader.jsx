@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react"
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
-import { ArrowLeft, CalendarCheck, Gift, Heart, LifeBuoy, Menu, Receipt, Search, Wrench } from "lucide-react"
+import { ArrowLeft, CalendarCheck, Gift, Heart, LifeBuoy, Menu, Receipt, Search, UserRound, Wrench } from "lucide-react"
 import SuperAppSwitcher from "../../../shared/superapp/SuperAppSwitcher"
-import { ALL_ORDERS_PATH, SUPPORT_PATH } from "../../../shared/superapp/services"
+import { ACCOUNT_PATH, ALL_ORDERS_PATH, SUPPORT_PATH } from "../../../shared/superapp/services"
 import { cx, focusRing } from "../helpers"
 
 const MENU = [
   { to: "/services/bookings", label: "My bookings", icon: CalendarCheck },
   { to: "/services/saved", label: "Saved services", icon: Heart },
   { to: "/services/refer", label: "Refer and earn", icon: Gift },
+  { to: ACCOUNT_PATH, label: "Your account", icon: UserRound },
   { to: ALL_ORDERS_PATH, label: "All orders", icon: Receipt },
   { to: SUPPORT_PATH, label: "Help and support", icon: LifeBuoy },
 ]

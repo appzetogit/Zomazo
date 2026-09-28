@@ -104,7 +104,7 @@ export default function AllOrders() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] pb-10">
       <div className="bg-white dark:bg-zinc-900 p-4 flex items-center shadow-sm sticky top-0 z-10 border-b border-gray-100 dark:border-zinc-800">
-        <Link to="/user/orders" aria-label="Back to food orders">
+        <Link to="/account" aria-label="Back to your account">
           <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-gray-200 cursor-pointer" />
         </Link>
         <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-white">All orders</h1>

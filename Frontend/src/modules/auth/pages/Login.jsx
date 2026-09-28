@@ -7,12 +7,14 @@ import apiClient, { authAPI } from "@food/api"
 import { setUnifiedAuthData, isUnifiedAuthenticated } from "@food/utils/auth"
 import { useSettings } from "../../Taxi/shared/context/SettingsContext"
 import { REFERRAL_VIA } from "@/shared/superapp/services"
+import { getCompanyName } from "@food/utils/businessSettings"
 
 // Fallback only -- the logo an admin uploads in business settings wins. The
 // file path is unchanged because the asset itself still lives there; note that
 // renaming the file would not change the artwork inside it.
 const FALLBACK_LOGO = "/k9-logo.png"
-const COMPANY_NAME = "Quick Drop"
+// This deployment's name (Business Setup), not a hard-coded one.
+const COMPANY_NAME = getCompanyName()
 
 export default function UnifiedOTPFastLogin({ viewType = "auth" }) {
   const RESEND_COOLDOWN_SECONDS = 60
@@ -46,7 +48,8 @@ export default function UnifiedOTPFastLogin({ viewType = "auth" }) {
   const landingPath = () => {
     const from = location.state?.from?.pathname
     if (from && from !== "/") return from
-    return invite.ref ? INVITE_HOME[invite.via] || "/food/user" : "/food/user"
+    // Signed in, a customer starts on the super app's home, not inside Food.
+    return invite.ref ? INVITE_HOME[invite.via] || "/home" : "/home"
   }
 
   const getWebFcmTokenForLogin = async () => {
@@ -117,7 +120,7 @@ export default function UnifiedOTPFastLogin({ viewType = "auth" }) {
   // }, [viewType, navigate, location])
 
   useEffect(() => {
-    document.title = "Login | Quick Drop"
+    document.title = `Login | ${getCompanyName()}`
   }, [])
 
   const normalizedPhone = () => {

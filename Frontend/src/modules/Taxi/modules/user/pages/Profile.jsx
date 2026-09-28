@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ALL_ORDERS_PATH } from '@/shared/superapp/services';
+import { ACCOUNT_PATH, ALL_ORDERS_PATH } from '@/shared/superapp/services';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -35,6 +35,7 @@ const menuSections = [
       { icon: User, title: 'Profile Settings', sub: 'Manage your personal info', path: '/taxi/user/profile/settings', bg: 'bg-indigo-50', color: 'text-indigo-600' },
       { icon: MapPin, title: 'Saved Addresses', sub: 'Home, office & others', path: '/taxi/user/profile/addresses', bg: 'bg-emerald-50', color: 'text-emerald-600' },
       { icon: History, title: 'My Rides', sub: 'Rides, parcels & trips', path: '/taxi/user/activity', bg: 'bg-blue-50', color: 'text-blue-600' },
+      { icon: User, title: 'Your Account', sub: 'Profile, wallet, orders & help across the app', path: ACCOUNT_PATH, bg: 'bg-slate-50', color: 'text-slate-700' },
       { icon: History, title: 'All Orders', sub: 'Food, groceries, rides, services & shop', path: ALL_ORDERS_PATH, bg: 'bg-orange-50', color: 'text-orange-600' },
     ]
   },

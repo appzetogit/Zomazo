@@ -7,6 +7,7 @@ import loginBanner2 from "@food/assets/restaurant/loginbanner2.png"
 import loginBanner3 from "@food/assets/restaurant/loginbanner3.png"
 import loginBanner4 from "@food/assets/restaurant/loginbanner4.png"
 import { useCompanyName } from "@food/hooks/useCompanyName"
+import Brand from "@/shared/superapp/Brand"
 
 // Carousel data with images and taglines
 const carouselData = [
@@ -300,7 +301,7 @@ export default function RestaurantWelcome() {
           variant="outline"
           className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-bold py-6 md:py-7 text-base md:text-lg rounded-lg transition-all shadow-lg bg-transparent"
         >
-          Partner with Quick Drop
+          Partner with <Brand />
         </Button> */}
 
         {/* Terms and Conditions */}

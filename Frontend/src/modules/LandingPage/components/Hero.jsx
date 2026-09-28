@@ -5,6 +5,7 @@ import { gsap } from 'gsap'
 
 import premiumCar from '../assets/premium-royal-car.png'
 import taxiHeroBg from '../../Taxi/assets/landing/hero-bg.png'
+import Brand from "@/shared/superapp/Brand"
 
 const ThreeBackground = lazy(() => import('./ThreeBackground'))
 
@@ -127,7 +128,7 @@ export default function Hero({ settings }) {
         >
           {/* Section Heading Name */}
           <p className="text-xs font-black uppercase tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-[#d94600] via-[#be123c] to-[#1e40af]">
-            Welcome to Quick Drop
+            Welcome to <Brand />
           </p>
 
           {/* Headline Slogans Carousel wrapper */}

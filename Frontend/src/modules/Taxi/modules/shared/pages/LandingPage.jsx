@@ -11,6 +11,7 @@ import parcelImg from '@/assets/landing/parcel.png';
 import bikeImg from '@/assets/landing/bike.png';
 import heroBgImg from '@/assets/landing/hero-bg.png';
 import newHeroTaxiImg from '@/assets/ride-removebg-preview.png';
+import Brand from "@/shared/superapp/Brand"
 
 function LandingPage() {
   const navigate = useNavigate();
@@ -62,7 +63,7 @@ function LandingPage() {
                {appLogo ? (
                  <img src={appLogo} alt={appName} className="h-[40px] w-auto object-contain" />
                ) : (
-                 <span style={{color: '#333'}}>Quick Drop</span>
+                 <span style={{color: '#333'}}><Brand /></span>
                )}
              </a>
           </div>
@@ -73,7 +74,7 @@ function LandingPage() {
              </div>
              <div className="top-contact-item">
                <Mail size={16} />
-               <span>Quick Dropindia@gmail.com</span>
+               <span><Brand />india@gmail.com</span>
              </div>
           </div>
         </div>
@@ -86,7 +87,7 @@ function LandingPage() {
                {appLogo ? (
                  <img src={appLogo} alt={appName} className="h-[32px] w-auto object-contain" />
                ) : (
-                 <span>Quick Drop</span>
+                 <span><Brand /></span>
                )}
             </a>
             <nav className={`new-nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
@@ -113,7 +114,7 @@ function LandingPage() {
           <div className="new-hero-left">
             <span className="new-hero-subtitle">Travel securely with us!</span>
             <h1 className="new-hero-title">Book your taxi from<br/>anywhere today!</h1>
-            <p className="new-hero-desc">Everything your taxi business needs is already here!<br/>Quick Drop made for taxi service companies!</p>
+            <p className="new-hero-desc">Everything your taxi business needs is already here!<br/><Brand /> made for taxi service companies!</p>
             <div className="new-hero-cta-row">
               <button className="new-hero-action-btn" onClick={() => window.open('https://play.google.com/store/apps/details?id=com.Quick Drop.user', '_blank')}>Book Your Ride</button>
               <button className="new-hero-login-btn" onClick={() => navigate('/taxi/user/login')}>
@@ -268,7 +269,7 @@ function LandingPage() {
                {appLogo ? (
                  <img src={appLogo} alt={appName} className="h-[48px] w-auto object-contain" />
                ) : (
-                 <span style={{color: '#FFB300', fontSize: '2.5rem', fontWeight: 800}}>Quick Drop</span>
+                 <span style={{color: '#FFB300', fontSize: '2.5rem', fontWeight: 800}}><Brand /></span>
                )}
             </a>
             <p>We provide the best taxi and ride services in the region. Reliable, fast, and secure rides at your fingertips.</p>
@@ -279,7 +280,7 @@ function LandingPage() {
               <a href="#" className="social-icon">in</a>
               <a href="#" className="social-icon">y</a>
             </div>
-            <div className="footer-website">www.Quick Drop.com</div>
+            <div className="footer-website">www.<Brand />.com</div>
           </div>
           <div className="footer-col-2">
             <h3>Quick Links</h3>
@@ -311,7 +312,7 @@ function LandingPage() {
             <Link to="/terms">Terms & Conditions</Link>
           </div>
           <div className="footer-copyright">
-            Copyright 2026 © All Right Reserved Design by Quick Drop
+            Copyright 2026 © All Right Reserved Design by <Brand />
           </div>
         </div>
       </footer>

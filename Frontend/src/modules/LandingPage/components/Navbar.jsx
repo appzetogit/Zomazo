@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import k9Logo from '../assets/k9-logo.png'
 import { useSettings } from '../../Taxi/shared/context/SettingsContext'
+import Brand from "@/shared/superapp/Brand"
+import { getCompanyName } from "@food/utils/businessSettings"
+import { withBrand } from "@/shared/superapp/Brand"
 
 export default function Navbar({ settings }) {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -46,10 +49,10 @@ export default function Navbar({ settings }) {
             {/* Logo */}
             <a href="#" className="flex items-center gap-3 group">
               {appLogo ? (
-                <img src={appLogo} alt="Quick Drop" className="h-10 w-auto object-contain" />
+                <img src={appLogo} alt={getCompanyName()} className="h-10 w-auto object-contain" />
               ) : (
                 <span className="font-black text-xl tracking-tight text-slate-900">
-                  Quick Drop
+                  <Brand />
                 </span>
               )}
             </a>
@@ -63,7 +66,7 @@ export default function Navbar({ settings }) {
                   onClick={(e) => handleSmoothScroll(e, link.href)}
                   className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors duration-200 relative group"
                 >
-                  {link.name}
+                  {withBrand(link.name)}
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#ff6d00] to-[#2563eb] group-hover:w-full transition-all duration-300 rounded-full" />
                 </a>
               ))}
@@ -123,7 +126,7 @@ export default function Navbar({ settings }) {
             >
               <div className="flex items-center justify-between mb-10">
                 {settings?.logo_url ? (
-                  <img src={settings.logo_url} alt="Quick Drop" className="h-10 w-auto object-contain" />
+                  <img src={settings.logo_url} alt={getCompanyName()} className="h-10 w-auto object-contain" />
                 ) : (
                   <span className="font-black text-xl text-slate-900">Quick <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff5100] via-[#e11d48] via-[#1d4ed8] to-[#10b981]">Drop</span></span>
                 )}
@@ -135,7 +138,7 @@ export default function Navbar({ settings }) {
                 {navLinks.map((link) => (
                   <a key={link.name} href={link.href} onClick={(e) => handleSmoothScroll(e, link.href)}
                     className="text-lg font-bold text-slate-700 hover:text-slate-900 transition-colors">
-                    {link.name}
+                    {withBrand(link.name)}
                   </a>
                 ))}
               </div>

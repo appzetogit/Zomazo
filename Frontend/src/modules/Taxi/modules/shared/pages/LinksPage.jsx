@@ -2,6 +2,7 @@ import React from 'react';
 import { Download, ExternalLink, Shield, Zap, Star } from 'lucide-react';
 import './LinksPage.css';
 import bannerImg from '@/assets/images/links-banner.png';
+import Brand from "@/shared/superapp/Brand"
 
 const LinksPage = () => {
   const links = [
@@ -35,7 +36,7 @@ const LinksPage = () => {
       <nav className="links-nav">
         <div className="nav-container">
           <a href="/" className="nav-logo">
-            <span className="logo-Quick Drop">Quick Drop</span>
+            <span className="logo-Quick Drop"><Brand /></span>
           </a>
           <a href="/" className="back-home">Back to Home</a>
         </div>
@@ -48,7 +49,7 @@ const LinksPage = () => {
 
       <div className="links-content-wrapper">
         <header className="links-header">
-          <h1 className="links-title">Download <span className="highlight">Quick Drop</span></h1>
+          <h1 className="links-title">Download <span className="highlight"><Brand /></span></h1>
           <p className="links-tagline">Choose the app that's right for you and start your journey today.</p>
         </header>
 
@@ -90,7 +91,7 @@ const LinksPage = () => {
         </div>
 
         <footer className="links-footer">
-          <p>© 2026 Quick Drop. All rights reserved.</p>
+          <p>© 2026 <Brand />. All rights reserved.</p>
           <div className="footer-links">
             <a href="https://Quick Drop.com" target="_blank" rel="noopener noreferrer">Visit Website</a>
             <span className="dot"></span>
