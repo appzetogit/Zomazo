@@ -2653,6 +2653,29 @@ export const userAPI = {
       {},
       { contextModule: "user" },
     ),
+  /** GET /food/user/favorites (Bearer USER): ids plus the still-orderable entities. */
+  getFavorites: () =>
+    apiClient.get("/food/user/favorites", { contextModule: "user" }),
+  /** POST /food/user/favorites/restaurants/:id (Bearer USER). Idempotent. */
+  addFavoriteRestaurant: (restaurantId) =>
+    apiClient.post(`/food/user/favorites/restaurants/${String(restaurantId)}`, {}, {
+      contextModule: "user",
+    }),
+  /** DELETE /food/user/favorites/restaurants/:id (Bearer USER). Idempotent. */
+  removeFavoriteRestaurant: (restaurantId) =>
+    apiClient.delete(`/food/user/favorites/restaurants/${String(restaurantId)}`, {
+      contextModule: "user",
+    }),
+  /** POST /food/user/favorites/foods/:id (Bearer USER). Idempotent. */
+  addFavoriteFood: (foodId) =>
+    apiClient.post(`/food/user/favorites/foods/${String(foodId)}`, {}, {
+      contextModule: "user",
+    }),
+  /** DELETE /food/user/favorites/foods/:id (Bearer USER). Idempotent. */
+  removeFavoriteFood: (foodId) =>
+    apiClient.delete(`/food/user/favorites/foods/${String(foodId)}`, {
+      contextModule: "user",
+    }),
   /** POST /food/user/safety-emergency-reports (Bearer USER) */
   createSafetyEmergencyReport: (message) =>
     apiClient.post(

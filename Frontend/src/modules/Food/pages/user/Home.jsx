@@ -3376,6 +3376,9 @@ export default function Home() {
                       // Add to favorites and show toast
                       addFavorite({
                         slug: restaurantSlug,
+                        // The server keys favourites by id; the slug alone cannot be saved.
+                        mongoId: restaurant?.mongoId || restaurant?._id,
+                        restaurantId: restaurant?.restaurantId || restaurant?.id,
                         name: restaurant.name,
                         cuisine: restaurant.cuisine,
                         rating: restaurant.rating,
