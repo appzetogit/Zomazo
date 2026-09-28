@@ -2,9 +2,12 @@ import { useCallback, useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { io } from "socket.io-client"
 import { toast } from "sonner"
-import { Bike, Check, ChevronRight, Clock, KeyRound, Loader2, Package, Phone, Store } from "lucide-react"
+import { Bike, Check, ChevronRight, Clock, HelpCircle, KeyRound, Loader2, Package, Phone, Receipt, Store } from "lucide-react"
 import { API_BASE_URL } from "@food/api/config"
+import { ALL_ORDERS_PATH, SUPPORT_PATH } from "@/shared/superapp/services"
 import { quickAPI, errorMessage } from "../api"
+import TrackingMap, { toLatLng } from "../components/TrackingMap"
+import RateOrder from "../components/RateOrder"
 import { cx, focusRing, formatMoney } from "../helpers"
 
 /** The customer's quick orders, and one order's live progress. */
@@ -49,7 +52,13 @@ export function OrdersList() {
   if (needsLogin) return <SignInPrompt />
   return (
     <div className="mx-auto max-w-[760px] px-3 py-3 lg:px-6">
-      <h1 className="mb-3 px-1 text-[20px] font-black tracking-tight text-wh-text">Your quick orders</h1>
+      <div className="mb-3 flex items-baseline justify-between gap-3 px-1">
+        <h1 className="text-[20px] font-black tracking-tight text-wh-text">Your quick orders</h1>
+        <Link to={ALL_ORDERS_PATH} className={cx("inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-wh-link hover:underline", focusRing)}>
+          <Receipt className="h-4 w-4" aria-hidden="true" />All orders
+        </Link>
+      </div>
+      <p className="-mt-2 mb-3 px-1 text-[12px] text-wh-muted">Food, rides, services and shop orders are all in All orders.</p>
       {orders === null ? (
         <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-wh-muted" aria-label="Loading" /></div>
       ) : orders.length ? (
@@ -80,29 +89,73 @@ export function OrdersList() {
 
 /**
  * Live updates for one order over the quick-commerce socket (/qc namespace).
- * Polling keeps the page right if the socket cannot connect.
+ *
+ * The tracking room is named after whichever id the rider app sends with its
+ * position (the display id or the Mongo id), so the page joins under both.
+ * A status change re-reads the order; a position only moves the rider. Polling
+ * keeps the page right if the socket cannot connect.
  */
-function useOrderLive(orderId, onUpdate) {
+function useOrderLive(ids, onStatus, onPosition) {
+  const key = ids.filter(Boolean).map(String).join(",")
   useEffect(() => {
     const token = localStorage.getItem("user_accessToken")
-    if (!token || !orderId) return undefined
+    const list = key ? key.split(",") : []
+    if (!token || !list.length) return undefined
     let origin = window.location.origin
     try {
       origin = new URL(API_BASE_URL || "/api/v1", window.location.origin).origin
     } catch {
       // keep the page's own origin
     }
+    const mine = (id) => list.includes(String(id))
     const socket = io(`${origin}/qc`, { path: "/socket.io/", transports: ["websocket", "polling"], auth: { token } })
-    socket.on("connect", () => socket.emit("join-tracking", orderId))
+    socket.on("connect", () => list.forEach((id) => socket.emit("join-tracking", id)))
     socket.on("order_status_update", (p) => {
-      if (!p || String(p.orderMongoId || p.orderId) === String(orderId)) onUpdate()
+      if (!p || mine(p.orderMongoId) || mine(p.orderId)) onStatus()
     })
-    socket.on("location-update", () => onUpdate({ quiet: true }))
+    socket.on("location-update", (p) => {
+      if (p?.orderId && !mine(p.orderId)) return
+      const lat = Number(p?.lat ?? p?.boy_lat)
+      const lng = Number(p?.lng ?? p?.boy_lng)
+      if (Number.isFinite(lat) && Number.isFinite(lng)) onPosition({ lat, lng })
+    })
     return () => {
-      socket.emit("leave-tracking", orderId)
+      list.forEach((id) => socket.emit("leave-tracking", id))
       socket.disconnect()
     }
-  }, [orderId, onUpdate])
+  }, [key, onStatus, onPosition])
+}
+
+// The rider is on the road (or heading to the store) only in these states.
+const TRACKABLE = ["confirmed", "preparing", "ready_for_pickup", "reached_pickup", "picked_up", "reached_drop"]
+const ROUTE_REFRESH_MS = 45000
+
+/**
+ * The road from the rider to their next stop, re-asked while they move. The
+ * server cuts it from the rider's last known position; Directions is billed,
+ * so it is refreshed on a slow timer and on each status change, not per ping.
+ */
+function useRiderRoute(orderId, active, statusKey) {
+  const [route, setRoute] = useState(null)
+  useEffect(() => {
+    if (!active || !orderId) {
+      setRoute(null)
+      return undefined
+    }
+    let cancelled = false
+    const load = () =>
+      quickAPI
+        .orderRoute(orderId)
+        .then((r) => !cancelled && setRoute(r))
+        .catch(() => {})
+    load()
+    const timer = setInterval(load, ROUTE_REFRESH_MS)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [orderId, active, statusKey])
+  return route
 }
 
 export function OrderDetail() {
@@ -110,6 +163,7 @@ export function OrderDetail() {
   const [order, setOrder] = useState(null)
   const [error, setError] = useState("")
   const [cancelling, setCancelling] = useState(false)
+  const [livePosition, setLivePosition] = useState(null)
 
   const refresh = useCallback(() => {
     quickAPI
@@ -126,13 +180,19 @@ export function OrderDetail() {
     const timer = setInterval(refresh, 15000)
     return () => clearInterval(timer)
   }, [refresh])
-  useOrderLive(orderId, refresh)
+
+  const status = order?.orderStatus || order?.status
+  const riderAssigned = Boolean(order?.dispatch?.deliveryPartnerId)
+  const tracking = riderAssigned && TRACKABLE.includes(status)
+  useOrderLive([orderId, order?.orderId, order?.orderMongoId], refresh, setLivePosition)
+  const route = useRiderRoute(orderId, tracking, status)
 
   const cancel = async () => {
     if (!window.confirm("Cancel this order?")) return
     setCancelling(true)
     try {
-      setOrder(await quickAPI.cancelOrder(orderId, "Cancelled by customer"))
+      await quickAPI.cancelOrder(orderId, "Cancelled by customer")
+      refresh()
       toast.success("Order cancelled")
     } catch (err) {
       toast.error(errorMessage(err, "The order could not be cancelled."))
@@ -144,7 +204,6 @@ export function OrderDetail() {
   if (error && !order) return <p className="px-4 py-16 text-center text-[14px] text-wh-muted">{error}</p>
   if (!order) return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-wh-muted" aria-label="Loading" /></div>
 
-  const status = order.orderStatus || order.status
   const cancelled = isCancelled(status)
   const current = stepIndex(status)
   const rider = order.dispatch?.deliveryPartnerId
@@ -152,9 +211,28 @@ export function OrderDetail() {
   const riderPhone = rider?.phone || rider?.phoneNumber
   const eta = order.eta?.minutes
   const p = order.pricing || {}
+  const storeAt = toLatLng(order.restaurantId?.location)
+  const homeAt = toLatLng(order.deliveryAddress?.location || order.deliveryAddress)
+  const riderAt = tracking ? livePosition || toLatLng(order.deliveryState?.currentLocation) || route?.origin || null : null
+  const showMap = !cancelled && status !== "delivered" && status !== "pending_payment" && (storeAt || homeAt)
 
   return (
     <div className="mx-auto flex max-w-[760px] flex-col gap-3 px-3 py-3 lg:px-6">
+      {showMap ? (
+        <section className="rounded-[10px] bg-wh-surface p-2" aria-label="Live map">
+          <TrackingMap store={storeAt} home={homeAt} rider={riderAt} polyline={route?.polyline} />
+          <p className="px-2 pb-1 pt-2 text-[12px] text-wh-muted">
+            {riderAt
+              ? route?.durationMins
+                ? `Your delivery partner is about ${route.durationMins} min from ${route.target === "customer" ? "you" : "the store"}.`
+                : "Your delivery partner's live position."
+              : riderAssigned
+                ? "Waiting for your delivery partner's location…"
+                : "A delivery partner will be assigned shortly."}
+          </p>
+        </section>
+      ) : null}
+
       <section className="rounded-[10px] bg-wh-surface p-4">
         <p className="text-[12px] text-wh-muted">Order {order.orderId || order.order_id}</p>
         <h1 className="mt-0.5 text-[22px] font-black tracking-tight text-wh-text">{statusLabel(status)}</h1>
@@ -209,6 +287,8 @@ export function OrderDetail() {
         </section>
       ) : null}
 
+      {status === "delivered" ? <RateOrder order={order} storeName={storeName(order)} riderName={riderName} onRated={refresh} /> : null}
+
       <section className="rounded-[10px] bg-wh-surface p-4">
         <p className="mb-3 flex items-center gap-2 text-[15px] font-bold text-wh-text"><Store className="h-4 w-4 text-wh-brand-ink" aria-hidden="true" />{storeName(order)}</p>
         <ul className="flex flex-col gap-1.5">
@@ -230,6 +310,15 @@ export function OrderDetail() {
           {" · "}{when(order.createdAt)}
         </p>
       </section>
+
+      <Link to={SUPPORT_PATH} className={cx("flex items-center gap-3 rounded-[10px] bg-wh-surface p-4 hover:shadow-md", focusRing)}>
+        <HelpCircle className="h-5 w-5 text-wh-brand-ink" aria-hidden="true" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold text-wh-text">Need help with this order?</span>
+          <span className="block text-[12px] text-wh-muted">Raise a ticket with order {order.orderId || order.order_id} in the help centre</span>
+        </span>
+        <ChevronRight className="h-4 w-4 text-wh-muted" aria-hidden="true" />
+      </Link>
     </div>
   )
 }
