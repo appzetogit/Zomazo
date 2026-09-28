@@ -117,6 +117,68 @@ export const awardOrderCashback = async (orderId) => {
     }
 };
 
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+/**
+ * Takes back the cashback an order earned, in proportion to what was refunded
+ * on it. A returned order kept its full cashback, so buy, get cashback, return
+ * everything was free money; Quick has reversed it since 22 Sep. Once per
+ * `key` (the return), never more than was awarded, never below zero, and as a
+ * single conditional update so it cannot race another move on the ONE wallet.
+ * Never throws: a refund must not fail over its cashback.
+ */
+export const reverseOrderCashback = async (orderId, { refundedAmount, orderTotal, key }) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(String(orderId))) return { reversed: 0 };
+        const order = await Order.findById(orderId).select('_id userId order_id').lean();
+        if (!order?.userId) return { reversed: 0 };
+        const wallet = await UserWallet.findOne({ userId: order.userId }).lean();
+        if (!wallet) return { reversed: 0 };
+        const oid = String(order._id);
+        const rows = wallet.transactions || [];
+        const award = rows.find((t) => t?.metadata?.source === 'cashback' && String(t?.metadata?.orderId || '') === oid);
+        if (!award) return { reversed: 0 };
+
+        const reverseKey = String(key || 'full');
+        const total = Number(orderTotal) || 0;
+        const share = total > 0 ? Math.min(1, Math.max(0, Number(refundedAmount) / total)) : 1;
+        const already = rows
+            .filter((t) => t?.metadata?.source === 'cashback_reversal' && String(t?.metadata?.orderId || '') === oid)
+            .reduce((n, t) => n + (Number(t.amount) || 0), 0);
+        const wanted = Math.min(round2(Number(award.amount) * share), round2(Number(award.amount) - already));
+        const amount = Math.max(0, Math.min(wanted, round2(wallet.balance)));
+        if (amount <= 0) return { reversed: 0 };
+
+        const res = await UserWallet.updateOne(
+            {
+                userId: order.userId,
+                balance: { $gte: amount },
+                transactions: { $not: { $elemMatch: { 'metadata.source': 'cashback_reversal', 'metadata.orderId': oid, 'metadata.key': reverseKey } } },
+            },
+            {
+                $inc: { balance: -amount },
+                $push: {
+                    transactions: {
+                        $each: [{
+                            type: 'deduction',
+                            amount,
+                            status: 'Completed',
+                            description: `Cashback returned for refunded order ${order.order_id || oid}`,
+                            metadata: { source: 'cashback_reversal', orderId: oid, key: reverseKey },
+                            createdAt: new Date(),
+                        }],
+                        $position: 0,
+                    },
+                },
+            },
+        );
+        return { reversed: res.modifiedCount ? amount : 0 };
+    } catch (e) {
+        logger.warn(`reverseOrderCashback failed for ${orderId}: ${e?.message || e}`);
+        return { reversed: 0 };
+    }
+};
+
 /** Cashback-only slice of the wallet ledger. */
 export const getCashbackHistory = async (userId, query = {}) => {
     const id = String(userId || '');

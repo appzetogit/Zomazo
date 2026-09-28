@@ -419,6 +419,11 @@ export async function receiveAndRefundReturnAdmin(id, adminId, { note = '' } = {
     ).lean();
 
     if (outcome.amount > 0) {
+        // The cashback this order earned goes back with the refund, pro rata.
+        const order = await Order.findById(ret.orderId).select('pricing.total').lean();
+        const { reverseOrderCashback } = await import('../../user/services/cashback.service.js');
+        await reverseOrderCashback(ret.orderId, { refundedAmount: outcome.amount, orderTotal: order?.pricing?.total, key: `return:${ret._id}` });
+
         await Order.updateOne(
             { _id: ret.orderId },
             { $inc: { 'payment.refund.amount': outcome.amount }, $set: { 'payment.refund.status': 'processed', 'payment.refund.processedAt': new Date() } }
