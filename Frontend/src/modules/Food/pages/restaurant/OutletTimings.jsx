@@ -64,7 +64,11 @@ export default function OutletTimings() {
   const [days, setDays] = useState(getDefaultDays)
   const [loading, setLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // What the server last confirmed. The dirty flag is a comparison against it:
+  // flipping it on for any state change marked the page dirty the moment it
+  // finished loading, so "unsaved changes" was always true.
+  const [savedDays, setSavedDays] = useState(null)
+  const hasUnsavedChanges = savedDays !== null && JSON.stringify(days) !== JSON.stringify(savedDays)
 
   // Load from backend on mount.
   useEffect(() => {
@@ -74,11 +78,18 @@ export default function OutletTimings() {
         setLoading(true)
         const res = await restaurantAPI.getOutletTimings()
         const outletTimings = res?.data?.data?.outletTimings || res?.data?.outletTimings
-        if (mounted && outletTimings && typeof outletTimings === "object") {
-          setDays({ ...getDefaultDays(), ...outletTimings })
+        if (mounted) {
+          const loaded = outletTimings && typeof outletTimings === "object"
+            ? { ...getDefaultDays(), ...outletTimings }
+            : getDefaultDays()
+          setDays(loaded)
+          setSavedDays(loaded)
         }
       } catch (error) {
         debugError("Error loading outlet timings from backend:", error)
+        // Nothing loaded, so treat the defaults on screen as unsaved: the
+        // Save button stays visible and the seller can still store them.
+        if (mounted) setSavedDays({})
       } finally {
         if (mounted) setLoading(false)
       }
@@ -87,12 +98,6 @@ export default function OutletTimings() {
       mounted = false
     }
   }, [])
-
-  // Mark unsaved changes whenever days change (after initial load)
-  useEffect(() => {
-    if (loading) return
-    setHasUnsavedChanges(true)
-  }, [days, loading])
 
   // Lenis smooth scrolling
   useEffect(() => {
@@ -137,9 +142,12 @@ export default function OutletTimings() {
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      await restaurantAPI.saveOutletTimings(days)
+      const res = await restaurantAPI.saveOutletTimings(days)
+      const stored = res?.data?.data?.outletTimings || res?.data?.outletTimings
+      const confirmed = stored && typeof stored === "object" ? { ...getDefaultDays(), ...stored } : days
+      setDays(confirmed)
+      setSavedDays(confirmed)
       window.dispatchEvent(new Event("outletTimingsUpdated"))
-      setHasUnsavedChanges(false)
       toast.success("Outlet timings saved successfully!")
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to save timings. Please try again.")
@@ -390,6 +398,19 @@ export default function OutletTimings() {
                           ) : (
                             <p className="text-sm text-gray-500 pl-6">This day is closed</p>
                           )}
+                          {/* The day page adds "copy to all days"; it saves on
+                              its own, so unsaved edits here would be lost. */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (hasUnsavedChanges && !window.confirm("You have unsaved changes on this page. Leave without saving them?")) return
+                              navigate(`/food/restaurant/outlet-timings/${day.toLowerCase()}`)
+                            }}
+                            className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            Edit {day} on its own page or copy it to every day
+                          </button>
                         </div>
                       </motion.div>
                     )}

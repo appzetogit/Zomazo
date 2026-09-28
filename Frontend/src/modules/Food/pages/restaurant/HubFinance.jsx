@@ -137,22 +137,24 @@ export default function HubFinance() {
     return strId
   }
 
-  // Get current cycle dates from API response or use default
+  /*
+   * The current cycle's dates, from the server only.
+   *
+   * This used to fall back to a made-up "15 - 21 Dec'25" whenever the response
+   * had no dates -- and read `currentCycle.start.day` unguarded, which threw for
+   * every quick-commerce seller, whose finance has a wallet but no cycle. With
+   * no dates the report now says "to date" instead of inventing a week.
+   */
   const currentCycleDates = useMemo(() => {
-    if (financeData?.currentCycle) {
+    const start = financeData?.currentCycle?.start
+    const end = financeData?.currentCycle?.end
+    if (start?.day && end?.day) {
       return {
-        start: financeData.currentCycle.start.day,
-        end: financeData.currentCycle.end.day,
-        month: financeData.currentCycle.start.month,
-        year: financeData.currentCycle.start.year
+        start: start.day, end: end.day, month: start.month || "", year: start.year || "",
+        label: `${start.day} - ${end.day} ${start.month || ""}'${start.year || ""}`,
       }
     }
-    return {
-      start: "15",
-      end: "21",
-      month: "Dec",
-      year: "25"
-    }
+    return { start: "", end: "", month: "", year: "", label: "to date" }
   }, [financeData])
 
   const invoiceOrders = useMemo(() => {
@@ -409,6 +411,7 @@ export default function HubFinance() {
         end: currentCycleDates.end,
         month: currentCycleDates.month,
         year: currentCycleDates.year,
+        label: currentCycleDates.label,
         estimatedPayout: formatCurrency(currentCycle.estimatedPayout || 0),
         orders: currentCycle.totalOrders || 0,
         payoutDate: currentCycle.payoutDate ? new Date(currentCycle.payoutDate).toLocaleDateString('en-IN') : "-"
@@ -534,14 +537,14 @@ export default function HubFinance() {
           <div class="section-title">Current Cycle</div>
           <div class="current-cycle">
             <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">
-              Est. payout (${reportData.currentCycle.start} - ${reportData.currentCycle.end} ${reportData.currentCycle.month})
+              Est. payout (${reportData.currentCycle.label})
             </p>
             <div class="payout-amount">${reportData.currentCycle.estimatedPayout}</div>
             <p style="font-size: 14px; color: #666; margin: 5px 0;">${reportData.currentCycle.orders} orders</p>
             <div class="info-row">
               <div>
                 <p class="info-label" style="font-size: 11px; margin: 5px 0;">Payout for</p>
-                <p style="margin: 0; font-weight: 600;">${reportData.currentCycle.start} - ${reportData.currentCycle.end} ${reportData.currentCycle.month}'${reportData.currentCycle.year}</p>
+                <p style="margin: 0; font-weight: 600;">${reportData.currentCycle.label}</p>
               </div>
               <div style="text-align: right;">
                 <p class="info-label" style="font-size: 11px; margin: 5px 0;">Payout date</p>

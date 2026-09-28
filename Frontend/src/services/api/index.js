@@ -1383,19 +1383,32 @@ export const restaurantAPI = {
       params: { from, to, format: "csv" },
       responseType: "blob",
     }),
-  /** Fetch restaurant by owner (stub for missing backend endpoint). */
+  /**
+   * The signed-in restaurant's name, display id and address, for finance
+   * headers. Read from GET /current (the real profile); this used to resolve a
+   * hard-coded "Your Restaurant" / REST000001 placeholder for every seller.
+   * The id is formatted exactly as the finance endpoint formats it.
+   */
   getRestaurantByOwner: () =>
-    Promise.resolve({
-      data: {
-        success: true,
+    getRestaurantCurrentOnce().then((res) => {
+      const r = res?.data?.data?.restaurant || res?.data?.restaurant || {}
+      const id = String(r._id || r.id || "")
+      const address =
+        r.location?.formattedAddress ||
+        r.location?.address ||
+        [r.addressLine1, r.addressLine2, r.area, r.city].filter(Boolean).join(", ")
+      return {
         data: {
-          restaurant: {
-            name: "Your Restaurant",
-            restaurantId: "REST000001",
-            address: "Your address",
+          success: true,
+          data: {
+            restaurant: {
+              name: r.restaurantName || r.name || "",
+              restaurantId: id ? `REST${id.slice(-6).padStart(6, "0")}` : "",
+              address: address || "",
+            },
           },
         },
-      },
+      }
     }),
   /** Submit a real withdrawal request to the backend. */
   createWithdrawalRequest: (amount) =>

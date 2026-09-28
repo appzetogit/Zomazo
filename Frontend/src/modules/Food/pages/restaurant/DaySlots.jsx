@@ -2,39 +2,41 @@ import { useState, useRef, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
-import { ArrowLeft, Clock, Edit2, Trash2, ChevronDown, AlertTriangle, X } from "lucide-react"
+import { ArrowLeft, Clock, Edit2 } from "lucide-react"
 import { Button } from "@food/components/ui/button"
 import { Checkbox } from "@food/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@food/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@food/components/ui/select"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@food/components/ui/popover"
-import { useCompanyName } from "@food/hooks/useCompanyName"
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+import { Switch } from "@food/components/ui/switch"
+import { restaurantAPI } from "@food/api"
+import { toast } from "sonner"
 
+/*
+ * One day's trading hours on a page of its own, with "copy to all days".
+ *
+ * This page used to offer up to three slots a day and saved them to a
+ * localStorage key that was never even defined, so every save failed and
+ * nothing ever reached the server. The server stores exactly one opening and
+ * one closing time per day (outlet_timings, read by the open/closed check the
+ * customer app and order placement use), so that is what this edits now,
+ * through the same GET/PUT /outlet-timings the weekly page uses. Offering
+ * split shifts here would promise hours the platform cannot enforce.
+ */
+const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
-const getDefaultDayData = () => ({
-  isOpen: true,
-  slots: [{ id: Date.now(), start: "03:45", end: "02:15", startPeriod: "am", endPeriod: "pm" }]
-})
+const to12h = (hhmm, fallback) => {
+  const m = String(hhmm || fallback).match(/^(\d{1,2}):(\d{2})$/) || String(fallback).match(/^(\d{1,2}):(\d{2})$/)
+  const h24 = Math.max(0, Math.min(23, Number(m[1])))
+  return {
+    time: `${String(h24 % 12 || 12).padStart(2, "0")}:${m[2]}`,
+    period: h24 >= 12 ? "pm" : "am",
+  }
+}
+
+const to24h = (time12, period) => {
+  const [h, m] = String(time12).split(":").map((x) => parseInt(x, 10) || 0)
+  let hour = h % 12
+  if (period === "pm") hour += 12
+  return `${String(hour).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+}
 
 // Time Picker Wheel Component
 function TimePickerWheel({ 
@@ -380,48 +382,44 @@ function TimePickerWheel({
 }
 
 export default function DaySlots() {
-  const companyName = useCompanyName()
   const navigate = useNavigate()
   const { day } = useParams()
-  const dayName = day ? day.charAt(0).toUpperCase() + day.slice(1) : "Monday"
-  
-  const [dayData, setDayData] = useState(getDefaultDayData)
+  const dayName = DAY_NAMES.find((d) => d.toLowerCase() === String(day || "").toLowerCase()) || "Monday"
+  const backToWeek = () => navigate("/food/restaurant/outlet-timings")
 
+  // The whole week as the server returned it; only this day is edited, but the
+  // PUT replaces all seven, so the others must go back unchanged.
+  const [week, setWeek] = useState(null)
+  const [isOpen, setIsOpen] = useState(true)
+  const [slot, setSlot] = useState({ start: "09:00", startPeriod: "am", end: "10:00", endPeriod: "pm" })
   const [copyToAllDays, setCopyToAllDays] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [slotToDelete, setSlotToDelete] = useState(null)
-  const [timePickerOpen, setTimePickerOpen] = useState({ 
-    slotId: null, 
-    field: null,
-    type: null // 'time' or 'period'
-  })
-  
-  // Generate hour options (1-12)
-  const hourOptions = Array.from({ length: 12 }, (_, i) => i + 1)
-  
-  // Generate minute options (00-59)
-  const minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'))
-  
-  // Get current hour and minute from slot time
-  const getTimeParts = (timeStr) => {
-    if (!timeStr || !timeStr.includes(":")) return { hour: "1", minute: "00" }
-    const [h, m] = timeStr.split(":")
-    const hour = parseInt(h) || 1
-    return {
-      hour: hour.toString(),
-      minute: (m || "00").padStart(2, '0')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [timePickerOpen, setTimePickerOpen] = useState(null) // "start" | "end" | null
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await restaurantAPI.getOutletTimings()
+        const timings = res?.data?.data?.outletTimings || res?.data?.outletTimings || {}
+        if (!mounted) return
+        const today = timings[dayName] || { isOpen: true, openingTime: "09:00", closingTime: "22:00" }
+        const start = to12h(today.openingTime, "09:00")
+        const end = to12h(today.closingTime, "22:00")
+        setWeek(timings)
+        setIsOpen(today.isOpen !== false)
+        setSlot({ start: start.time, startPeriod: start.period, end: end.time, endPeriod: end.period })
+      } catch (error) {
+        if (mounted) toast.error(error?.response?.data?.message || "Could not load your outlet timings.")
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    })()
+    return () => {
+      mounted = false
     }
-  }
-  
-  // Handle time selection from custom picker
-  const handleCustomTimeChange = (slotId, field, hour, minute, period = null) => {
-    const formattedTime = `${hour}:${minute}`
-    updateSlot(slotId, field, formattedTime)
-    if (period && (field === "start" || field === "end")) {
-      const periodField = field === "start" ? "startPeriod" : "endPeriod"
-      updateSlot(slotId, periodField, period)
-    }
-  }
+  }, [dayName])
 
   // Lenis smooth scrolling
   useEffect(() => {
@@ -430,151 +428,84 @@ export default function DaySlots() {
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
     })
-
+    let frame
     function raf(time) {
       lenis.raf(time)
-      requestAnimationFrame(raf)
+      frame = requestAnimationFrame(raf)
     }
-
-    requestAnimationFrame(raf)
-
+    frame = requestAnimationFrame(raf)
     return () => {
+      cancelAnimationFrame(frame)
       lenis.destroy()
     }
   }, [])
 
-  // Calculate duration for a slot
-  const calculateSlotDuration = (start, end, startPeriod, endPeriod) => {
-    const parseTime = (timeStr, period) => {
-      if (!timeStr || !timeStr.includes(":")) return 0
-      const [hours, minutes] = timeStr.split(":")
-      let hour = parseInt(hours) || 0
-      const mins = parseInt(minutes) || 0
-      if (period === "pm" && hour !== 12) hour += 12
-      if (period === "am" && hour === 12) hour = 0
-      return hour * 60 + mins
-    }
+  const openingTime = to24h(slot.start, slot.startPeriod)
+  const closingTime = to24h(slot.end, slot.endPeriod)
 
-    const startMinutes = parseTime(start, startPeriod)
-    const endMinutes = parseTime(end, endPeriod)
-    let diff = endMinutes - startMinutes
-    
-    if (diff < 0) diff += 24 * 60
-    
+  const duration = (() => {
+    const toMin = (hhmm) => {
+      const [h, m] = hhmm.split(":").map(Number)
+      return h * 60 + m
+    }
+    let diff = toMin(closingTime) - toMin(openingTime)
+    // Same rule as the server: a closing time before the opening time runs
+    // past midnight, and equal times mean open all day.
+    if (diff <= 0) diff += 24 * 60
     const hours = Math.floor(diff / 60)
     const minutes = diff % 60
-    
-    if (minutes === 0) {
-      return `${hours} hrs`
-    }
-    return `${hours} hrs ${minutes} mins`
-  }
+    return minutes === 0 ? `${hours} hrs` : `${hours} hrs ${minutes} mins`
+  })()
 
-  // Calculate total duration
-  const calculateTotalDuration = () => {
-    if (!dayData.slots || dayData.slots.length === 0) return "0 hrs"
-
-    let totalMinutes = 0
-    dayData.slots.forEach(slot => {
-      const parseTime = (timeStr, period) => {
-        const [hours, minutes] = timeStr.split(":")
-        let hour = parseInt(hours)
-        if (period === "pm" && hour !== 12) hour += 12
-        if (period === "am" && hour === 12) hour = 0
-        return hour * 60 + parseInt(minutes)
-      }
-
-      const startMinutes = parseTime(slot.start, slot.startPeriod)
-      const endMinutes = parseTime(slot.end, slot.endPeriod)
-      let diff = endMinutes - startMinutes
-      if (diff < 0) diff += 24 * 60
-      totalMinutes += diff
-    })
-
-    const hours = Math.floor(totalMinutes / 60)
-    const minutes = totalMinutes % 60
-
-    if (minutes === 0) {
-      return `${hours} hrs`
-    }
-    return `${hours} hrs ${minutes} mins`
-  }
-
-  const updateSlot = (slotId, field, value) => {
-    setDayData(prev => ({
-      ...prev,
-      slots: prev.slots.map(slot =>
-        slot.id === slotId ? { ...slot, [field]: value } : slot
-      )
-    }))
-  }
-
-  const addSlot = () => {
-    if (dayData.slots.length >= 3) {
-      alert("Maximum 3 slots allowed per day")
-      return
-    }
-    setDayData(prev => ({
-      ...prev,
-      slots: [
-        ...prev.slots,
-        {
-          id: Date.now() + Math.random(),
-          start: "09:00",
-          end: "05:00",
-          startPeriod: "am",
-          endPeriod: "pm"
-        }
-      ]
-    }))
-  }
-
-  const deleteSlot = (slotId) => {
-    if (dayData.slots.length === 1) {
-      alert("At least one slot is required")
-      return
-    }
-    
-    // Open confirmation dialog
-    setSlotToDelete(slotId)
-    setDeleteDialogOpen(true)
-  }
-
-  const confirmDelete = () => {
-    if (slotToDelete) {
-      setDayData(prev => ({
-        ...prev,
-        slots: prev.slots.filter(slot => slot.id !== slotToDelete)
-      }))
-      setDeleteDialogOpen(false)
-      setSlotToDelete(null)
-    }
-  }
-
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!week || saving) return
+    const row = isOpen
+      ? { isOpen: true, openingTime, closingTime }
+      : { isOpen: false, openingTime: "", closingTime: "" }
+    const next = { ...week }
+    for (const d of copyToAllDays ? DAY_NAMES : [dayName]) next[d] = { ...row }
+    setSaving(true)
     try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      let allDays = saved ? JSON.parse(saved) : {}
-
-      if (copyToAllDays) {
-        // Copy to all days
-        const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        dayNames.forEach(d => {
-          allDays[d] = { ...dayData }
-        })
-      } else {
-        // Update only current day
-        allDays[dayName] = dayData
-      }
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(allDays))
+      await restaurantAPI.saveOutletTimings(next)
       window.dispatchEvent(new Event("outletTimingsUpdated"))
-      navigate("/restaurant/outlet-timings")
+      toast.success(copyToAllDays ? "Timings copied to every day" : `${dayName} timings saved`)
+      backToWeek()
     } catch (error) {
-      debugError("Error saving day slots:", error)
-      alert("Error saving slots. Please try again.")
+      toast.error(error?.response?.data?.message || "Failed to save timings. Please try again.")
+    } finally {
+      setSaving(false)
     }
   }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-sm text-gray-600">Loading outlet timings...</div>
+      </div>
+    )
+  }
+
+  const timeRow = (label, field) => (
+    <div className="flex w-full justify-between items-center gap-3">
+      <div className="flex items-center gap-2 shrink-0">
+        <Clock className="w-4 h-4 text-gray-600" />
+        <span className="text-sm font-medium text-gray-700 whitespace-nowrap">{label}</span>
+      </div>
+      <button
+        type="button"
+        onClick={() => setTimePickerOpen(field)}
+        className="flex items-center gap-2 border border-gray-300 rounded-sm bg-gray-50 px-3 py-2 hover:bg-gray-100"
+        aria-label={`Change ${label.toLowerCase()}`}
+      >
+        <span className="font-bold text-gray-900" style={{ fontSize: "15px" }}>
+          {slot[field]} {slot[`${field}Period`].toUpperCase()}
+        </span>
+        <Edit2 className="w-4 h-4 text-gray-500 shrink-0" />
+      </button>
+    </div>
+  )
+
+  const pickerParts = timePickerOpen ? slot[timePickerOpen].split(":") : null
 
   return (
     <div className="min-h-screen bg-neutral-50/60 overflow-x-hidden flex flex-col pb-28 text-gray-900">
@@ -583,260 +514,101 @@ export default function DaySlots() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate("/restaurant/outlet-timings")}
+              onClick={backToWeek}
               className="p-2 -ml-2 hover:bg-gray-100 rounded-xl text-gray-600 hover:text-gray-900 transition-colors"
               aria-label="Go back"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-base sm:text-lg font-bold text-gray-900">{dayName} Slots Configuration</h1>
-              <p className="text-xs text-gray-500 hidden sm:block">{companyName} delivery schedule</p>
+              <h1 className="text-base sm:text-lg font-bold text-gray-900">{dayName} timings</h1>
+              <p className="text-xs text-gray-500 hidden sm:block">When customers can order from you on {dayName}</p>
             </div>
           </div>
           <button
             onClick={handleSave}
-            className="hidden sm:inline-flex items-center justify-center bg-gray-900 hover:bg-black text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+            disabled={saving}
+            className="hidden sm:inline-flex items-center justify-center bg-gray-900 hover:bg-black disabled:opacity-60 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
           >
-            Save Slots
+            {saving ? "Saving..." : "Save"}
           </button>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto w-full flex-1 px-4 sm:px-6 py-6 space-y-5">
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs font-medium text-blue-900">
-          Configure active order fulfillment time windows. You can configure up to 3 individual meal periods (e.g. Lunch and Dinner).
+        <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex items-center justify-between">
+          <span className="text-base font-bold text-gray-900">Open on {dayName}</span>
+          <Switch
+            checked={isOpen}
+            onCheckedChange={setIsOpen}
+            className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-300"
+          />
         </div>
 
-        {/* Time Slots */}
-        <div className="space-y-4">
-          {dayData.slots.map((slot, index) => {
-            const duration = calculateSlotDuration(slot.start, slot.end, slot.startPeriod, slot.endPeriod)
-            return (
-              <motion.div
-                key={slot.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.1 }}
-                className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm space-y-4"
-              >
-                {/* Slot Header */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-base font-bold text-gray-900">Slot-{index + 1}</span>
-                    <span className="text-sm text-gray-600 ml-2">({duration})</span>
-                  </div>
-                  <button
-                    onClick={() => deleteSlot(slot.id)}
-                    className="w-8 h-8 bg-pink-100 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-                    aria-label="Delete slot"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-400" />
-                  </button>
-                </div>
-
-                {/* Start Time - All in one row */}
-                <div className="flex w-full justify-between items-center gap-3">
-                  <div className="flex  items-center gap-2 shrink-0">
-                    <Clock className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Start Time</span>
-                  </div>
-                  <div 
-                    className="relative flex items-center border border-gray-300 rounded-sm bg-gray-50 cursor-pointer"
-                    onClick={() => setTimePickerOpen({ slotId: slot.id, field: "start", type: "time" })}
-                  >
-                    <input
-                      type="text"
-                      value={slot.start}
-                      readOnly
-                      placeholder="03:45"
-                      className="w-20 px-2 py-2 bg-transparent text-gray-900 font-bold focus:outline-none cursor-pointer"
-                      style={{ fontSize: '15px' }}
-                    />
-                    <button
-                      type="button"
-                      className="mr-2 p-1 hover:bg-gray-200 rounded transition-colors z-10 relative"
-                      aria-label="Open time picker"
-                    >
-                      <Edit2 className="w-4 h-4 text-gray-500 shrink-0" />
-                    </button>
-                  </div>
-                  <div 
-                    className="shrink-0 cursor-pointer"
-                    onClick={() => setTimePickerOpen({ slotId: slot.id, field: "start", type: "period" })}
-                  >
-                    <div className="w-[70px] h-9 px-3 py-2 border border-gray-300 rounded-sm bg-white text-gray-900 font-medium flex items-center justify-between">
-                      <span>{slot.startPeriod.toUpperCase()}</span>
-                      <ChevronDown className="w-4 h-4 opacity-50" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* End Time - All in one row */}
-                <div className="flex w-full justify-between items-center gap-3">
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Clock className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium mr-1 text-gray-700 whitespace-nowrap">End Time</span>
-                  </div>
-                  <div 
-                    className="relative flex items-center border border-gray-300 rounded-sm bg-gray-50 cursor-pointer"
-                    onClick={() => setTimePickerOpen({ slotId: slot.id, field: "end", type: "time" })}
-                  >
-                    <input
-                      type="text"
-                      value={slot.end}
-                      readOnly
-                      placeholder="02:15"
-                      className="w-20 px-2 py-2 bg-transparent text-gray-900 font-bold focus:outline-none cursor-pointer"
-                      style={{ fontSize: '15px' }}
-                    />
-                    <button
-                      type="button"
-                      className="mr-2 p-1 hover:bg-gray-200 rounded transition-colors z-10 relative"
-                      aria-label="Open time picker"
-                    >
-                      <Edit2 className="w-4 h-4 text-gray-500 shrink-0" />
-                    </button>
-                  </div>
-                  <div 
-                    className="shrink-0 cursor-pointer"
-                    onClick={() => setTimePickerOpen({ slotId: slot.id, field: "end", type: "period" })}
-                  >
-                    <div className="w-[70px] h-9 px-3 py-2 border border-gray-300 rounded-sm bg-white text-gray-900 font-medium flex items-center justify-between">
-                      <span>{slot.endPeriod.toUpperCase()}</span>
-                      <ChevronDown className="w-4 h-4 opacity-50" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
-
-        {/* Add Time Slot Button */}
-        {dayData.slots.length < 3 && (
-          <button
-            onClick={addSlot}
-            className="w-full text-blue-600 hover:text-blue-700 text-sm font-medium py-3 transition-colors"
+        {isOpen ? (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm space-y-4"
           >
-            + Add time slot
-          </button>
+            <div>
+              <span className="text-base font-bold text-gray-900">Trading hours</span>
+              <span className="text-sm text-gray-600 ml-2">({duration})</span>
+            </div>
+            {timeRow("Opening time", "start")}
+            {timeRow("Closing time", "end")}
+            <p className="text-xs text-gray-500">
+              A closing time earlier than the opening time runs past midnight into the next day.
+            </p>
+          </motion.div>
+        ) : (
+          <p className="text-sm text-gray-500 px-1">You will not take orders on {dayName}.</p>
         )}
       </div>
 
       {/* Sticky Bottom Controls */}
       <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-4 z-40 shadow-lg">
-        <div className="space-y-4">
-          {/* Copy to all days */}
+        <div className="max-w-4xl mx-auto space-y-4">
           <div className="flex items-center gap-3">
             <Checkbox
               id="copy-to-all"
               checked={copyToAllDays}
-              onCheckedChange={setCopyToAllDays}
+              onCheckedChange={(v) => setCopyToAllDays(v === true)}
               className="w-5 h-5 border-2 border-gray-300 rounded data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
             />
-            <label
-              htmlFor="copy-to-all"
-              className="text-sm text-gray-700 cursor-pointer"
-            >
-              Copy above timings to all days
+            <label htmlFor="copy-to-all" className="text-sm text-gray-700 cursor-pointer">
+              Copy these timings to all days
             </label>
           </div>
-
-          {/* Total Duration */}
-          <div className="text-sm text-gray-700">
-            Total: {calculateTotalDuration()}
-          </div>
-
-          {/* Save Button */}
           <Button
             onClick={handleSave}
+            disabled={saving}
             className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-3 rounded-lg"
           >
-            Save
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </div>
 
-      {/* Time Picker Modal */}
-      {timePickerOpen.slotId && timePickerOpen.type === "time" && (() => {
-        const currentSlot = dayData.slots.find(s => s.id === timePickerOpen.slotId)
-        if (!currentSlot) return null
-        const timeParts = getTimeParts(timePickerOpen.field === "start" ? currentSlot.start : currentSlot.end)
-        const currentPeriod = timePickerOpen.field === "start" ? currentSlot.startPeriod : currentSlot.endPeriod
-        
-        return (
-          <TimePickerWheel
-            isOpen={true}
-            onClose={() => setTimePickerOpen({ slotId: null, field: null, type: null })}
-            initialHour={timeParts.hour}
-            initialMinute={timeParts.minute}
-            initialPeriod={currentPeriod}
-            onConfirm={(hour, minute, period) => {
-              handleCustomTimeChange(timePickerOpen.slotId, timePickerOpen.field, hour, minute, period)
-              setTimePickerOpen({ slotId: null, field: null, type: null })
-            }}
-          />
-        )
-      })()}
-
-      {/* Period Picker Modal */}
-      {timePickerOpen.slotId && timePickerOpen.type === "period" && (() => {
-        const currentSlot = dayData.slots.find(s => s.id === timePickerOpen.slotId)
-        if (!currentSlot) return null
-        const timeParts = getTimeParts(timePickerOpen.field === "start" ? currentSlot.start : currentSlot.end)
-        const currentPeriod = timePickerOpen.field === "start" ? currentSlot.startPeriod : currentSlot.endPeriod
-        
-        return (
-          <TimePickerWheel
-            isOpen={true}
-            onClose={() => setTimePickerOpen({ slotId: null, field: null, type: null })}
-            initialHour={timeParts.hour}
-            initialMinute={timeParts.minute}
-            initialPeriod={currentPeriod}
-            onConfirm={(hour, minute, period) => {
-              handleCustomTimeChange(timePickerOpen.slotId, timePickerOpen.field, hour, minute, period)
-              setTimePickerOpen({ slotId: null, field: null, type: null })
-            }}
-          />
-        )
-      })()}
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] p-4">
-          <DialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
-              </div>
-              <DialogTitle className="text-left">Delete Time Slot</DialogTitle>
-            </div>
-            <DialogDescription className="text-left text-gray-600 pt-2">
-              Are you sure you want to delete this time slot? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDeleteDialogOpen(false)  
-                setSlotToDelete(null)
-              }}
-              className="w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={confirmDelete}
-              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {timePickerOpen && (
+        <TimePickerWheel
+          isOpen={true}
+          onClose={() => setTimePickerOpen(null)}
+          initialHour={pickerParts[0]}
+          initialMinute={pickerParts[1]}
+          initialPeriod={slot[`${timePickerOpen}Period`]}
+          onConfirm={(hour, minute, period) => {
+            const field = timePickerOpen
+            setSlot((prev) => ({
+              ...prev,
+              [field]: `${String(hour).padStart(2, "0")}:${minute}`,
+              [`${field}Period`]: period,
+            }))
+            setTimePickerOpen(null)
+          }}
+        />
+      )}
     </div>
   )
 }
-
