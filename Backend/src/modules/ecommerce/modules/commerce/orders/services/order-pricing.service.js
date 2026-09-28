@@ -20,6 +20,7 @@ import { channelForMode } from '../../shared/channels.js';
 import { getActiveZones, zoneEtaMinutes } from '../../shared/zoneServiceability.js';
 import { AVG_SPEED_KMPH, PACKING_MINUTES } from './order.helpers.js';
 import { checkFirstOrderEligibility } from './firstOrderGuard.service.js';
+import { addressBookOwner } from '../../../../../../core/identity/addressBook.js';
 
 const round2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
 
@@ -342,7 +343,15 @@ async function resolveDeliveryAddress(userId, dto) {
     return dto.deliveryAddress;
   }
 
-  const user = await User.findById(userId).select('addresses').lean();
+  // The customer's one address book is on their platform account (shared with
+  // every service); the Shop's own copy only when there is no account.
+  const owner = await addressBookOwner(userId, 'ecom_users');
+  const user = owner
+    ? await mongoose.connection.collection('users').findOne(
+        { _id: new mongoose.Types.ObjectId(owner) },
+        { projection: { addresses: 1 } },
+      )
+    : await User.findById(userId).select('addresses').lean();
   const addresses = Array.isArray(user?.addresses) ? user.addresses : [];
   if (addresses.length === 0) return dto.deliveryAddress;
 

@@ -24,6 +24,7 @@ import { isMedicalStore } from '../../shared/storeType.js';
 import { findZoneForPoint, readAddressPoint, ZONE_VERTICALS } from '../../shared/zoneServiceability.js';
 import { zoneSurgeAmount } from '../../admin/models/deliverySurgeZone.model.js';
 import { FoodItem } from '../../admin/models/food.model.js';
+import { addressBookOwner } from '../../../../../../core/identity/addressBook.js';
 import { qcBogo, qcFreebie } from '../../shared/offers.js';
 
 const round2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
@@ -440,7 +441,15 @@ async function resolveDeliveryAddress(userId, dto) {
     return dto.deliveryAddress;
   }
 
-  const user = await FoodUser.findById(userId).select('addresses').lean();
+  // The customer's one address book is on their platform account (shared with
+  // every service); this service's own copy only when there is no account.
+  const owner = await addressBookOwner(userId, 'qc_users');
+  const user = owner
+    ? await mongoose.connection.collection('users').findOne(
+        { _id: new mongoose.Types.ObjectId(owner) },
+        { projection: { addresses: 1 } },
+      )
+    : await FoodUser.findById(userId).select('addresses').lean();
   const addresses = Array.isArray(user?.addresses) ? user.addresses : [];
   if (addresses.length === 0) return dto.deliveryAddress;
 

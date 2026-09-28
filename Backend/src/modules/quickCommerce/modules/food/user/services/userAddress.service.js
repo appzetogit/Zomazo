@@ -20,13 +20,13 @@ const normalizeLabel = (label) => {
     return 'Other';
 };
 
-export const listAddresses = async (userId) => {
+const own_listAddresses = async (userId) => {
     const user = await FoodUser.findById(userId).select('addresses').lean();
     const addresses = (user?.addresses || []).map((address) => normalizeDeliveryAddress(address));
     return { addresses };
 };
 
-export const addAddress = async (userId, dto) => {
+const own_addAddress = async (userId, dto) => {
     const user = await FoodUser.findById(userId).select('addresses');
     if (!user) throw new ValidationError('User not found');
 
@@ -69,7 +69,7 @@ export const addAddress = async (userId, dto) => {
     return { address: normalizeDeliveryAddress(saved.toObject()) };
 };
 
-export const updateAddress = async (userId, addressId, dto) => {
+const own_updateAddress = async (userId, addressId, dto) => {
     if (!mongoose.Types.ObjectId.isValid(addressId)) {
         throw new ValidationError('Invalid address id');
     }
@@ -93,7 +93,7 @@ export const updateAddress = async (userId, addressId, dto) => {
     return { address: normalizeDeliveryAddress(address.toObject()) };
 };
 
-export const deleteAddress = async (userId, addressId) => {
+const own_deleteAddress = async (userId, addressId) => {
     if (!mongoose.Types.ObjectId.isValid(addressId)) {
         throw new ValidationError('Invalid address id');
     }
@@ -121,7 +121,7 @@ export const deleteAddress = async (userId, addressId) => {
     return { success: true };
 };
 
-export const setDefaultAddress = async (userId, addressId) => {
+const own_setDefaultAddress = async (userId, addressId) => {
     if (!mongoose.Types.ObjectId.isValid(addressId)) {
         throw new ValidationError('Invalid address id');
     }
@@ -140,3 +140,26 @@ export const setDefaultAddress = async (userId, addressId) => {
     return { address: normalizeDeliveryAddress(updated?.toObject()) };
 };
 
+
+/*
+ * The customer's one address book lives on their platform account
+ * (core/identity/addressBook.js), shared with Food, Rides, Services and the
+ * Shop. A customer with no platform account keeps this service's own copy.
+ */
+import * as platformBook from '../../../../../food/user/services/userAddress.service.js';
+import { addressBookOwner } from '../../../../../../core/identity/addressBook.js';
+
+const viaBook = (name, own) => async (userId, ...args) => {
+    const owner = await addressBookOwner(userId, 'qc_users');
+    if (!owner) return own(userId, ...args);
+    const result = await platformBook[name](owner, ...args);
+    if (result?.addresses) return { ...result, addresses: result.addresses.map((a) => normalizeDeliveryAddress(a)) };
+    if (result?.address) return { ...result, address: normalizeDeliveryAddress(result.address) };
+    return result;
+};
+
+export const listAddresses = viaBook('listAddresses', own_listAddresses);
+export const addAddress = viaBook('addAddress', own_addAddress);
+export const updateAddress = viaBook('updateAddress', own_updateAddress);
+export const deleteAddress = viaBook('deleteAddress', own_deleteAddress);
+export const setDefaultAddress = viaBook('setDefaultAddress', own_setDefaultAddress);
