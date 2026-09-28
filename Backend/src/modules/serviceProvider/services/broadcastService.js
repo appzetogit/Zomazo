@@ -66,9 +66,14 @@ async function sendToAudience(broadcast, audience) {
   for (;;) {
     const query = { ...def.filter, ...(lastId ? { _id: { $gt: lastId } } : {}) };
     // Paged by _id rather than skip, which gets slower on every page.
-    const page = await Model.find(query).select('_id fcmTokens fcmTokenMobile').sort({ _id: 1 }).limit(PAGE).lean();
+    const page = await Model.find(query).select('_id fcmTokens fcmTokenMobile platformUserId phone').sort({ _id: 1 }).limit(PAGE).lean();
     if (!page.length) break;
     lastId = page[page.length - 1]._id;
+    // Customers who signed in through the platform login have their devices on
+    // the platform account (core/identity/platformUser.js).
+    const shared = audience === 'customers'
+      ? await import('../../../core/identity/platformUser.js').then((m) => m.platformDeviceTokensForMany(page))
+      : new Map();
 
     await Notification.insertMany(page.map((doc) => ({
       [def.field]: doc._id,
@@ -80,7 +85,7 @@ async function sendToAudience(broadcast, audience) {
     totals.recipients += page.length;
 
     for (const doc of page) {
-      const tokens = [...(doc.fcmTokens || []), ...(doc.fcmTokenMobile || [])]
+      const tokens = [...(doc.fcmTokens || []), ...(doc.fcmTokenMobile || []), ...(shared.get(String(doc._id)) || [])]
         .filter((t) => typeof t === 'string' && t.trim());
       for (const token of new Set(tokens)) {
         pending.push(token);

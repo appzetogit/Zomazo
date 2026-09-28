@@ -331,7 +331,9 @@ async function removeInvalidTokens(tokens) {
     await Promise.all([
       User.updateMany({ $or: [{ fcmTokens: { $in: tokens } }, { fcmTokenMobile: { $in: tokens } }] }, updateQuery),
       Vendor.updateMany({ $or: [{ fcmTokens: { $in: tokens } }, { fcmTokenMobile: { $in: tokens } }] }, updateQuery),
-      Worker.updateMany({ $or: [{ fcmTokens: { $in: tokens } }, { fcmTokenMobile: { $in: tokens } }] }, updateQuery)
+      Worker.updateMany({ $or: [{ fcmTokens: { $in: tokens } }, { fcmTokenMobile: { $in: tokens } }] }, updateQuery),
+      // Customers' platform-login devices are pushed to as well (sendNotificationToUser).
+      import('../../../core/identity/platformUser.js').then((m) => m.dropPlatformDeviceTokens(tokens))
     ]);
 
     console.log('[FCM Cleanup] ✅ Invalid tokens removed from database');
@@ -363,6 +365,11 @@ async function sendNotificationToUser(userId, payload, includeMobile = true) {
     if (includeMobile && user.fcmTokenMobile && user.fcmTokenMobile.length > 0) {
       tokens = [...tokens, ...user.fcmTokenMobile];
     }
+    // Devices the customer registered through the platform login live on the
+    // platform account, not on sp_users: reach those too.
+    const { platformDeviceTokensFor } = await import('../../../core/identity/platformUser.js');
+    const shared = await platformDeviceTokensFor(userId, includeMobile ? {} : { platform: 'web' });
+    tokens = [...new Set([...tokens, ...shared])];
 
     if (tokens.length === 0) {
       console.log(`[FCM] ⚠️ No FCM tokens found for user: ${userId}`);
@@ -379,7 +386,8 @@ async function sendNotificationToUser(userId, payload, includeMobile = true) {
       dataOnly: false // Explicitly disable dataOnly to force system tray notification
     };
 
-    await sendPushNotification(tokens, finalPayload);
+    // Through the exports so a test can stand in for Firebase.
+    await module.exports.sendPushNotification(tokens, finalPayload);
   } catch (error) {
     console.error(`[FCM] ❌ Error sending notification to user ${userId}:`, error);
   }

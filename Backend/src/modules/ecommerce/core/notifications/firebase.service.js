@@ -2,6 +2,8 @@ import crypto from 'crypto';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { User } from '../users/user.model.js';
+import { recordCustomerNotification } from '../../../../core/notifications/customerInbox.js';
+import { dropPlatformDeviceTokens, platformDeviceTokensFor } from '../../../../core/identity/platformUser.js';
 import { Seller } from '../../modules/commerce/seller/models/seller.model.js';
 import { DeliveryPartner } from '../../modules/commerce/delivery/models/deliveryPartner.model.js';
 import { Admin } from '../admin/admin.model.js';
@@ -421,7 +423,14 @@ export const listOwnerTokens = async ({ ownerType, ownerId, platform }) => {
     const model = getOwnerModel(ownerType);
     if (!model) return [];
     const doc = await model.findById(ownerId).select('fcmTokens fcmTokenMobile').lean();
-    return readTokensFromDoc(doc, platform);
+    const own = readTokensFromDoc(doc, platform);
+    if (String(ownerType).toUpperCase() !== 'USER') return own;
+    // Customers sign in once, on the platform: their devices are on the platform
+    // account, not on ecom_users.
+    const shared = await platformDeviceTokensFor(ownerId, {
+        platform: platform ? (isMobilePlatform(platform) ? 'mobile' : 'web') : undefined
+    });
+    return [...new Set([...own, ...shared])];
 };
 
 export const upsertFirebaseDeviceToken = async ({ ownerType, ownerId, token, platform = 'web' }) => {
@@ -612,6 +621,20 @@ export const sendPushNotification = async (tokens, payload = {}) => {
 };
 
 export const sendNotificationToOwner = async ({ ownerType, ownerId, payload, platform } = {}) => {
+    // Every customer push is also filed in the super app's one inbox
+    // (core/notifications/customerInbox.js), like Quick's: a customer with
+    // notifications off still finds their order updates there.
+    if (String(ownerType || '').toUpperCase() === 'USER' && !payload?.skipInbox) {
+        await recordCustomerNotification({
+            vertical: 'ecommerce',
+            userId: ownerId,
+            title: payload?.title || payload?.notification?.title,
+            message: payload?.body || payload?.message || payload?.notification?.body,
+            data: payload?.data,
+            image: payload?.image,
+        });
+    }
+
     // Clone payload to avoid side-effects across batched sends.
     const enrichedPayload = { ...payload };
 
@@ -639,6 +662,7 @@ export const sendNotificationToOwner = async ({ ownerType, ownerId, payload, pla
                 }
                 await doc.save();
             }
+            if (String(ownerType).toUpperCase() === 'USER') await dropPlatformDeviceTokens(invalidTokens);
         }
         logger.info(
             `FCM push sent to ${ownerType}:${ownerId} (${platform || 'all'}). Success=${response.successCount}, Failure=${response.failureCount}`

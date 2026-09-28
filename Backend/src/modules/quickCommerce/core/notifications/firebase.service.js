@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { recordCustomerNotification } from '../../../../core/notifications/customerInbox.js';
+import { dropPlatformDeviceTokens, platformDeviceTokensFor } from '../../../../core/identity/platformUser.js';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { FoodUser } from '../users/user.model.js';
@@ -447,7 +448,14 @@ export const listOwnerTokens = async ({ ownerType, ownerId, platform }) => {
     const model = getOwnerModel(ownerType);
     if (!model) return [];
     const doc = await model.findById(ownerId).select('fcmTokens fcmTokenMobile').lean();
-    return readTokensFromDoc(doc, platform);
+    const own = readTokensFromDoc(doc, platform);
+    if (String(ownerType).toUpperCase() !== 'USER') return own;
+    // A customer who signed in through the platform login has their devices on
+    // the platform account, not on qc_users: reach those too.
+    const shared = await platformDeviceTokensFor(ownerId, {
+        platform: platform ? (isMobilePlatform(platform) ? 'mobile' : 'web') : undefined
+    });
+    return [...new Set([...own, ...shared])];
 };
 
 export const upsertFirebaseDeviceToken = async ({ ownerType, ownerId, token, platform = 'web' }) => {
@@ -679,6 +687,7 @@ export const sendNotificationToOwner = async ({ ownerType, ownerId, payload, pla
                 }
                 await doc.save();
             }
+            if (String(ownerType).toUpperCase() === 'USER') await dropPlatformDeviceTokens(invalidTokens);
         }
         logger.info(
             `FCM push sent to ${ownerType}:${ownerId} (${platform || 'all'}). Success=${response.successCount}, Failure=${response.failureCount}`

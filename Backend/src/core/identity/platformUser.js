@@ -29,6 +29,7 @@ const OWN_USERS = [
   ['users', null],
   ['qc_users', 'quickCommerce'],
   ['sp_users', 'serviceProvider'],
+  ['ecom_users', 'ecommerce'],
 ];
 
 /**
@@ -53,5 +54,91 @@ export async function platformUserIdFor(id) {
     return main ? { platformId: String(main._id), vertical } : null;
   }
   return null;
+}
+
+const tokenList = (v) => (Array.isArray(v) ? v : [v]).map((t) => String(t || '').trim()).filter(Boolean);
+
+/**
+ * The devices the customer signed in on through the platform login, for any
+ * service's own customer id.
+ *
+ * Web login registers the browser's FCM token on the platform account only
+ * (core/auth/auth.service.js), so a service that pushes to its own customer
+ * row (qc_users, sp_users, ecom_users) reached nobody who never opened that
+ * service's own login. Each service's sender merges these in.
+ *
+ * `platform` narrows to one bucket like the senders do: 'web' reads fcmTokens,
+ * 'mobile' / 'android' / 'ios' read fcmTokenMobile; omitted reads both.
+ * Never throws -- a lookup failure just means no extra devices.
+ */
+export async function platformDeviceTokensFor(id, { platform } = {}) {
+  try {
+    const resolved = await platformUserIdFor(id);
+    if (!resolved) return [];
+    const main = await mongoose.connection
+      .collection('users')
+      .findOne(
+        { _id: new mongoose.Types.ObjectId(resolved.platformId) },
+        { projection: { fcmTokens: 1, fcmTokenMobile: 1, isActive: 1 } },
+      );
+    if (!main || main.isActive === false) return [];
+    const p = String(platform || '').toLowerCase();
+    const mobile = ['mobile', 'android', 'ios', 'app'].includes(p);
+    if (p && mobile) return [...new Set(tokenList(main.fcmTokenMobile))];
+    if (p) return [...new Set(tokenList(main.fcmTokens))];
+    return [...new Set([...tokenList(main.fcmTokens), ...tokenList(main.fcmTokenMobile)])];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * platformDeviceTokensFor for a page of a service's customer rows at once
+ * (broadcasts). Each row is { _id, platformUserId?, phone? }; the result maps
+ * the row's _id to its platform account's tokens (both buckets). Two queries
+ * however long the page.
+ */
+export async function platformDeviceTokensForMany(rows = []) {
+  const out = new Map();
+  try {
+    const byId = new Map();
+    const byPhone = new Map();
+    for (const row of rows) {
+      if (!row?._id) continue;
+      if (isId(row.platformUserId)) byId.set(String(row._id), String(row.platformUserId));
+      else if (lastTen(row.phone).length === 10) byPhone.set(String(row._id), lastTen(row.phone));
+    }
+    const users = mongoose.connection.collection('users');
+    const projection = { fcmTokens: 1, fcmTokenMobile: 1, phone: 1, isActive: 1 };
+    const ids = [...new Set(byId.values())].map((v) => new mongoose.Types.ObjectId(v));
+    const phones = [...new Set(byPhone.values())].flatMap((p) => [p, `+91${p}`, `91${p}`]);
+    const [mainsById, mainsByPhone] = await Promise.all([
+      ids.length ? users.find({ _id: { $in: ids } }, { projection }).toArray() : [],
+      phones.length ? users.find({ phone: { $in: phones } }, { projection }).toArray() : [],
+    ]);
+    const tokensOf = (m) =>
+      !m || m.isActive === false ? [] : [...new Set([...tokenList(m.fcmTokens), ...tokenList(m.fcmTokenMobile)])];
+    const idIndex = new Map(mainsById.map((m) => [String(m._id), m]));
+    const phoneIndex = new Map(mainsByPhone.map((m) => [lastTen(m.phone), m]));
+    for (const [rowId, pid] of byId) out.set(rowId, tokensOf(idIndex.get(pid)));
+    for (const [rowId, phone] of byPhone) out.set(rowId, tokensOf(phoneIndex.get(phone)));
+  } catch {
+    /* no extra devices */
+  }
+  return out;
+}
+
+/** FCM said these tokens are dead: drop them from platform accounts too. */
+export async function dropPlatformDeviceTokens(tokens = []) {
+  const list = tokenList(tokens);
+  if (!list.length) return;
+  try {
+    await mongoose.connection.collection('users').updateMany(
+      { $or: [{ fcmTokens: { $in: list } }, { fcmTokenMobile: { $in: list } }] },
+      { $pull: { fcmTokens: { $in: list }, fcmTokenMobile: { $in: list } } },
+    );
+  } catch {
+    /* best effort */
+  }
 }
 
