@@ -11,6 +11,7 @@ import { getIO, rooms } from '../../../../config/socket.js';
 import { holdIfConfigured, registerHoldTarget } from '../../../../../../core/orders/orderHold.js';
 import { isMedicalStore } from '../../shared/storeType.js';
 import { addOrderJob } from '../../../../queues/producers/order.producer.js';
+import { qcRiderOnFoodJob, qcPartnerIdsBusyOnFood } from '../../../../../../core/identity/qcRiderBridge.js';
 
 export function enqueueOrderEvent(action, payload = {}) {
   try {
@@ -124,8 +125,11 @@ export async function partnerHasActiveDelivery(deliveryPartnerId) {
     'dispatch.status': 'accepted',
     orderStatus: { $nin: TERMINAL_ORDER_STATUSES },
   });
+  if (active) return true;
 
-  return Boolean(active);
+  // A rider from the platform app may be out on a FOOD order; that is just as
+  // much an active delivery (core/identity/qcRiderBridge.js).
+  return qcRiderOnFoodJob(deliveryPartnerId);
 }
 
 export async function getBusyDeliveryPartnerIds() {
@@ -137,7 +141,10 @@ export async function getBusyDeliveryPartnerIds() {
     .select('dispatch.deliveryPartnerId')
     .lean();
 
-  return new Set(rows.map((row) => String(row.dispatch.deliveryPartnerId)));
+  const busy = new Set(rows.map((row) => String(row.dispatch.deliveryPartnerId)));
+  // Bridged riders carrying a food order are not free for groceries either.
+  for (const id of await qcPartnerIdsBusyOnFood()) busy.add(id);
+  return busy;
 }
 
 export function buildOrderIdentityFilter(orderIdOrMongoId) {

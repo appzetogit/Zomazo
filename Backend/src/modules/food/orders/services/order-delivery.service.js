@@ -14,6 +14,7 @@ import { config } from '../../../../config/env.js';
 import { getIO, rooms } from '../../../../config/socket.js';
 import { getFirebaseDB } from '../../../../config/firebase.js';
 import { fetchPolyline } from '../utils/googleMaps.js';
+import { foodRiderOnQcJob } from '../../../../core/identity/qcRiderBridge.js';
 
 import * as foodTransactionService from './foodTransaction.service.js';
 import * as dispatchService from './order-dispatch.service.js';
@@ -369,6 +370,13 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
   }
   if (lockOrderId && !(await acquireDeliveryLock(partnerId, lockOrderId._id))) {
     throw new ValidationError('You are already on another job');
+  }
+  // The same rider may be carrying a grocery order from the quick-commerce
+  // pool (core/identity/qcRiderBridge.js), which the lock above only sees for
+  // riders linked to a unified driver. Checked before the order is claimed.
+  if (lockOrderId && await foodRiderOnQcJob(partnerId)) {
+    await releaseDeliveryLock(partnerId, lockOrderId._id);
+    throw new ValidationError('You are on a quick-commerce delivery. Complete it before accepting another order.');
   }
 
   const order = await FoodOrder.findOneAndUpdate(
