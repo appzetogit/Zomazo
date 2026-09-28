@@ -96,7 +96,11 @@ export const filterCandidatesToZone = (candidates = [], orderZoneId = null, zone
         (z) => Array.isArray(z.coordinates) && z.coordinates.length >= 3,
     );
     if (!hasZones || !orderZoneId) {
-        return { kept: candidates, dropped: [], enforced: false };
+        // A copy, not the caller's array: both dispatchers do
+        // `scored.length = 0; scored.push(...kept)`, which emptied `kept` along
+        // with it when it WAS `scored` -- so an order from a store outside every
+        // zone (or a platform with none set up) was offered to nobody at all.
+        return { kept: [...candidates], dropped: [], enforced: false };
     }
 
     const kept = [];
