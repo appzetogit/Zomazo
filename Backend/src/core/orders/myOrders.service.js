@@ -32,6 +32,9 @@ const coll = (name) => mongoose.connection.collection(name);
 const oid = (v) => new mongoose.Types.ObjectId(String(v));
 const isId = (v) => mongoose.Types.ObjectId.isValid(String(v || ''));
 const lastTen = (phone) => String(phone || '').replace(/\D/g, '').slice(-10);
+// Services statuses in the customer's words (the booking screen's own).
+const SERVICE_STATUS_LABEL = { no_vendors: 'No professional available', searching: 'Finding a professional' };
+
 const humanize = (s) => String(s || '').replace(/[_-]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 
 /* ---------------------------------------------------------------- states */
@@ -181,7 +184,7 @@ async function bookings({ userIds, before, limit }) {
       : '',
     amount: Number(d.userPayableAmount ?? d.finalAmount) || 0,
     state: bookingState(d.status),
-    statusLabel: humanize(d.status),
+    statusLabel: SERVICE_STATUS_LABEL[d.status] || humanize(d.status),
     createdAt: d.createdAt,
     route: `/services/bookings/${d._id}`,
   }));

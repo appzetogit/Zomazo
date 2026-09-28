@@ -169,3 +169,5 @@ await ensure(
 
 console.log(`Done: ${counts.created} created, ${counts.kept} already there.`);
 await mongoose.disconnect();
+// Some models this loads keep timers or clients open; a one-shot script ends here.
+process.exit(0);
