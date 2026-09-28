@@ -80,6 +80,7 @@ const adminSidebarMenuTemplate = [
           { label: "Seller Reviews", path: "/sellers/reviews" },
           { label: "Seller Complaints", path: "/sellers/complaints" },
           { label: "Seller Settings", path: "/sellers/settings" },
+          { label: "Seller Commission", path: "/sellers/commission" },
           { label: "Subscription Settings", path: "/sellers/subscription-settings" },
           { label: "Subscription Billing", path: "/sellers/subscription-history" },
         ],
@@ -190,6 +191,19 @@ const adminSidebarMenuTemplate = [
           { label: "Delivery Earning", path: "/delivery-partners/earnings" },
         ],
       },
+    ],
+  },
+  {
+    // The Shop's own riders: what they earn per delivery, and the cash they
+    // collect on COD orders and hand back. Routed in the Shop admin all along
+    // (components/admin/AdminRouter.jsx), just never in the menu.
+    type: "section",
+    label: "DELIVERY PARTNERS",
+    panels: SHOP,
+    items: [
+      { type: "link", label: "Delivery Boy Commission", path: "/delivery-boy-commission", icon: "Percent" },
+      { type: "link", label: "Delivery Cash Limit", path: "/delivery-cash-limit", icon: "Wallet" },
+      { type: "link", label: "Cash Limit Settlement", path: "/cash-limit-settlement", icon: "Banknote" },
     ],
   },
   {

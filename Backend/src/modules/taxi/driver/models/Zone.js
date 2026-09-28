@@ -37,6 +37,11 @@ const zoneSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    // Until when a demand-triggered peak stays on (common/peakZone.js).
+    peak_zone_active_until: {
+      type: Date,
+      default: null,
+    },
     ride_surge_enabled: {
       type: Boolean,
       default: false,

@@ -604,6 +604,12 @@ const rideSchema = new mongoose.Schema(
         default: '',
         trim: true,
       },
+      // Why surge applied: 'peak_demand' (common/peakZone.js), 'time_slot', 'zone' or ''.
+      surge_reason: {
+        type: String,
+        default: '',
+        trim: true,
+      },
       // Ride insurance the rider chose at booking, frozen (common/rideInsurance.js).
       insurance: {
         type: new mongoose.Schema({

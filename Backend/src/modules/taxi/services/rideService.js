@@ -26,6 +26,7 @@ import { getTipSettings } from './appSettingsService.js';
 import { getBidRideSettings } from './transportSettingsService.js';
 import { computeRideFare } from '../common/rideFare.js';
 import { pickSurgeSlot, surgeFromPercent } from '../common/surgeSlot.js';
+import { peakDemandFor } from '../common/peakZone.js';
 import { SurgeSlot } from '../admin/models/SurgeSlot.js';
 import { RideInsurancePlan } from '../admin/models/RideInsurancePlan.js';
 import { availablePlans, insuranceSnapshot, planApplies } from '../common/rideInsurance.js';
@@ -956,9 +957,13 @@ const findSurgeZoneForPickup = async ({ pickupPoint, serviceLocationId = null, t
       },
     },
   })
-    .select('_id name ride_surge_enabled')
+    .select('_id name unit ride_surge_enabled peak_zone_ride_count peak_zone_radius peak_zone_selection_duration peak_zone_duration peak_zone_surge_percentage peak_zone_active_until')
     .lean();
 };
+
+/** Demand-triggered peak for this pickup (common/peakZone.js). */
+const loadPeakDemand = (surgeZone, pickupPoint) =>
+  surgeZone ? peakDemandFor({ zone: surgeZone, pickupPoint, Ride, Zone }) : Promise.resolve(null);
 
 /**
  * The surge for one vehicle in the pickup zone. An admin's time slot, while it
@@ -968,20 +973,32 @@ const findSurgeZoneForPickup = async ({ pickupPoint, serviceLocationId = null, t
 const loadZoneSurgeSlots = async (zoneId) =>
   zoneId ? SurgeSlot.find({ zone_ids: zoneId, active: true }).lean() : [];
 
-export const resolveRideSurge = ({ surgeZone, pricingRule, slots = [], vehicleTypeId, fareBeforeSurge, at = new Date() }) => {
+export const resolveRideSurge = ({ surgeZone, pricingRule, slots = [], vehicleTypeId, fareBeforeSurge, peak = null, at = new Date() }) => {
   const slot = pickSurgeSlot(slots, { zoneId: surgeZone?._id, vehicleTypeId, at });
+  let surge;
   if (slot) {
-    return {
+    surge = {
       amount: surgeFromPercent(fareBeforeSurge, slot.percent),
       percent: Number(slot.percent),
       slotId: slot._id || null,
       slotName: slot.name || `${slot.start_time}-${slot.end_time}`,
+      reason: 'time_slot',
     };
+  } else {
+    const amount = surgeZone?.ride_surge_enabled
+      ? Math.max(0, Number(pricingRule?.ride_surge_amount || 0))
+      : 0;
+    surge = { amount, percent: 0, slotId: null, slotName: '', reason: amount > 0 ? 'zone' : null };
   }
-  const amount = surgeZone?.ride_surge_enabled
-    ? Math.max(0, Number(pricingRule?.ride_surge_amount || 0))
-    : 0;
-  return { amount, percent: 0, slotId: null, slotName: '' };
+  // A demand peak is the zone's own percentage while open requests are over
+  // its threshold. It never stacks with another surge: the larger one applies.
+  if (peak?.active && peak.percent > 0) {
+    const peakAmount = surgeFromPercent(fareBeforeSurge, peak.percent);
+    if (peakAmount > surge.amount) {
+      return { amount: peakAmount, percent: Number(peak.percent), slotId: null, slotName: 'Peak demand', reason: 'peak_demand' };
+    }
+  }
+  return surge;
 };
 
 /**
@@ -1006,6 +1023,7 @@ export const quoteRideFares = async ({
   const dropPoint = normalizePoint(dropCoords, 'dropCoords');
   const surgeZone = await findSurgeZoneForPickup({ pickupPoint, serviceLocationId, transportType });
   const surgeSlots = await loadZoneSurgeSlots(surgeZone?._id);
+  const peak = await loadPeakDemand(surgeZone, pickupPoint);
   // Parcels carry no ride insurance.
   const insurancePlans = transportType === 'delivery' ? [] : await RideInsurancePlan.find({ active: true }).lean();
   // Measured exactly as createRideRecord measures it.
@@ -1028,10 +1046,16 @@ export const quoteRideFares = async ({
     });
     const base = computeRideFare({ pricingRule, transportType, distanceMeters, durationMinutes });
     const surge = base
-      ? resolveRideSurge({ surgeZone, pricingRule, slots: surgeSlots, vehicleTypeId, fareBeforeSurge: base.fareBeforeSurge })
+      ? resolveRideSurge({ surgeZone, pricingRule, slots: surgeSlots, vehicleTypeId, fareBeforeSurge: base.fareBeforeSurge, peak })
       : null;
     const fare = base
-      ? { ...computeRideFare({ pricingRule, transportType, distanceMeters, durationMinutes, surgeAmount: surge.amount }), surgePercent: surge.percent, surgeSlotName: surge.slotName }
+      ? {
+        ...computeRideFare({ pricingRule, transportType, distanceMeters, durationMinutes, surgeAmount: surge.amount }),
+        surgePercent: surge.percent,
+        surgeSlotName: surge.slotName,
+        // 'peak_demand' | 'time_slot' | 'zone' | null -- lets the app say why.
+        surgeReason: surge.reason,
+      }
       : null;
     // The measured trip travels with the quote so the app can SHOW the same
     // distance it is being charged for. Without it the app displayed its own
@@ -1049,6 +1073,10 @@ export const quoteRideFares = async ({
       measuredDistanceMeters: distanceMeters,
       measuredDurationMinutes: durationMinutes,
       distanceSource: trip ? (trip.source || 'straight_line') : 'unknown',
+      // Demand in the pickup area, so the app can explain a peak-zone surge.
+      peakZone: peak && peak.threshold
+        ? { active: peak.active, percent: peak.percent, openRequests: peak.openRequests, threshold: peak.threshold }
+        : null,
     };
   }));
 };
@@ -1294,6 +1322,7 @@ export const createRideRecord = async ({
     slots: await loadZoneSurgeSlots(surgeZone?._id),
     vehicleTypeId: primaryVehicleTypeId,
     fareBeforeSurge: safeFare,
+    peak: normalizedTransportType === 'delivery' ? null : await loadPeakDemand(surgeZone, pickupPoint),
   });
   const rideSurgeAmount = rideSurge.amount;
   const effectiveStartingFareWithoutSurge = pricingNegotiationMode === 'user_increment_only'
@@ -1343,6 +1372,7 @@ export const createRideRecord = async ({
     insurance: rideInsurance,
     surge_slot_id: rideSurge.slotId,
     surge_slot_name: rideSurge.slotName,
+    surge_reason: rideSurge.reason || '',
     fare_before_surge: effectiveStartingFareWithoutSurge,
     // What the rider agreed to. A promo lowers it below (see the promo branch);
     // an accepted bid replaces it (acceptRideBidAssignment).
@@ -1736,6 +1766,7 @@ export const serializeRideRealtime = (ride) => ({
       surge_zone_name: ride.pricingSnapshot.surge_zone_name || '',
       surge_percent: Number(ride.pricingSnapshot.surge_percent ?? 0),
       surge_slot_name: ride.pricingSnapshot.surge_slot_name || '',
+      surge_reason: ride.pricingSnapshot.surge_reason || '',
       allowed_payment_methods: normalizeAllowedRidePaymentMethods(ride.pricingSnapshot.allowed_payment_methods),
       user_cancellation_fee_type: ride.pricingSnapshot.user_cancellation_fee_type || 'percentage',
       user_cancellation_fee: Number(ride.pricingSnapshot.user_cancellation_fee ?? 0),
