@@ -56,6 +56,31 @@ const toObjectId = (value) => {
  * with no taxi contribution rather than a failure.
  */
 export const resolveRiderIdentity = async (anyId) => {
+    const identity = await resolveHubIdentity(anyId);
+    return withBridgedPartner(identity);
+};
+
+/**
+ * The other delivery half through the rider-app bridge
+ * (core/identity/qcRiderBridge.js): a food rider's grocery row carries
+ * platformDeliveryPartnerId. Only fills a gap -- the hub's answer wins -- so a
+ * rider who is not on a unified driver still sees their grocery earnings, cash
+ * and withdrawals in the one balance.
+ */
+const withBridgedPartner = async (identity) => {
+    if (!identity.foodPartnerId === !identity.qcPartnerId) return identity;
+    const { FoodDeliveryPartner: QCDeliveryPartner } = await import(
+        '../../modules/quickCommerce/modules/food/delivery/models/deliveryPartner.model.js'
+    );
+    if (identity.foodPartnerId) {
+        const qc = await QCDeliveryPartner.findOne({ platformDeliveryPartnerId: identity.foodPartnerId }).select('_id').lean();
+        return qc ? { ...identity, qcPartnerId: qc._id } : identity;
+    }
+    const qc = await QCDeliveryPartner.findById(identity.qcPartnerId).select('platformDeliveryPartnerId').lean();
+    return qc?.platformDeliveryPartnerId ? { ...identity, foodPartnerId: qc.platformDeliveryPartnerId } : identity;
+};
+
+const resolveHubIdentity = async (anyId) => {
     const id = toObjectId(anyId);
     if (!id) return { driverId: null, foodPartnerId: null, qcPartnerId: null, linked: false };
 

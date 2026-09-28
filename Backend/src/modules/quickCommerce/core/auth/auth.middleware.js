@@ -8,6 +8,7 @@ import { FoodUser } from '../users/user.model.js';
 import { FoodUser as PlatformUser } from '../../../../core/users/user.model.js';
 import { FoodRestaurant } from '../../modules/food/restaurant/models/restaurant.model.js';
 import { FoodDeliveryPartner } from '../../modules/food/delivery/models/deliveryPartner.model.js';
+import { resolveQcPartnerForFoodRider } from '../../../../core/identity/qcRiderBridge.js';
 
 export const requireAdmin = (req, res, next) => {
     if (req.user?.role !== 'ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
@@ -51,6 +52,20 @@ const resolveSessionAccount = async (model, decoded) => {
     // 1. A token minted by this module: the id IS the satellite id.
     const direct = await model.findById(id).select(select).lean();
     if (direct) return direct;
+
+    // A rider signed in through the platform rider app carries their FOOD
+    // partner id. The bridge finds (or makes) their grocery-pool row and syncs
+    // availability onto it, so the one app gets both kinds of job.
+    if (decoded.role === 'DELIVERY_PARTNER') {
+        const bridged = await resolveQcPartnerForFoodRider(id);
+        if (!bridged) return null;
+        return {
+            _id: bridged._id,
+            tokenVersion: bridged.tokenVersion,
+            status: bridged.status,
+            bridgedFrom: String(id)
+        };
+    }
 
     if (decoded.role !== 'USER') return null;
 
@@ -173,6 +188,17 @@ export const authMiddleware = (req, res, next) => {
             req.user.platformUserId = String(decoded.userId);
             if (normalizedDecoded.role === 'USER' && doc.isActive === false) {
                 return sendError(res, 401, 'User account is deactivated');
+            }
+            if (doc.bridgedFrom) {
+                req.user.platformDeliveryPartnerId = doc.bridgedFrom;
+                // Food only signs in approved riders, but a token outlives a
+                // later rejection -- and QC's own admin can bar the rider here.
+                if (doc.status !== 'approved') {
+                    return sendError(res, 403, 'Your delivery account is not approved for quick commerce deliveries.');
+                }
+                // Food tokens carry no version of their own; the grocery row's
+                // counter belongs to QC's own login, so it is not compared.
+                return next();
             }
 
             // A token minted before the latest login belongs to a device that has

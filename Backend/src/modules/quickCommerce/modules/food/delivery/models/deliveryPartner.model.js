@@ -97,6 +97,17 @@ const deliveryPartnerSchema = new mongoose.Schema(
             default: null,
             index: true
         },
+        /**
+         * The food_delivery_partners row this rider signed up with, when they
+         * came in through the rider app rather than QC's own registration.
+         * Set by core/identity/qcRiderBridge.js, which lets a food rider's
+         * token work here and keeps availability and position in step. No ref:
+         * the model lives in another vertical (see tests/qc.smoke.mjs).
+         */
+        platformDeliveryPartnerId: {
+            type: mongoose.Schema.Types.ObjectId,
+            default: null
+        },
         rejectionReason: { type: String },
         rejectedAt: { type: Date },
         approvedAt: { type: Date },
@@ -156,6 +167,11 @@ const deliveryPartnerSchema = new mongoose.Schema(
 
 // Indices
 deliveryPartnerSchema.index({ lastLocation: '2dsphere' });
+// One grocery row per food rider. Partial, so the many unlinked rows (null) do not collide.
+deliveryPartnerSchema.index(
+    { platformDeliveryPartnerId: 1 },
+    { unique: true, partialFilterExpression: { platformDeliveryPartnerId: { $type: 'objectId' } } }
+);
 
 export const FoodDeliveryPartner = mongoose.models.QCDeliveryPartner || mongoose.model('QCDeliveryPartner', deliveryPartnerSchema, 'qc_delivery_partners');
 

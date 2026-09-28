@@ -8,6 +8,7 @@ import { FoodOrder } from '../../orders/models/order.model.js';
 import { uploadImageBuffer } from '../../../../services/cloudinary.service.js';
 import { ValidationError } from '../../../../core/auth/errors.js';
 import { getDeliveryCashLimitSettings } from '../../admin/services/admin.service.js';
+import { syncQcFromFoodRider } from '../../../../core/identity/qcRiderBridge.js';
 
 /**
  * The documents the admin asked for, as the app sent them.
@@ -421,6 +422,9 @@ export const updateDeliveryAvailability = async (userId, payload) => {
         partner.lastLocationAt = new Date();
     }
     await partner.save();
+    // The same rider in the quick-commerce pool goes online/offline and moves
+    // with this one, so grocery dispatch can find them. Never throws.
+    await syncQcFromFoodRider(partner);
     return { availabilityStatus: partner.availabilityStatus };
 };
 

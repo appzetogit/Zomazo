@@ -106,6 +106,25 @@ export const initSocket = async (rootIo) => {
                     })
                     .catch(() => next(new Error('AUTH_INVALID')));
             }
+            // Same for a rider from the platform rider app: offers are emitted to
+            // delivery:<qc_delivery_partners id>, and their token names the food
+            // partner. The bridge maps it (creating the grocery row if need be).
+            if (String(decoded.role || '').toUpperCase() === 'DELIVERY_PARTNER' && decoded.userId) {
+                return import('../modules/food/delivery/models/deliveryPartner.model.js')
+                    .then(async ({ FoodDeliveryPartner: QCPartner }) => {
+                        if (await QCPartner.exists({ _id: decoded.userId })) return null;
+                        const { resolveQcPartnerForFoodRider } = await import('../../../core/identity/qcRiderBridge.js');
+                        return resolveQcPartnerForFoodRider(decoded.userId);
+                    })
+                    .then((bridged) => {
+                        if (bridged) {
+                            socket.user.userId = String(bridged._id);
+                            socket.user.platformDeliveryPartnerId = String(decoded.userId);
+                        }
+                        next();
+                    })
+                    .catch(() => next(new Error('AUTH_INVALID')));
+            }
             return next();
         } catch (err) {
             logger.error(`Socket auth failed for socket ${socket.id}: ${err.message}`);
