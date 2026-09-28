@@ -984,6 +984,35 @@ export async function confirmReachedDropDelivery(orderId, deliveryPartnerId) {
   return sanitizeOrderForDeliveryPartner(order);
 }
 
+/*
+ * Wrong handover codes. The code is 4 digits and a wrong guess cost nothing,
+ * so a rider could try all 10,000 and "deliver" without the customer. After 5
+ * wrong tries the code is replaced and the new one sent to the customer, so
+ * guessing starts over against a code the rider has never seen. (Food and
+ * Quick got this on 22 Sep; the Shop's copy was missed.)
+ */
+const MAX_HANDOVER_ATTEMPTS = 5;
+async function rejectWrongHandoverCode(order) {
+  const res = await Order.collection.findOneAndUpdate(
+    { _id: order._id },
+    { $inc: { dropOtpAttempts: 1 } },
+    { returnDocument: 'after', projection: { dropOtpAttempts: 1 } },
+  );
+  const attempts = Number((res?.value ?? res)?.dropOtpAttempts || 0);
+  if (attempts >= MAX_HANDOVER_ATTEMPTS) {
+    const fresh = generateFourDigitDeliveryOtp();
+    await Order.collection.updateOne(
+      { _id: order._id },
+      { $set: { deliveryOtp: fresh, dropOtpAttempts: 0 } },
+    );
+    order.deliveryOtp = fresh;
+    emitDeliveryDropOtpToUser(order, fresh);
+    throw new ValidationError('Too many wrong codes. The customer has been sent a new code.');
+  }
+  const left = MAX_HANDOVER_ATTEMPTS - attempts;
+  throw new ValidationError(`Invalid OTP. Ask the customer for the code shown in their app. ${left} ${left === 1 ? 'try' : 'tries'} left.`);
+}
+
 export async function verifyDropOtpDelivery(orderId, deliveryPartnerId, otp) {
   const identity = buildOrderIdentityFilter(orderId);
   const order = await Order.findOne(identity).select('+deliveryOtp');
@@ -1009,9 +1038,7 @@ export async function verifyDropOtpDelivery(orderId, deliveryPartnerId, otp) {
 
   const expected = String(order.deliveryOtp || '').trim();
   if (!expected || expected !== otpStr) {
-    throw new ValidationError(
-      'Invalid OTP. Ask the customer for the code shown in their app.',
-    );
+    await rejectWrongHandoverCode(order);
   }
 
   if (!order.deliveryVerification) order.deliveryVerification = { dropOtp: {} };
@@ -1063,7 +1090,7 @@ export async function completeDelivery(orderId, deliveryPartnerId, body = {}) {
       order.markModified('deliveryVerification.dropOtp.verified');
       logger.info(`[DeliveryComplete] OTP verified during completion call for ${order._id}`);
     } else {
-      throw new ValidationError('Invalid handover OTP provided.');
+      await rejectWrongHandoverCode(orderWithSecret || order);
     }
   }
 
