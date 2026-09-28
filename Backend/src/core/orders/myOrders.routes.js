@@ -8,6 +8,7 @@ import { listMyOrders } from './myOrders.service.js';
  * auth in routes/index.js, like /v1/food/user.
  *
  *   ?service=food|quick|medical|taxi|parcel|rental|services
+ *   ?service=rides|quick_all          taxi+parcel+rental, quick+medical
  *   ?state=ongoing|past
  *   ?before=<ISO date from nextBefore>   next page
  *   ?limit=1..50                         default 20

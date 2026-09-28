@@ -152,7 +152,8 @@ async function rides({ userId, before, limit }) {
       state: rideState(d.status),
       statusLabel: d.status === 'completed' ? 'Completed' : String(d.status).startsWith('cancel') ? 'Cancelled' : humanize(d.status),
       createdAt: d.createdAt,
-      route: `/taxi/rides/${d._id}`,
+      // The taxi app's own ride screen; it loads the ride by id, parcels included.
+      route: `/taxi/user/ride/detail/${d._id}`,
     };
   });
 }
@@ -179,13 +180,23 @@ async function bookings({ userIds, before, limit }) {
     state: bookingState(d.status),
     statusLabel: humanize(d.status),
     createdAt: d.createdAt,
-    route: `/services/bookings/${d._id}`,
+    // No customer-facing Services app has a booking screen yet, so there is
+    // nowhere to send the customer; the row is listed but does not open.
+    route: null,
   }));
 }
 
 /* ------------------------------------------------------------------ list */
 
 const SERVICE_FILTERS = ['food', 'quick', 'medical', 'taxi', 'parcel', 'rental', 'services', 'shop'];
+
+// Filters the customer thinks of as one app. Rides, parcels and rentals are
+// all booked in the taxi app; medicines are ordered in the quick app. The
+// single-service filters above still pick out one kind.
+const SERVICE_GROUPS = {
+  rides: ['taxi', 'parcel', 'rental'],
+  quick_all: ['quick', 'medical'],
+};
 
 /**
  * @param {string} userId  the signed-in customer's platform id
@@ -196,7 +207,8 @@ export async function listMyOrders(userId, query = {}) {
   if (!isId(userId)) return { items: [], nextBefore: null, ongoingCount: 0 };
   const limit = Math.min(50, Math.max(1, Number(query.limit) || 20));
   const before = query.before && !Number.isNaN(Date.parse(query.before)) ? new Date(query.before) : new Date(Date.now() + 60_000);
-  const service = SERVICE_FILTERS.includes(query.service) ? query.service : '';
+  const service = SERVICE_FILTERS.includes(query.service) || SERVICE_GROUPS[query.service] ? query.service : '';
+  const kinds = SERVICE_GROUPS[service] || (service ? [service] : []);
   const state = query.state === 'ongoing' || query.state === 'past' ? query.state : '';
 
   const me = await coll('users').findOne({ _id: oid(userId) }, { projection: { phone: 1 } });
@@ -207,17 +219,17 @@ export async function listMyOrders(userId, query = {}) {
   ]);
 
   // Each source is read one page deep; after merging, the page is exact.
-  const want = (keys) => !service || keys.includes(service);
+  const want = (keys) => !kinds.length || keys.some((k) => kinds.includes(k));
   const lists = await Promise.all([
-    want(['food']) ? storeOrders({ collection: 'food_orders', sellers: 'food_restaurants', userIds: [oid(userId)], before, limit, key: 'food', route: (id) => `/food/orders/${id}` }) : [],
-    want(['quick', 'medical']) ? storeOrders({ collection: 'qc_orders', sellers: 'qc_restaurants', userIds: qcIds, before, limit, key: 'quick', route: (id) => `/qc/order/${id}` }) : [],
+    want(['food']) ? storeOrders({ collection: 'food_orders', sellers: 'food_restaurants', userIds: [oid(userId)], before, limit, key: 'food', route: (id) => `/food/user/orders/${id}` }) : [],
+    want(['quick', 'medical']) ? storeOrders({ collection: 'qc_orders', sellers: 'qc_restaurants', userIds: qcIds, before, limit, key: 'quick', route: (id) => `/quick/orders/${id}` }) : [],
     want(['taxi', 'parcel', 'rental']) ? rides({ userId, before, limit }) : [],
     want(['services']) ? bookings({ userIds: spIds, before, limit }) : [],
     want(['shop']) ? storeOrders({ collection: 'ecom_orders', sellers: 'ecom_sellers', userIds: shopIds, before, limit, key: 'shop', route: (id) => `/shop/orders/${id}`, sellerField: 'sellerId', nameField: 'sellerName' }) : [],
   ]);
 
   let rows = lists.flat();
-  if (service) rows = rows.filter((r) => r.service === service);
+  if (kinds.length) rows = rows.filter((r) => kinds.includes(r.service));
   if (state === 'ongoing') rows = rows.filter((r) => r.state === 'ongoing');
   if (state === 'past') rows = rows.filter((r) => r.state !== 'ongoing');
   rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

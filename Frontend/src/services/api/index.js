@@ -2764,6 +2764,15 @@ export const uploadAPI = {
 };
 /** Order API (user app – Bearer USER token). Minimal calls: single create/verify, list/details cached by caller. */
 export const orderAPI = {
+  /**
+   * GET /platform/me/orders (Bearer USER): the customer's orders from every
+   * service in one newest-first list. params: service, state, before, limit.
+   */
+  getAllMyOrders: (params = {}) =>
+    apiClient.get("/platform/me/orders", {
+      params,
+      contextModule: "user",
+    }),
   calculateOrder: (payload) =>
     apiClient.post("/food/orders/calculate", payload ?? {}, {
       contextModule: "user",

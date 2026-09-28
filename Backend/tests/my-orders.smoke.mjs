@@ -93,16 +93,18 @@ await check('each row names what it was and opens its own detail screen', async 
   const by = Object.fromEntries(all.items.map((i) => [i.service, i]));
   assert.equal(by.food.title, 'Joy');
   assert.equal(all.items.find((i) => i.number === 'FOD-1').subtitle, '2 × Paneer Tikka, +1 more');
-  assert.equal(all.items.find((i) => i.number === 'FOD-1').route, `/food/orders/${food1}`);
+  assert.equal(all.items.find((i) => i.number === 'FOD-1').route, `/food/user/orders/${food1}`);
   assert.equal(by.medical.title, 'Sharma Medical');
-  assert.equal(by.medical.route, `/qc/order/${med}`);
+  assert.equal(by.medical.route, `/quick/orders/${med}`);
   assert.equal(by.taxi.title, 'Ride to Tea Garden');
   assert.equal(by.taxi.subtitle, 'Bus Stand → Tea Garden');
-  assert.equal(by.taxi.route, `/taxi/rides/${ride}`);
+  assert.equal(by.taxi.route, `/taxi/user/ride/detail/${ride}`);
   assert.equal(by.parcel.title, 'Parcel to Office');
   assert.equal(by.services.title, 'AC repair');
   assert.match(by.services.subtitle, /^For .*, 10:00$/);
   assert.equal(by.services.amount, 499);
+  // No customer app has a booking screen, so the row does not link anywhere.
+  assert.equal(by.services.route, null);
 });
 await check('states and labels', async () => {
   const s = Object.fromEntries(all.items.map((i) => [i.number, [i.state, i.statusLabel]]));
@@ -123,6 +125,10 @@ await check('ongoing only, and past only', async () => {
 await check('one service at a time', async () => {
   assert.deepEqual((await listMyOrders(String(asha), { service: 'medical' })).items.map((i) => i.number), ['MED-1']);
   assert.deepEqual((await listMyOrders(String(asha), { service: 'food' })).items.map((i) => i.number), ['FOD-3', 'FOD-1']);
+});
+await check('one app at a time: rides with parcels, quick with medicines', async () => {
+  assert.deepEqual((await listMyOrders(String(asha), { service: 'rides' })).items.map((i) => i.service), ['parcel', 'taxi']);
+  assert.deepEqual((await listMyOrders(String(asha), { service: 'quick_all' })).items.map((i) => i.number), ['MED-1', 'QC-1']);
 });
 await check('paging with nextBefore walks the whole list once', async () => {
   const seen = [];

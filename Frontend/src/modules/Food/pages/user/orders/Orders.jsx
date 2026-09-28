@@ -655,6 +655,7 @@ Order again from this restaurant in the ${companyName} app.`
             <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-gray-200 cursor-pointer" />
           </Link>
           <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-white">Your Orders</h1>
+        <Link to="/user/orders/all" className="ml-auto text-sm font-medium text-[#EB590E]">All orders</Link>
         </div>
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 text-[#EB590E] animate-spin" />
@@ -671,6 +672,7 @@ Order again from this restaurant in the ${companyName} app.`
             <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-gray-200 cursor-pointer" />
           </Link>
           <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-white">Your Orders</h1>
+        <Link to="/user/orders/all" className="ml-auto text-sm font-medium text-[#EB590E]">All orders</Link>
         </div>
         <div className="px-4 py-8 text-center">
           <p className="text-gray-600 dark:text-gray-400">You haven't placed any orders yet</p>
@@ -690,6 +692,7 @@ Order again from this restaurant in the ${companyName} app.`
           <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-gray-200 cursor-pointer" />
         </Link>
         <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-white">Your Orders</h1>
+        <Link to="/user/orders/all" className="ml-auto text-sm font-medium text-[#EB590E]">All orders</Link>
       </div>
 
       {/* Search Bar */}

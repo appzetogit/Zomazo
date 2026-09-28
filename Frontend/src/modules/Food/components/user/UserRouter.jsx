@@ -35,6 +35,7 @@ const AddressSelectorPage = lazy(() => import("@food/pages/user/cart/AddressSele
 
 // Orders
 const Orders = lazy(() => import("@food/pages/user/orders/Orders"))
+const AllOrders = lazy(() => import("@food/pages/user/orders/AllOrders"))
 const OrderTracking = lazy(() => import("@food/pages/user/orders/OrderTracking"))
 const OrderInvoice = lazy(() => import("@food/pages/user/orders/OrderInvoice"))
 const UserOrderDetails = lazy(() => import("@food/pages/user/orders/UserOrderDetails"))
@@ -135,6 +136,15 @@ export default function UserRouter() {
             element={
               <ProtectedRoute requiredRole="user" loginPath="/login">
                 <Orders />
+              </ProtectedRoute>
+            }
+          />
+          {/* Every service in one list; a static path, so it wins over orders/:orderId. */}
+          <Route
+            path="orders/all"
+            element={
+              <ProtectedRoute requiredRole="user" loginPath="/login">
+                <AllOrders />
               </ProtectedRoute>
             }
           />
