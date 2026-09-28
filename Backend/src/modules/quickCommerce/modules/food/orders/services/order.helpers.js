@@ -319,7 +319,11 @@ function buildDeliveryPromise(order, { minutes, pickedUp, status }) {
   if (!Number.isFinite(legToCustomer) || legToCustomer <= 0) return null;
 
   const alreadyPacked = ['ready_for_pickup', 'reached_pickup'].includes(String(status));
-  const packing = alreadyPacked ? 0 : PACKING_MINUTES;
+  // The store's own estimate from when it accepted, counted down; the flat
+  // default only when it gave none.
+  const readyAt = order?.estimatedReadyAt ? new Date(order.estimatedReadyAt).getTime() : NaN;
+  const storePacking = Number.isFinite(readyAt) ? Math.max(0, Math.ceil((readyAt - Date.now()) / 60000)) : null;
+  const packing = alreadyPacked ? 0 : (storePacking ?? PACKING_MINUTES);
   const legToSeller = Number.isFinite(minutes) ? minutes : 0;
 
   return Math.ceil(Math.max(packing, legToSeller) + legToCustomer);

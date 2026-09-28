@@ -1295,6 +1295,7 @@ export async function updateOrderStatusRestaurant(
   orderStatus,
   note = "",
   actor = { role: "RESTAURANT", id: null },
+  { prepTimeMins = null } = {},
 ) {
   const isAdmin = String(actor?.role || "").toUpperCase() === "ADMIN";
   // Pickup and delivery are the rider's steps (handover code, cash, ledger).
@@ -1378,6 +1379,14 @@ export async function updateOrderStatusRestaurant(
   if (note && String(note).trim()) {
     order.note = String(note).trim();
   }
+  // The kitchen's own estimate, given when it accepts. Stored as the moment the
+  // food should be ready so every later read of the ETA counts down to it.
+  if (["confirmed", "preparing"].includes(String(orderStatus)) && Number(prepTimeMins) > 0) {
+    order.prepTimeMins = Math.round(Number(prepTimeMins));
+    order.estimatedReadyAt = new Date(Date.now() + order.prepTimeMins * 60000);
+  } else if (String(orderStatus) === "ready_for_pickup") {
+    order.estimatedReadyAt = order.estimatedReadyAt && order.estimatedReadyAt < new Date() ? order.estimatedReadyAt : new Date();
+  }
 
   pushStatusHistory(order, {
     byRole: isAdmin ? "ADMIN" : "RESTAURANT",
@@ -1421,6 +1430,8 @@ export async function updateOrderStatusRestaurant(
         orderId: order._id.toString(),
         orderStatus: order.orderStatus,
         note: order.note || note || "",
+        prepTimeMins: order.prepTimeMins ?? null,
+        estimatedReadyAt: order.estimatedReadyAt || null,
         title,
         message: body,
       };

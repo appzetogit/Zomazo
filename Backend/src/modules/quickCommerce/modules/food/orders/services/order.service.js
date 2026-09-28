@@ -2029,6 +2029,7 @@ export async function updateOrderStatusRestaurant(
   restaurantId,
   orderStatus,
   note = "",
+  { prepTimeMins = null } = {},
 ) {
   // Pickup and delivery are the rider's steps (handover code, cash, ledger). A
   // store could mark its own order delivered -- which also recorded a cash
@@ -2092,6 +2093,15 @@ export async function updateOrderStatusRestaurant(
   // 'created' AND 'confirmed') later cancelled confirmed, actively-dispatching orders as
   // "Not accepted by restaurant". Retire the deadline now that the restaurant has acted.
   order.acceptanceDeadlineAt = null;
+
+  // The store's own packing estimate, given when it accepts. Stored as the moment
+  // the order should be packed so the customer ETA counts down to it.
+  if (["confirmed", "preparing"].includes(String(orderStatus)) && Number(prepTimeMins) > 0) {
+    order.prepTimeMins = Math.round(Number(prepTimeMins));
+    order.estimatedReadyAt = new Date(Date.now() + order.prepTimeMins * 60000);
+  } else if (String(orderStatus) === "ready_for_pickup") {
+    order.estimatedReadyAt = order.estimatedReadyAt && order.estimatedReadyAt < new Date() ? order.estimatedReadyAt : new Date();
+  }
 
   const normalizedPaymentMethod = String(order.payment?.method || "cash").toLowerCase();
   const prevPaymentStatus = String(order.payment?.status || "cod_pending").toLowerCase();
@@ -2165,6 +2175,8 @@ export async function updateOrderStatusRestaurant(
         orderStatus: order.orderStatus,
         note: order.note || "",
         statusNote: note || "",
+        prepTimeMins: order.prepTimeMins ?? null,
+        estimatedReadyAt: order.estimatedReadyAt || null,
         title,
         message: body,
       };

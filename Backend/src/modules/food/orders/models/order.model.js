@@ -488,6 +488,13 @@ const orderSchema = new mongoose.Schema(
             default: () => ({})
         },
         note: { type: String, default: '', trim: true },
+        /**
+         * Minutes the kitchen/store said it needs when accepting, and the moment
+         * that lands. The customer ETA counts down to readyAt instead of a flat
+         * default; null until the outlet accepts with a time.
+         */
+        prepTimeMins: { type: Number, default: null, min: 1, max: 240 },
+        estimatedReadyAt: { type: Date, default: null },
         sendCutlery: { type: Boolean, default: true },
         deliveryFleet: { type: String, default: 'standard', trim: true },
         scheduledAt: { type: Date, default: null },

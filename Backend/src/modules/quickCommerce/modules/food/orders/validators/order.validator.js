@@ -179,7 +179,9 @@ export function validateOrderStatusDto(body) {
             'delivered',
             'cancelled_by_restaurant'
         ]),
-        note: z.string().optional()
+        note: z.string().optional(),
+        // Kitchen/packing time given on accept; drives the customer ETA.
+        prepTimeMins: z.preprocess((v) => (v === null || v === '' ? undefined : v), z.coerce.number().int().min(1).max(240).optional())
     });
     const result = schema.safeParse(body);
     if (!result.success) {

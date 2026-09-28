@@ -473,6 +473,13 @@ const orderSchema = new mongoose.Schema(
         deliveryInstructions: { type: String, default: '', trim: true },
         acceptanceWindowSeconds: { type: Number, default: 240, min: 1 },
         acceptanceDeadlineAt: { type: Date, default: null },
+        /**
+         * Minutes the kitchen/store said it needs when accepting, and the moment
+         * that lands. The customer ETA counts down to readyAt instead of a flat
+         * default; null until the outlet accepts with a time.
+         */
+        prepTimeMins: { type: Number, default: null, min: 1, max: 240 },
+        estimatedReadyAt: { type: Date, default: null },
         /** Idempotency guard so retries/duplicate calls never double-push the "new order" alert. */
         restaurantNotifiedAt: { type: Date, default: null },
         /** Set once stock was decremented for this order; absent on pre-inventory orders. */

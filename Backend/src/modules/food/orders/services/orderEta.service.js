@@ -119,6 +119,23 @@ const riderPoint = (order) =>
   readPoint(order?.deliveryState?.currentLocation) ||
   readPoint(order?.dispatch?.lastLocation);
 
+/** Once these are reached the food is cooked; nothing is left to wait for. */
+const COOKED_STATUSES = new Set(['ready_for_pickup', 'reached_pickup', 'picked_up', 'reached_drop']);
+
+/**
+ * Minutes of cooking still ahead, or null when the kitchen gave no time.
+ *
+ * The restaurant says how long it needs when it accepts; that is stored as
+ * `estimatedReadyAt`. Counting down to it is the difference between an ETA
+ * that honours "this biryani takes 35 minutes" and one that assumes 15.
+ */
+export const remainingPrepMinutes = (order, now = Date.now()) => {
+  if (COOKED_STATUSES.has(String(order?.orderStatus || '').toLowerCase())) return 0;
+  const readyAt = order?.estimatedReadyAt ? new Date(order.estimatedReadyAt).getTime() : NaN;
+  if (!Number.isFinite(readyAt)) return null;
+  return Math.max(0, Math.ceil((readyAt - now) / 60000));
+};
+
 /**
  * `{source, target, minutes, distanceKm, tripDistanceKm}` for [order].
  *
@@ -147,6 +164,8 @@ export const buildOrderEta = (order, { prepMinutes = DEFAULT_PREP_MINUTES } = {}
   if (!order) return nothing;
 
   const status = String(order.orderStatus || '').toLowerCase();
+  const kitchen = remainingPrepMinutes(order);
+  const prepLeft = kitchen ?? prepMinutes;
   const restaurant = restaurantPoint(order);
   const customer = customerPoint(order);
   const tripDistanceKm = roadKm(restaurant, customer);
@@ -180,12 +199,16 @@ export const buildOrderEta = (order, { prepMinutes = DEFAULT_PREP_MINUTES } = {}
 
     // Still collecting. The distance reported is the leg they are on, but the
     // minutes cover both legs, because that is what the customer is waiting.
+    // A rider who arrives before the food is cooked waits for it, so the
+    // kitchen's remaining time wins when it is the longer of the two.
     const legToRestaurant = roadKm(rider, restaurant);
     if (legToRestaurant !== null) {
+      const travel = minutesFor(legToRestaurant + (tripDistanceKm ?? 0));
+      const waitingOnKitchen = kitchen && tripDistanceKm !== null ? kitchen + minutesFor(tripDistanceKm) : 0;
       return {
         source: 'live',
         target: 'restaurant',
-        minutes: minutesFor(legToRestaurant + (tripDistanceKm ?? 0)),
+        minutes: Math.max(travel, waitingOnKitchen),
         distanceKm: legToRestaurant,
         tripDistanceKm,
       };
@@ -198,7 +221,7 @@ export const buildOrderEta = (order, { prepMinutes = DEFAULT_PREP_MINUTES } = {}
   return {
     source: 'estimate',
     target: 'customer',
-    minutes: Math.max(1, Math.round(prepMinutes) + minutesFor(tripDistanceKm)),
+    minutes: Math.max(1, Math.round(prepLeft) + minutesFor(tripDistanceKm)),
     distanceKm: tripDistanceKm,
     tripDistanceKm,
   };
