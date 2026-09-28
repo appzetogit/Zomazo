@@ -334,6 +334,8 @@ export default function CartPage() {
               {row("Items", quote.subtotal)}
               {row("Delivery", quote.deliveryFee)}
               {row("Delivery GST", quote.deliveryFeeGst)}
+              {/* Only present while the admin has a surge on for this zone. */}
+              {row("Surge (busy area)", quote.surgeAmount)}
               {row("Platform fee", quote.platformFee)}
               {row("Taxes", quote.tax)}
               {quote.discount ? <div className="flex justify-between text-[14px] text-wh-success"><span>Discount</span><span>−₹{formatMoney(quote.discount)}</span></div> : null}

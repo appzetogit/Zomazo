@@ -398,7 +398,9 @@ const rewriteAdminVertical = (url) => {
  * deletes, in the body for the rest, because that is where each already carries
  * its payload.
  */
-const ZONE_PATH = /(^|\/)(qc|food)\/admin\/zones(\/|$|\?)/;
+// Zone surge is per zone too, so it rides along: its list has to be drawn from
+// the map the panel is showing, and its writes checked against that map.
+const ZONE_PATH = /(^|\/)(qc|food)\/admin\/(zones|delivery\/zone-surge)(\/|$|\?)/;
 
 const applyZoneVertical = (config) => {
   const entry = currentQcBase();

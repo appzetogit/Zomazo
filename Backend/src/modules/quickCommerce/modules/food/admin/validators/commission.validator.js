@@ -86,3 +86,30 @@ export const validateDeliveryCommissionRuleDto = (body) => {
         status: typeof result.data.status === 'boolean' ? result.data.status : undefined
     };
 };
+
+const zoneSurgeUpsertSchema = z.object({
+    zoneId: z.string().min(1, 'zoneId is required'),
+    isEnabled: z.boolean().optional(),
+    surgeAmount: z.number().min(0, 'surgeAmount must be 0 or greater')
+});
+
+/** Same contract as food's, so the shared Fee Settings screen needs no branch. */
+export const validateZoneSurgeUpsertDto = (body) => {
+    const normalized = {
+        zoneId: body?.zoneId ? String(body.zoneId) : '',
+        isEnabled: body?.isEnabled,
+        surgeAmount: Number(body?.surgeAmount)
+    };
+    const result = zoneSurgeUpsertSchema.safeParse(normalized);
+    if (!result.success) {
+        throw new ValidationError(result.error.errors[0].message);
+    }
+    if (!mongoose.Types.ObjectId.isValid(result.data.zoneId)) {
+        throw new ValidationError('Invalid zoneId');
+    }
+    return {
+        zoneId: result.data.zoneId,
+        isEnabled: typeof result.data.isEnabled === 'boolean' ? result.data.isEnabled : undefined,
+        surgeAmount: Math.round((Number(result.data.surgeAmount) || 0) * 100) / 100
+    };
+};

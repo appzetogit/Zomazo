@@ -220,7 +220,7 @@ export function OrderDetail() {
           ))}
         </ul>
         <div className="my-3 border-t border-wh-border" />
-        {[["Delivery", p.deliveryFee], ["Platform fee", p.platformFee], ["Taxes", Number(p.tax || 0) + Number(p.deliveryFeeGst || 0)]].map(([l, v]) =>
+        {[["Delivery", p.deliveryFee], ["Surge (busy area)", p.surgeAmount], ["Platform fee", p.platformFee], ["Taxes", Number(p.tax || 0) + Number(p.deliveryFeeGst || 0)]].map(([l, v]) =>
           Number(v) ? <div key={l} className="flex justify-between text-[13px] text-wh-muted"><span>{l}</span><span>₹{formatMoney(v)}</span></div> : null,
         )}
         {Number(p.discount) ? <div className="flex justify-between text-[13px] text-wh-success"><span>Discount</span><span>−₹{formatMoney(p.discount)}</span></div> : null}

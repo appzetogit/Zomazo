@@ -25,6 +25,8 @@ import { zoneModelFor, ZONE_VERTICALS } from '../../shared/zoneServiceability.js
  * a request with a missing parameter edit medical's map.
  */
 const zonesOf = (vertical) => zoneModelFor(vertical);
+import { QCDeliverySurgeZone } from '../models/deliverySurgeZone.model.js';
+import { normalizeZoneVertical } from '../../shared/zoneServiceability.js';
 import { invalidateActiveZonesCache } from '../../shared/zoneServiceability.js';
 import { FoodCategory } from '../models/category.model.js';
 import { FoodItem } from '../models/food.model.js';
@@ -6631,4 +6633,64 @@ export function getAdminPermissionCatalog() {
             actions: ADMIN_FULL_PERMISSIONS[section],
         })),
     };
+}
+
+// ----- Zone surge -----
+// Ported from food (food admin.service getDeliveryZoneSurgeConfigs and friends),
+// reading this vertical's own zone map. Every zone is listed, configured or not,
+// so the screen can switch a surge on for a zone that has never had one.
+
+const surgeRound = (value) => Math.round((Number(value) || 0) * 100) / 100;
+
+export async function getDeliveryZoneSurgeConfigs(vertical) {
+    const Zone = zonesOf(vertical);
+    const [zones, configs] = await Promise.all([
+        Zone.find({}).select('_id name zoneName isActive').sort({ createdAt: -1 }).lean(),
+        QCDeliverySurgeZone.find({}).lean(),
+    ]);
+    const configMap = new Map(configs.map((c) => [String(c.zoneId), c]));
+    const surgeConfigs = zones.map((zone) => {
+        const cfg = configMap.get(String(zone._id));
+        return {
+            zoneId: zone._id,
+            zoneName: zone.zoneName || zone.name || '',
+            zoneActive: zone.isActive !== false,
+            isEnabled: cfg?.isEnabled === true,
+            surgeAmount: surgeRound(cfg?.surgeAmount),
+        };
+    });
+    return { surgeConfigs };
+}
+
+async function assertSurgeZone(zoneId, vertical) {
+    const exists = await zonesOf(vertical).exists({ _id: zoneId });
+    if (!exists) throw new ValidationError('Zone not found');
+}
+
+export async function upsertDeliveryZoneSurgeConfig(body, adminId = null, vertical) {
+    await assertSurgeZone(body.zoneId, vertical);
+    const payload = { surgeAmount: surgeRound(body.surgeAmount), vertical: normalizeZoneVertical(vertical) };
+    if (typeof body.isEnabled === 'boolean') payload.isEnabled = body.isEnabled;
+    if (adminId && mongoose.Types.ObjectId.isValid(adminId)) {
+        payload.updatedBy = new mongoose.Types.ObjectId(adminId);
+    }
+    return QCDeliverySurgeZone.findOneAndUpdate(
+        { zoneId: body.zoneId },
+        { $set: payload, $setOnInsert: { zoneId: body.zoneId } },
+        { new: true, upsert: true }
+    ).lean();
+}
+
+export async function toggleDeliveryZoneSurgeStatus(zoneId, isEnabled, adminId = null, vertical) {
+    if (!zoneId || !mongoose.Types.ObjectId.isValid(zoneId)) return null;
+    await assertSurgeZone(zoneId, vertical);
+    const update = { isEnabled: Boolean(isEnabled), vertical: normalizeZoneVertical(vertical) };
+    if (adminId && mongoose.Types.ObjectId.isValid(adminId)) {
+        update.updatedBy = new mongoose.Types.ObjectId(adminId);
+    }
+    return QCDeliverySurgeZone.findOneAndUpdate(
+        { zoneId },
+        { $set: update, $setOnInsert: { zoneId, surgeAmount: 0 } },
+        { new: true, upsert: true }
+    ).lean();
 }

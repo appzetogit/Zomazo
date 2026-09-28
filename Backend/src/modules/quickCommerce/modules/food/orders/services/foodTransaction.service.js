@@ -110,12 +110,15 @@ export async function createInitialTransaction(order) {
     const platformFee = Number(order.pricing?.platformFee) || 0;
     const deliveryFee = Number(order.pricing?.deliveryFee) || 0;
     const deliveryFeeGst = Number(order.pricing?.deliveryFeeGst) || 0;
+    // Collected from the customer and paid out inside riderShare, so it is added
+    // here to net to nothing -- otherwise every surged order books a loss.
+    const surgeAmount = Number(order.pricing?.surgeAmount) || 0;
     const tax = Number(order.pricing?.tax) || 0;
 
     let restaurantNet = subtotal + packagingFee - restaurantCommission;
     // The 18% GST on the delivery fee is collected for the government, like the
     // item GST, so it is booked as tax below rather than as platform profit.
-    let platformNetProfit = platformFee + deliveryFee + restaurantCommission - riderShare;
+    let platformNetProfit = platformFee + deliveryFee + surgeAmount + restaurantCommission - riderShare;
     let adminDiscountShare = 0;
     let restaurantDiscountShare = 0;
     let discountAdminBearPercentage = 0;
@@ -168,6 +171,7 @@ export async function createInitialTransaction(order) {
             packagingFee: packagingFee,
             deliveryFee: deliveryFee,
             deliveryFeeGst: deliveryFeeGst,
+            surgeAmount: surgeAmount,
             platformFee: platformFee,
             restaurantCommission: restaurantCommission,
             discount: discount,

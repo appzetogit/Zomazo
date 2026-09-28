@@ -415,16 +415,13 @@ router.patch(
 );
 router.get('/delivery/partners', adminController.getDeliveryPartners);
 /*
- * Zone surge exists only in food. The shared Delivery Boy Commission and Fee
- * Settings screens still ask for it from the quick-commerce panel, and the
- * request fell through to /delivery/:id -- a 500 casting "zone-surge" to an id.
- * Declared ahead of that route, as "none".
+ * Zone surge, as in food: a flat amount per zone added to each delivery and paid
+ * to the rider. Declared ahead of /delivery/:id, which would otherwise take
+ * "zone-surge" for a partner id and 500 casting it.
  */
-router.get('/delivery/zone-surge', (_req, res) => res.status(200).json({
-    success: true,
-    message: 'Zone surge is not used in quick commerce',
-    data: { surgeConfigs: [] },
-}));
+router.get('/delivery/zone-surge', adminController.getDeliveryZoneSurgeConfigs);
+router.put('/delivery/zone-surge', adminController.upsertDeliveryZoneSurgeConfig);
+router.patch('/delivery/zone-surge/:zoneId/status', adminController.toggleDeliveryZoneSurgeStatus);
 router.get('/delivery/:id', adminController.getDeliveryPartnerById);
 router.patch('/delivery/:id/approve', adminController.approveDeliveryPartner);
 router.patch('/delivery/:id/reject', adminController.rejectDeliveryPartner);

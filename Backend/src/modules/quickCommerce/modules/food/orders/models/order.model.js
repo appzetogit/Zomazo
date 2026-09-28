@@ -94,6 +94,8 @@ const pricingSchema = new mongoose.Schema(
         packagingFee: { type: Number, default: 0, min: 0 },
         deliveryFee: { type: Number, default: 0, min: 0 },
         deliveryFeeGst: { type: Number, default: 0, min: 0 },
+        /** The zone's delivery surge at the time of the order; passed to the rider. */
+        surgeAmount: { type: Number, default: 0, min: 0 },
         platformFee: { type: Number, default: 0, min: 0 },
         /** Extra surcharge when user selects Quick Mode (also included in platformFee). */
         quickDeliveryFee: { type: Number, default: 0, min: 0 },
@@ -486,6 +488,8 @@ const orderSchema = new mongoose.Schema(
         deliveryFleet: { type: String, default: 'standard', trim: true },
         scheduledAt: { type: Date, default: null },
         riderEarning: { type: Number, default: 0, min: 0 },
+        /** The part of riderEarning that is zone surge (already inside riderEarning). */
+        riderSurgePay: { type: Number, default: 0, min: 0 },
         // The hold before the restaurant sees a new order (core/orders/orderHold.js):
         // when it ends, and when the order was actually released to the restaurant.
         restaurantReleaseAt: { type: Date, default: null },

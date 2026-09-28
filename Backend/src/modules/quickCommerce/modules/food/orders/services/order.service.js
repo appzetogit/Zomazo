@@ -686,6 +686,7 @@ export async function createOrder(userId, dto) {
       packagingFee: Number(pricingResult.pricing?.packagingFee) || 0,
       deliveryFee: Number(pricingResult.pricing?.deliveryFee) || 0,
       deliveryFeeGst: Number(pricingResult.pricing?.deliveryFeeGst) || 0,
+      surgeAmount: Number(pricingResult.pricing?.surgeAmount) || 0,
       platformFee: Number(pricingResult.pricing?.platformFee) || 0,
       quickDeliveryFee: Number(pricingResult.pricing?.quickDeliveryFee) || 0,
       deliveryMode:
@@ -750,7 +751,11 @@ export async function createOrder(userId, dto) {
       vertical: isMedicalStore(restaurant?.storeType) ? 'medical' : 'quickCommerce',
       zoneId: serviceableZone?._id ? String(serviceableZone._id) : restaurant?.zoneId ? String(restaurant.zoneId) : undefined,
     });
-    const riderEarning = calculateRiderEarning(feeSettings, distanceKm) || 0;
+    // The zone surge the customer paid goes to the rider whole, on top of the
+    // distance-based earning -- it exists to get a rider to take the order.
+    const riderSurgePay = Number(normalizedPricing.surgeAmount) || 0;
+    const riderEarning =
+      Math.round(((calculateRiderEarning(feeSettings, distanceKm) || 0) + riderSurgePay) * 100) / 100;
     
     // Calculate restaurant commission from subtotal
     let restaurantCommission = 0;
@@ -772,6 +777,7 @@ export async function createOrder(userId, dto) {
       (Number.isFinite(normalizedPricing.deliveryFee) ? normalizedPricing.deliveryFee : 0) +
       (Number.isFinite(normalizedPricing.deliveryFeeGst) ? normalizedPricing.deliveryFeeGst : 0) +
       (Number.isFinite(normalizedPricing.platformFee) ? normalizedPricing.platformFee : 0) +
+      riderSurgePay +
       restaurantCommission -
       riderEarning;
 
@@ -836,6 +842,7 @@ export async function createOrder(userId, dto) {
       deliveryFleet: String(dto.deliveryFleet || "standard"),
       scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null,
       riderEarning: Number(riderEarning) || 0,
+      riderSurgePay,
       platformProfit: Number(platformProfit) || 0,
     });
 

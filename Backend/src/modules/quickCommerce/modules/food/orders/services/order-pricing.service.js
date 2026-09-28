@@ -22,6 +22,7 @@ import { AVG_SPEED_KMPH, PACKING_MINUTES } from './order.helpers.js';
 import { withMasterFees } from '../../../../../../core/finance/platformFees.service.js';
 import { isMedicalStore } from '../../shared/storeType.js';
 import { findZoneForPoint, readAddressPoint, ZONE_VERTICALS } from '../../shared/zoneServiceability.js';
+import { zoneSurgeAmount } from '../../admin/models/deliverySurgeZone.model.js';
 
 const round2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
 
@@ -479,10 +480,16 @@ export async function calculateOrderPricing(userId, dto, options = {}) {
   // A pharmacy is priced by the Medical formula when one is set there, and
   // any zone-level setting for the zone this address is in.
   const orderVertical = isMedicalStore(restaurant?.storeType) ? 'medical' : 'quickCommerce';
+  const pricingZoneId = await zoneIdForPricing(restaurant, deliveryAddress, orderVertical);
   const feeSettings = await loadActiveFeeSettings({
     vertical: orderVertical,
-    zoneId: await zoneIdForPricing(restaurant, deliveryAddress, orderVertical),
+    zoneId: pricingZoneId,
   });
+  // The zone's surge, when an admin has switched one on. Read from the same zone
+  // the fee settings came from, so the quote and the placed order (which prices
+  // through here again) charge the same surge. Untaxed and paid to the rider in
+  // full, as in food.
+  const surgeAmount = await zoneSurgeAmount(pricingZoneId);
 
   const packagingFee = 0;
   const platformFee = Number(feeSettings.platformFee || 0);
@@ -603,7 +610,7 @@ export async function calculateOrderPricing(userId, dto, options = {}) {
   const total = round2(
     Math.max(
       0,
-      subtotal + packagingFee + deliveryFee + deliveryFeeGst + platformFee + tax - discount,
+      subtotal + packagingFee + deliveryFee + deliveryFeeGst + surgeAmount + platformFee + tax - discount,
     ),
   );
 
@@ -617,6 +624,7 @@ export async function calculateOrderPricing(userId, dto, options = {}) {
     packagingFee,
     deliveryFee,
     deliveryFeeGst,
+    surgeAmount,
     platformFee,
     discount,
     /*
