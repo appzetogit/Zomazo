@@ -300,6 +300,25 @@ const createQRCode = async (amount, bookingNumber, notes = {}) => {
 };
 
 /**
+ * A payment link's payments, as the QR poll reads them: one captured payment
+ * once the link is fully paid, none before.
+ *
+ * 'partially_paid' used to count as paid too, and the verify step finalises the
+ * booking on any captured payment without comparing amounts -- so paying Rs 1
+ * of a Rs 2000 job completed it and credited the partner in full. Food, Quick
+ * and the Shop dropped 'partially_paid' from their paid states on 22 Sep; this
+ * copy was missed.
+ */
+const paymentLinkPayments = (link) => {
+  if (link?.status !== 'paid') return [];
+  return [{
+    id: link.razorpay_payment_id || `pay_${Date.now()}`,
+    status: 'captured',
+    amount: link.amount_paid
+  }];
+};
+
+/**
  * Get payments for a QR Code or Payment Link
  */
 const getQRCodePayments = async (id) => {
@@ -321,18 +340,7 @@ const getQRCodePayments = async (id) => {
         const link = response.data;
         console.log(`[QR Service] Checking Payment Link ${id} status: ${link.status}`);
 
-        // If link is paid, we returned a captured payment object
-        if (link.status === 'paid' || link.status === 'partially_paid') {
-          return {
-            success: true,
-            payments: [{
-              id: link.razorpay_payment_id || `pay_${Date.now()}`,
-              status: 'captured',
-              amount: link.amount_paid
-            }]
-          };
-        }
-        return { success: true, payments: [] };
+        return { success: true, payments: paymentLinkPayments(link) };
       } catch (linkError) {
         console.error('Payment link fetch error:', linkError.response?.data || linkError.message);
         throw linkError;
@@ -362,6 +370,7 @@ module.exports = {
   refundPayment,
   createQRCode,
   getQRCodePayments,
+  paymentLinkPayments,
   isTestMode: () => !razorpayKeyId() || razorpayKeyId().startsWith('rzp_test')
 };
 
