@@ -53,11 +53,12 @@ function useTypewriter(words, { typeMs = 90, holdMs = 1400, deleteMs = 45 } = {}
   return text
 }
 
-export default function QuickHeader({ etaMinutes = 10 }) {
+export default function QuickHeader() {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const { itemCount } = useQuickCart()
-  const { areaLabel, zoneStatus, requestLocation, locating } = useQuickLocation()
+  // The nearest open store's own delivery time, not a promise made up here.
+  const { areaLabel, zoneStatus, requestLocation, locating, etaMinutes } = useQuickLocation()
   const isHome = /^\/quick\/?$/.test(pathname)
   const initialQ = new URLSearchParams(search).get("q") || ""
   const [q, setQ] = useState(initialQ)
@@ -81,7 +82,7 @@ export default function QuickHeader({ etaMinutes = 10 }) {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-wh-success opacity-60" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-wh-success" />
               </span>
-              {zoneStatus === "out" ? "Not delivering here yet" : `Delivery in ${etaMinutes} minutes`}
+              {zoneStatus === "out" ? "Not delivering here yet" : etaMinutes ? `Delivery in ${etaMinutes} minutes` : "Delivery in minutes"}
             </p>
             <p className="flex items-center gap-1 truncate text-[12px] text-wh-muted">
               <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -96,7 +97,7 @@ export default function QuickHeader({ etaMinutes = 10 }) {
         )}
         {!isHome ? (
           <Link to="/quick" className={cx("flex-1 text-[17px] font-black tracking-tight", focusRing)}>
-            Quick <span className="text-[12px] font-bold text-wh-success">· {etaMinutes} min</span>
+            Quick {etaMinutes ? <span className="text-[12px] font-bold text-wh-success">· {etaMinutes} min</span> : null}
           </Link>
         ) : null}
         <Link to="/quick/favorites" aria-label="Favourites" className={cx("hidden rounded-full bg-white p-2 shadow-sm sm:block", focusRing)}>

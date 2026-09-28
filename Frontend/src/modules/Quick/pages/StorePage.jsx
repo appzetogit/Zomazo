@@ -64,7 +64,7 @@ export default function StorePage() {
   )
   const shown = activeSection === "all" ? sections.flatMap((s) => s.items) : sections.find((s) => String(s.id) === activeSection)?.items || []
   const cardStore = store ? { id: String(store._id), name: store.restaurantName } : undefined
-  const eta = Number(store?.estimatedDeliveryTimeMinutes) || 10
+  const eta = Number(store?.estimatedDeliveryTimeMinutes) || null
   const closed = store && (store.isOpenNow === false || store.isAcceptingOrders === false)
 
   if (error) return <p className="px-4 py-16 text-center text-[14px] text-wh-muted">{error}</p>
@@ -80,7 +80,7 @@ export default function StorePage() {
           <h1 className="truncate text-[20px] font-black tracking-tight text-wh-text">{store?.restaurantName || "Loading…"}</h1>
           <p className="truncate text-[13px] text-wh-muted">{[store?.area, store?.city].filter(Boolean).join(", ")}</p>
           <p className="mt-1 flex flex-wrap items-center gap-3 text-[12px]">
-            <span className="inline-flex items-center gap-1 font-bold text-wh-success"><Clock className="h-3.5 w-3.5" aria-hidden="true" />{eta} min</span>
+            {eta ? <span className="inline-flex items-center gap-1 font-bold text-wh-success"><Clock className="h-3.5 w-3.5" aria-hidden="true" />{eta} min</span> : null}
             {store?.rating ? <span className="inline-flex items-center gap-1 text-wh-muted"><Star className="h-3.5 w-3.5 fill-current text-amber-500" aria-hidden="true" />{Number(store.rating).toFixed(1)}</span> : null}
             {closed ? <span className="font-bold text-wh-deal">Closed right now</span> : null}
           </p>

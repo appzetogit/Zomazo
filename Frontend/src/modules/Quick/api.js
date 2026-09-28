@@ -66,8 +66,9 @@ export const quickAPI = {
   rateOrder: (id, body) => apiClient.patch(`/qc/orders/${id}/ratings`, body, USER).then((r) => data(r).order),
 
   // Coupons the customer can use at this store (admin-wide and the store's own).
+  // "/deals" is the server's ad-blocker-safe alias of /offers (routes/index.js).
   offers: (restaurantId) =>
-    apiClient.get("/qc/restaurant/offers", { ...USER, params: { restaurantId } }).then((r) => data(r).allOffers || []),
+    apiClient.get("/qc/restaurant/deals", { ...USER, params: { restaurantId } }).then((r) => data(r).allOffers || []),
 
   // Favourites: stores ("restaurants") and products ("foods").
   favorites: () => apiClient.get("/qc/user/favorites", USER).then(data),

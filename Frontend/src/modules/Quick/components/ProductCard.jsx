@@ -84,8 +84,9 @@ function AddControl({ product, name, storeTo, store }) {
  * @param store  the store the product belongs to, when the list does not say
  *               (a store's own menu); search results carry it themselves.
  */
-export default function ProductCard({ product, etaMinutes = 10, store, showStore = true }) {
+export default function ProductCard({ product, etaMinutes, store, showStore = true }) {
   if (!product) return null
+  const eta = Math.round(Number(product?.seller?.estimatedDeliveryTimeMinutes) || Number(etaMinutes) || 0) || null
   const name = productName(product)
   const price = productPrice(product)
   const mrp = productMrp(product)
@@ -120,10 +121,13 @@ export default function ProductCard({ product, etaMinutes = 10, store, showStore
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 px-3 pb-3 pt-2">
-        <span className="inline-flex w-fit items-center gap-1 rounded-[4px] bg-[#F0F2F2] px-1.5 py-[2px] text-[10px] font-bold uppercase leading-[12px] text-wh-success">
-          <Clock className="h-3 w-3" aria-hidden="true" />
-          {Math.round(Number(product?.seller?.estimatedDeliveryTimeMinutes) || etaMinutes)} MINS
-        </span>
+        {/* The store's own delivery time; no chip rather than a made-up one. */}
+        {eta ? (
+          <span className="inline-flex w-fit items-center gap-1 rounded-[4px] bg-[#F0F2F2] px-1.5 py-[2px] text-[10px] font-bold uppercase leading-[12px] text-wh-success">
+            <Clock className="h-3 w-3" aria-hidden="true" />
+            {eta} MINS
+          </span>
+        ) : null}
         <p className="line-clamp-2 text-[13px] font-medium leading-[17px]">{name}</p>
         {pack ? <p className="text-[12px] leading-4 text-wh-muted">{pack}</p> : null}
         {showStore && owner.name ? <p className="truncate text-[11px] leading-4 text-wh-muted">from {owner.name}</p> : null}

@@ -34,6 +34,9 @@ export function QuickLocationProvider({ children }) {
   const [location, setLocation] = useState(readSaved)
   const [zone, setZone] = useState({ status: "loading", zoneId: null, zone: null })
   const [locating, setLocating] = useState(false)
+  // How soon the nearest open store delivers here; set by the home screen from
+  // the store list, shown by the header. null until known.
+  const [etaMinutes, setEtaMinutes] = useState(null)
 
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -89,8 +92,10 @@ export function QuickLocationProvider({ children }) {
       zoneName: zone.zone?.zoneName || zone.zone?.name || "",
       zoneStatus: zone.status, // loading | in | out | unknown
       areaLabel: location?.label || zone.zone?.zoneName || zone.zone?.name || "",
+      etaMinutes,
+      setEtaMinutes,
     }),
-    [location, locating, requestLocation, zone],
+    [location, locating, requestLocation, zone, etaMinutes],
   )
 
   return <QuickLocationContext.Provider value={value}>{children}</QuickLocationContext.Provider>

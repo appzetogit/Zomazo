@@ -5,7 +5,7 @@ import { quickAPI } from "../api"
 import { useQuickLocation } from "../context/QuickLocationContext"
 import CategoryTiles from "../components/CategoryTiles"
 import { ProductRail, SectionHead } from "../components/ProductCard"
-import StoreCard, { storeId } from "../components/StoreCard"
+import StoreCard, { storeClosed, storeEta, storeId } from "../components/StoreCard"
 import { cx, focusRing, isRealImage, mediaUrl } from "../helpers"
 
 /**
@@ -33,7 +33,7 @@ function Banners({ banners }) {
 }
 
 export default function Home() {
-  const { zoneId, zoneStatus, areaLabel, requestLocation, location } = useQuickLocation()
+  const { zoneId, zoneStatus, areaLabel, requestLocation, location, setEtaMinutes } = useQuickLocation()
   const [categories, setCategories] = useState([])
   const [popular, setPopular] = useState([])
   const [byCategory, setByCategory] = useState({})
@@ -66,6 +66,9 @@ export default function Home() {
       setCategories(cats)
       setPopular(pop.products || [])
       setStores(near)
+      // The header's "Delivery in N minutes": the nearest store that is open.
+      const open = near.find((s) => !storeClosed(s) && storeEta(s))
+      setEtaMinutes(open ? storeEta(open) : null)
       setLoading(false)
       const top = cats.slice(0, RAIL_CATEGORIES)
       const rails = await Promise.all(
