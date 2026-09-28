@@ -1,8 +1,8 @@
 /**
- * Shop riders' withdrawals go only to the account on file, and pause for a day
+ * Shop and Quick riders' withdrawals go only to the account on file, and pause for a day
  * after payout details change.
  *
- * Run: node tests/shop-rider-payout.smoke.mjs
+ * Run: node tests/rider-payout-on-file.smoke.mjs
  */
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
@@ -52,11 +52,25 @@ await check('changing the account pauses withdrawals for about a day', async () 
     await assert.rejects(requestDeliveryWithdrawal(String(riderId), { amount: 500 }), /changed recently.*24 hours/);
 });
 
+const qc = {
+    partner: (await import('../src/modules/quickCommerce/modules/food/delivery/models/deliveryPartner.model.js')).FoodDeliveryPartner,
+    finance: await import('../src/modules/quickCommerce/modules/food/delivery/services/deliveryFinance.service.js'),
+    profile: await import('../src/modules/quickCommerce/modules/food/delivery/services/delivery.service.js'),
+};
+const qcRider = new mongoose.Types.ObjectId();
+await qc.partner.collection.insertOne({ _id: qcRider, name: 'QC rider', phone: '9000000079', bankAccountNumber: '121212121212' });
+
+await check('Quick: a withdrawal to another account is refused, and a change pauses it', async () => {
+    await assert.rejects(qc.finance.requestDeliveryWithdrawal(String(qcRider), { amount: 500, bankDetails: { accountNumber: '999' } }), /bank account in your profile/);
+    await qc.profile.updateDeliveryPartnerBankDetails(String(qcRider), { documents: { bankDetails: { accountNumber: '343434343434' } } });
+    await assert.rejects(qc.finance.requestDeliveryWithdrawal(String(qcRider), { amount: 500 }), /changed recently/);
+});
+
 await mongoose.disconnect();
 await mongo.stop();
 if (failed) {
     console.log(`\n${failed} check(s) failed`);
     process.exit(1);
 }
-console.log('\nAll Shop rider payout checks passed');
+console.log('\nAll rider payout checks passed');
 process.exit(0);
