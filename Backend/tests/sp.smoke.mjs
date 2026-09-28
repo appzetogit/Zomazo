@@ -48,7 +48,12 @@ const server = app.listen(0);
 console.log('\n[1] model registry');
 
 const spModels = Object.keys(mongoose.models).filter((n) => n.startsWith('SP'));
-check(`29 SP* models registered (got ${spModels.length})`, () => assert.equal(spModels.length, 29));
+// 29, plus the four the Services coupons, broadcasts and referral rewards added.
+const ADDED_FOR_GROWTH = ['SPCoupon', 'SPCouponUsage', 'SPBroadcast', 'SPReferralLog'];
+check(`33 SP* models registered (got ${spModels.length})`, () => {
+    assert.equal(spModels.length, 29 + ADDED_FOR_GROWTH.length);
+    for (const name of ADDED_FOR_GROWTH) assert.ok(spModels.includes(name), `${name} is registered`);
+});
 
 check('no SP model landed on a master-owned collection', () => {
     const bad = spModels
