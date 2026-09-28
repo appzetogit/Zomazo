@@ -168,6 +168,9 @@ router.get('/commission', authMiddleware, requireRestaurant, getRestaurantCommis
  * than a missing convenience.
  */
 router.delete('/current', authMiddleware, requireRestaurant, deleteCurrentRestaurantAccountController);
+// The shared panel calls the food name (/profile/account, rewritten to /qc), so
+// without this alias a store's "Delete account" hit a 404.
+router.delete('/profile/account', authMiddleware, requireRestaurant, deleteCurrentRestaurantAccountController);
 router.patch('/profile', authMiddleware, requireRestaurant, async (req, res, next) => {
     // Invalidate caches when profile is updated
     await invalidateCache('restaurants:*');
