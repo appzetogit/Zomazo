@@ -2,11 +2,24 @@ import { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
 import { API_BASE_URL } from '@food/api/config';
 import { restaurantAPI } from '@food/api';
+import { RESTAURANT_VERTICAL_KEY } from '@food/api/axios';
 import alertSound from '@food/assets/audio/alert.mp3';
 import { dispatchNotificationInboxRefresh } from '@food/hooks/useNotificationInbox';
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
+
+// Quick-commerce sellers share this panel, but their orders are emitted on the
+// /qc Socket.IO namespace (modules/quickCommerce/config/socket.js), where rooms
+// are keyed by the QC restaurant id. Listening on the default namespace means a
+// store never hears new_order and only sees orders on the next poll.
+const isQuickCommerceSeller = () => {
+  try {
+    return localStorage.getItem(RESTAURANT_VERTICAL_KEY) === 'qc';
+  } catch {
+    return false;
+  }
+};
 
 const resolveAudioSource = (source, cacheKey = 'restaurant-alert') => {
   if (!source) return source;
@@ -458,8 +471,9 @@ export const useRestaurantNotifications = () => {
         .replace(/\/+$/, "");
     }
 
-    // Backend uses default namespace; rooms handle role separation.
-    const socketUrl = `${socketOrigin}`;
+    // Food restaurants use the default namespace; QC sellers the /qc namespace.
+    // Rooms (restaurant:<id>) handle role separation inside each.
+    const socketUrl = isQuickCommerceSeller() ? `${socketOrigin}/qc` : `${socketOrigin}`;
     
     // Validate socket URL format
     try {
