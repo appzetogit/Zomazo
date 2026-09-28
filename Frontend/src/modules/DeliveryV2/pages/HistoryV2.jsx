@@ -4,7 +4,8 @@ import {
   CheckCircle2, Clock, Search, History
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { deliveryAPI } from '@food/api';
+import { deliveryAPI, qcDeliveryAPI } from '@food/api';
+import { SERVICE_FOOD, SERVICE_QUICK, serviceBadge } from '@/modules/DeliveryV2/utils/service';
 import { toast } from 'sonner';
 import useDeliveryBackNavigation from '../hooks/useDeliveryBackNavigation';
 
@@ -47,9 +48,21 @@ export const HistoryV2 = () => {
           limit: 1000
         };
         
-        const response = await deliveryAPI.getTripHistory(params);
+        // Food and quick-commerce trips, side by side. The grocery half is
+        // best-effort: a rider quick commerce does not know yet has none.
+        const [response, qcResponse] = await Promise.all([
+          deliveryAPI.getTripHistory(params),
+          qcDeliveryAPI.getTripHistory(params).catch(() => null),
+        ]);
         if (response.data?.success) {
-          setTrips(response.data.data.trips || []);
+          const tag = (list, service) => (list || []).map((t) => ({ ...t, service }));
+          const when = (t) => new Date(t.date || t.deliveredAt || t.createdAt || 0).getTime();
+          setTrips(
+            [
+              ...tag(response.data.data.trips, SERVICE_FOOD),
+              ...tag(qcResponse?.data?.data?.trips, SERVICE_QUICK),
+            ].sort((a, b) => when(b) - when(a)),
+          );
         }
       } catch (error) {
         toast.error("Failed to load history");
@@ -259,7 +272,8 @@ export const HistoryV2 = () => {
                    const collection = Number(trip.codCollectedAmount || trip.orderTotal || 0);
                    const isCOD = (trip.paymentMethod || '').toLowerCase() === 'cash' || (trip.paymentMethod || '').toLowerCase() === 'cod';
                    const breakdown = getEarningBreakdown(trip);
-                   const tripKey = trip.orderId || trip._id || idx;
+                   const tripKey = `${trip.service}:${trip.orderId || trip._id || idx}`;
+                   const badge = serviceBadge(trip);
                    const isBreakdownOpen = expandedTripId === tripKey;
 
                    return (
@@ -276,6 +290,9 @@ export const HistoryV2 = () => {
                          </div>
                          
                          <div className="flex gap-2 mb-4 mt-3">
+                             <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${badge.className}`}>
+                                {badge.label}
+                             </span>
                              <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${isCOD ? 'bg-primary-orange/5 text-accent-orange' : 'bg-green-50 text-[#10B981]'}`}>
                                 {isCOD ? 'COD' : 'Online'}
                              </span>

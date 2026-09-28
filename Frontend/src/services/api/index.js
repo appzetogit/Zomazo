@@ -2588,6 +2588,45 @@ export const deliveryAPI = {
     }),
 };
 
+/**
+ * Quick-commerce (grocery + medical) jobs for the same rider.
+ *
+ * The rider signs in once, against food; quick commerce accepts that token and
+ * links the rider to its own pool (Backend core/identity/qcRiderBridge.js).
+ * Online/offline and position are NOT sent here -- the food availability call
+ * is mirrored server-side -- so only the job endpoints are listed.
+ */
+const qcDelivery = (method, path, body) =>
+  apiClient[method](`/qc/delivery${path}`, ...(body === undefined ? [] : [body]), {
+    contextModule: "delivery",
+  });
+
+export const qcDeliveryAPI = {
+  getOrders: (params = {}) =>
+    apiClient.get("/qc/delivery/orders/available", {
+      params: { limit: 20, page: 1, ...params },
+      contextModule: "delivery",
+    }),
+  getCurrentDelivery: () => qcDelivery("get", "/orders/current"),
+  acceptOrder: (orderId) => qcDelivery("patch", `/orders/${String(orderId)}/accept`, {}),
+  rejectOrder: (orderId, body = {}) => qcDelivery("patch", `/orders/${String(orderId)}/reject`, body ?? {}),
+  confirmReachedPickup: (orderId) => qcDelivery("patch", `/orders/${String(orderId)}/reached-pickup`, {}),
+  confirmOrderId: (orderId, _confirmedOrderId, location = {}, data = {}) =>
+    qcDelivery("patch", `/orders/${String(orderId)}/confirm-pickup`, {
+      latitude: location.lat,
+      longitude: location.lng,
+      billImageUrl: data.billImageUrl,
+    }),
+  confirmReachedDrop: (orderId) => qcDelivery("patch", `/orders/${String(orderId)}/reached-drop`, {}),
+  verifyDropOtp: (orderId, otp) => qcDelivery("post", `/orders/${String(orderId)}/verify-drop-otp`, { otp: String(otp) }),
+  completeDelivery: (orderId, body = {}) => qcDelivery("patch", `/orders/${String(orderId)}/complete`, body ?? {}),
+  getTripHistory: (params) =>
+    apiClient.get("/qc/delivery/trip-history", {
+      params: params ?? {},
+      contextModule: "delivery",
+    }),
+};
+
 export const userAPI = {
   getPublicFeeSettings: () => apiClient.get("/food/user/fee-settings", { contextModule: "user" }),
   deleteCurrentUserAccount: () => apiClient.delete('/food/user/profile', { contextModule: 'user' }),

@@ -10,6 +10,7 @@ import { uploadAPI } from '@food/api';
 import { toast } from 'sonner';
 import { openCamera } from "@food/utils/imageUploadUtils";
 import { directionsUrl } from '@/modules/DeliveryV2/utils/geo';
+import { serviceBadge, pickupNoun } from '@/modules/DeliveryV2/utils/service';
 
 /**
  * PickupActionModal - Unified White/Green Theme with Slider Actions.
@@ -72,7 +73,9 @@ export const PickupActionModal = ({
   }
 
   const isAtPickup = status === 'REACHED_PICKUP';
-  const restaurantName = order.restaurantName || order.restaurant_name || 'Restaurant';
+  const badge = serviceBadge(order);
+  const pickupLabel = pickupNoun(order);
+  const restaurantName = order.restaurantName || order.restaurant_name || order.restaurantId?.restaurantName || pickupLabel;
   const restaurantAddress = order.restaurantAddress || order.restaurant_address || order.restaurantLocation?.address || 'Address not available';
   const restaurantPhone =
     order.restaurantPhone ||
@@ -119,10 +122,13 @@ export const PickupActionModal = ({
                 </div>
                 <div>
                   <h3 className="text-gray-950 text-2xl font-black tracking-tight leading-none mb-2">{restaurantName}</h3>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-widest ${badge.className}`}>
+                      {badge.label}
+                    </span>
                     {isAtPickup ? (
                       <div className="bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                        <span className="text-emerald-600 text-[10px] font-black uppercase tracking-widest">At Restaurant √</span>
+                        <span className="text-emerald-600 text-[10px] font-black uppercase tracking-widest">At {pickupLabel} √</span>
                       </div>
                     ) : (
                       <div className="bg-primary-orange/5 px-3 py-1 rounded-full border border-primary-orange/10">

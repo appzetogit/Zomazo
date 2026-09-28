@@ -4,6 +4,7 @@ import { User, MapPin, FastForward, Clock, Phone, ChefHat, ChevronDown } from 'l
 import { ActionSlider } from '@/modules/DeliveryV2/components/ui/ActionSlider';
 import { useDeliveryStore } from '@/modules/DeliveryV2/store/useDeliveryStore';
 import { getHaversineDistance, calculateETA, directionsUrl } from '@/modules/DeliveryV2/utils/geo';
+import { serviceBadge, pickupNoun } from '@/modules/DeliveryV2/utils/service';
 
 /**
  * NewOrderModal - Ported to Original 1:1 Theme with Slider Accept.
@@ -71,7 +72,9 @@ export const NewOrderModal = ({ order, onAccept, onReject, onMinimize }) => {
   if (!order) return null;
 
   const earnings = order.earnings || order.riderEarning || (order.orderAmount ? order.orderAmount * 0.1 : 0);
-  const restaurantName = order.restaurantName || order.restaurant_name || (order.restaurantId?.name) || 'Restaurant';
+  const badge = serviceBadge(order);
+  const pickupLabel = pickupNoun(order);
+  const restaurantName = order.restaurantName || order.restaurant_name || order.restaurantId?.restaurantName || (order.restaurantId?.name) || pickupLabel;
   const restaurantAddress = order.restaurantAddress || order.restaurant_address || (order.restaurantId?.location?.address) || 'Address not available';
   const restaurantPhone =
     order.restaurantPhone ||
@@ -163,7 +166,13 @@ export const NewOrderModal = ({ order, onAccept, onReject, onMinimize }) => {
           {/* Header Ribbon (Compact Premium) */}
           <div className="bg-linear-to-br from-emerald-500 via-green-500 to-emerald-600 px-6 py-5 flex justify-between items-center text-white">
             <div>
-              <p className="text-white/80 text-[10px] font-black uppercase tracking-[0.2em] mb-1">New Order Request</p>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-white/80 text-[10px] font-black uppercase tracking-[0.2em]">New Order Request</p>
+                {/* Which service the job is from: food, or quick commerce (grocery / medical). */}
+                <span className={`px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-widest ${badge.className}`}>
+                  {badge.label}
+                </span>
+              </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-xl font-bold opacity-80">₹</span>
                 <h2 className="text-4xl font-black tracking-tighter">{Number(earnings || 0).toFixed(2)}</h2>
@@ -210,12 +219,12 @@ export const NewOrderModal = ({ order, onAccept, onReject, onMinimize }) => {
                 <div className="flex-1 space-y-4">
                   <div>
                     <div className="flex items-center justify-between gap-3">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-600 mb-0.5">Restaurant Pickup</h4>
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-600 mb-0.5">{pickupLabel} Pickup</h4>
                       {restaurantPhone && (
                         <button
                           onClick={() => (window.location.href = `tel:${restaurantPhone}`)}
                           className="shrink-0 w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 hover:bg-emerald-100 transition-colors active:scale-90"
-                          aria-label="Call restaurant"
+                          aria-label={`Call ${pickupLabel.toLowerCase()}`}
                         >
                           <Phone className="w-4 h-4" />
                         </button>

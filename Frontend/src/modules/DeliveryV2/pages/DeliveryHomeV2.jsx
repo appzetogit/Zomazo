@@ -5,8 +5,10 @@ import { useProximityCheck } from '@/modules/DeliveryV2/hooks/useProximityCheck'
 import { useOrderManager } from '@/modules/DeliveryV2/hooks/useOrderManager';
 import { useDeliveryNotifications } from '@food/hooks/useDeliveryNotifications';
 import { writeOrderTracking } from '@food/realtimeTracking';
-import { deliveryAPI } from '@food/api';
+import { deliveryAPI, qcDeliveryAPI } from '@food/api';
 import { toast } from 'sonner';
+import { useQcDeliveryOffers } from '@/modules/DeliveryV2/hooks/useQcDeliveryOffers';
+import { SERVICE_QUICK, tagOrder, isQuickOrder, serviceBadge, orderKey } from '@/modules/DeliveryV2/utils/service';
 
 // Components
 import LiveMap from '@/modules/DeliveryV2/components/map/LiveMap';
@@ -83,7 +85,16 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
   const { isOnline, toggleOnline, activeOrder, tripStatus, setRiderLocation, setActiveOrder, updateTripStatus, clearActiveOrder } = useDeliveryStore();
   const { isWithinRange, distanceToTarget } = useProximityCheck();
   const { acceptOrder, reachPickup, pickUpOrder, reachDrop, completeDelivery, resetTrip } = useOrderManager();
-  const { newOrder, clearNewOrder, orderStatusUpdate, clearOrderStatusUpdate, isConnected: isSocketConnected, emitLocation } = useDeliveryNotifications();
+  const { newOrder, clearNewOrder, orderStatusUpdate, clearOrderStatusUpdate, isConnected: isSocketConnected, emitLocation: emitFoodLocation, playNotificationSound } = useDeliveryNotifications();
+  // Grocery and medical jobs from quick commerce, for the same signed-in rider.
+  const qc = useQcDeliveryOffers({ enabled: isOnline });
+  // Live position goes to the namespace whose customers are watching this trip.
+  const activeOrderRef = useRef(activeOrder);
+  activeOrderRef.current = activeOrder;
+  const emitLocation = useCallback(
+    (payload) => (isQuickOrder(activeOrderRef.current) ? qc.emitLocation(payload) : emitFoodLocation(payload)),
+    [qc.emitLocation, emitFoodLocation],
+  );
   const companyName = useCompanyName();
   const { unreadCount: notificationUnreadCount } = useNotificationInbox("delivery", { limit: 20 });
 
@@ -283,7 +294,13 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
       try {
         const response = await deliveryAPI.getCurrentDelivery();
         const rawData = response?.data?.data?.activeOrder || response?.data?.data;
-        const serverData = (rawData && (rawData._id || rawData.orderId)) ? rawData : null;
+        let serverData = (rawData && (rawData._id || rawData.orderId)) ? rawData : null;
+        if (!serverData) {
+          // No food trip: the rider may be mid-way through a quick-commerce one.
+          const qcRes = await qcDeliveryAPI.getCurrentDelivery().catch(() => null);
+          const qcTrip = qcRes?.data?.data?.activeOrder;
+          if (qcTrip && (qcTrip._id || qcTrip.orderId)) serverData = tagOrder(qcTrip, SERVICE_QUICK);
+        }
         
         if (serverData) {
           // Robust location mapping (Same as acceptOrder logic)
@@ -494,6 +511,24 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
 
   useEffect(() => { setIncomingOrder(newOrder); }, [newOrder]);
 
+  // A quick-commerce offer takes the sheet when it is free. Food keeps
+  // priority: a food offer arriving replaces it, and it comes back after.
+  const lastQcAlertRef = useRef('');
+  useEffect(() => {
+    if (!qc.offer || activeOrder || incomingOrder) return;
+    setIncomingOrder(qc.offer);
+    const key = orderKey(qc.offer);
+    if (lastQcAlertRef.current !== key) {
+      lastQcAlertRef.current = key;
+      playNotificationSound?.(qc.offer);
+    }
+  }, [qc.offer, activeOrder, incomingOrder, playNotificationSound]);
+
+  // Drop a grocery offer that another rider took, or that was withdrawn.
+  useEffect(() => {
+    if (isQuickOrder(incomingOrder) && !qc.offer) setIncomingOrder(null);
+  }, [qc.offer, incomingOrder]);
+
   /**
    * Pass on the offer (button) or let it lapse (timer). The sheet closes at
    * once so the rider is never stuck waiting on the network; the server is
@@ -502,17 +537,19 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
    */
   const handleRejectOffer = useCallback((order, { timedOut = false } = {}) => {
     setIncomingOrder(null);
-    clearNewOrder();
+    const quick = isQuickOrder(order);
+    if (quick) qc.clearOffer(order);
+    else clearNewOrder();
     const orderId = order?.orderMongoId || order?._id || order?.orderId || order?.id;
     if (!orderId) return;
-    deliveryAPI.rejectOrder(orderId, { reason: timedOut ? 'timeout' : 'rider_passed' }).catch((err) => {
+    (quick ? qcDeliveryAPI : deliveryAPI).rejectOrder(orderId, { reason: timedOut ? 'timeout' : 'rider_passed' }).catch((err) => {
       // Once another rider has taken it, or the order is gone, the pass has
       // nothing left to do; anything else is worth telling a rider who tapped.
       const status = err?.response?.status;
       if (timedOut || status === 403 || status === 404) return;
       toast.error(err?.response?.data?.message || 'Could not pass this order. It may be offered to you again.');
     });
-  }, [clearNewOrder]);
+  }, [clearNewOrder, qc.clearOffer]);
 
   useEffect(() => {
     if (activeOrder && incomingOrder) {
@@ -537,6 +574,15 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
 
         if (!cancelled && currentPayload && (currentPayload._id || currentPayload.orderId)) {
           setActiveOrder(currentPayload);
+          return;
+        }
+
+        // A quick-commerce trip in progress (accepted on another device, or
+        // restored after a reload); otherwise this also picks up any open
+        // grocery offer into qc.offer.
+        const qcState = await qc.poll();
+        if (!cancelled && qcState.current) {
+          setActiveOrder(qcState.current);
           return;
         }
 
@@ -588,7 +634,7 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
       cancelled = true;
       window.clearInterval(poller);
     };
-  }, [activeOrder, currentTab, isOnline, isSocketConnected, setActiveOrder]);
+  }, [activeOrder, currentTab, isOnline, isSocketConnected, setActiveOrder, qc.poll]);
 
   useEffect(() => {
     if (orderStatusUpdate) {
@@ -599,6 +645,18 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
       clearOrderStatusUpdate();
     }
   }, [orderStatusUpdate, resetTrip, clearOrderStatusUpdate]);
+
+  // A quick-commerce trip's cancellation arrives on the /qc socket.
+  useEffect(() => {
+    const update = qc.statusUpdate;
+    if (!update) return;
+    qc.clearStatusUpdate();
+    if (!isQuickOrder(activeOrder) || orderKey(update) !== orderKey(activeOrder)) return;
+    if (String(update.orderStatus || '').startsWith('cancelled')) {
+      toast.error('Order cancelled');
+      resetTrip();
+    }
+  }, [qc.statusUpdate, qc.clearStatusUpdate, activeOrder, resetTrip]);
 
 
   const handleCenterMap = () => {
@@ -676,6 +734,12 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
                </div>
                <motion.div animate={{ x: isOnline ? 59 : 0 }} className="absolute left-1 w-6 h-6 bg-white rounded-full shadow-sm" />
              </button>
+             {/* Which service the current job is from: food or quick commerce. */}
+             {activeOrder && (
+               <span className={`px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${serviceBadge(activeOrder).className}`}>
+                 {serviceBadge(activeOrder).label}
+               </span>
+             )}
           </div>
           <div className="flex items-center gap-3">
              <button onClick={() => setShowEmergencyPopup(true)} className="w-9 h-9 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 border border-red-500/20 active:scale-95 transition-all shadow-lg"><AlertTriangle className="w-4 h-4" /></button>
@@ -856,7 +920,12 @@ export default function DeliveryHomeV2({ tab = 'feed' }) {
                     // guard never carry over from the offer before it.
                     key={String(incomingOrder.orderMongoId || incomingOrder._id || incomingOrder.orderId || incomingOrder.id || '')}
                     order={incomingOrder}
-                    onAccept={(o) => { acceptOrder(o); setIncomingOrder(null); clearNewOrder(); }}
+                    onAccept={(o) => {
+                      acceptOrder(o).catch(() => {});
+                      setIncomingOrder(null);
+                      if (isQuickOrder(o)) qc.clearOffer(o);
+                      else clearNewOrder();
+                    }}
                     onReject={handleRejectOffer}
                     onMinimize={() => setIsModalMinimized(true)}
                   />

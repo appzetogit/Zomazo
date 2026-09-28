@@ -1,10 +1,13 @@
 import { useDeliveryStore } from '@/modules/DeliveryV2/store/useDeliveryStore';
-import { deliveryAPI } from '@food/api';
 import { toast } from 'sonner';
+import { apiForOrder, tagOrder } from '@/modules/DeliveryV2/utils/service';
 
 /**
  * useOrderManager - Professional hook for real-world trip lifecycle actions.
  * Connects directly to the backend API services.
+ *
+ * Each action goes to the vertical the job came from -- food or quick commerce
+ * (see utils/service.js) -- and the active order keeps its `service` tag.
  */
 export const useOrderManager = () => {
   const { 
@@ -19,7 +22,7 @@ export const useOrderManager = () => {
     }
 
     try {
-      const response = await deliveryAPI.acceptOrder(orderId);
+      const response = await apiForOrder(order).acceptOrder(orderId);
       
       if (response?.data?.success) {
         const fullOrder = response.data.data?.order || order;
@@ -59,6 +62,7 @@ export const useOrderManager = () => {
 
         setActiveOrder({
           ...fullOrder,
+          service: order?.service,
           orderId: fullOrder.orderId || orderId,
           orderMongoId: fullOrder.orderMongoId || fullOrder._id || orderId,
           restaurantLocation: resLoc,
@@ -73,7 +77,8 @@ export const useOrderManager = () => {
       }
     } catch (error) {
       console.error('Accept Order Error:', error);
-      toast.error('Network error. Please try again.');
+      // The server's reason (busy on another job, order taken) beats a generic one.
+      toast.error(error?.response?.data?.message || 'Network error. Please try again.');
       throw error;
     }
   };
@@ -84,7 +89,7 @@ export const useOrderManager = () => {
   const reachPickup = async () => {
     const orderId = activeOrder?.orderMongoId || activeOrder?._id || activeOrder?.orderId;
     try {
-      const response = await deliveryAPI.confirmReachedPickup(orderId);
+      const response = await apiForOrder(activeOrder).confirmReachedPickup(orderId);
       if (response?.data?.success) {
         updateTripStatus('REACHED_PICKUP');
         // toast.info('Arrived at Restaurant');
@@ -104,7 +109,7 @@ export const useOrderManager = () => {
     const orderId = activeOrder?.orderMongoId || activeOrder?._id || activeOrder?.orderId;
     try {
       // confirmOrderId(orderId, confirmedOrderId, location, data)
-      const response = await deliveryAPI.confirmOrderId(
+      const response = await apiForOrder(activeOrder).confirmOrderId(
         orderId, 
         activeOrder.displayOrderId || orderId, 
         riderLocation || {},
@@ -129,7 +134,7 @@ export const useOrderManager = () => {
   const reachDrop = async () => {
     const orderId = activeOrder?.orderMongoId || activeOrder?._id || activeOrder?.orderId;
     try {
-      const response = await deliveryAPI.confirmReachedDrop(orderId);
+      const response = await apiForOrder(activeOrder).confirmReachedDrop(orderId);
       if (response?.data?.success) {
         updateTripStatus('REACHED_DROP');
         // toast.info('Arrived at Customer Location');
@@ -149,13 +154,13 @@ export const useOrderManager = () => {
     const orderId = activeOrder?.orderMongoId || activeOrder?._id || activeOrder?.orderId;
     try {
       // 1. Verify OTP first
-      const verifyRes = await deliveryAPI.verifyDropOtp(orderId, otp);
+      const verifyRes = await apiForOrder(activeOrder).verifyDropOtp(orderId, otp);
       
       if (verifyRes?.data?.success) {
         let finalOrder = verifyRes.data?.data?.order || activeOrder;
         
         // 2. Mark as complete
-        const completeRes = await deliveryAPI.completeDelivery(orderId, { otp, rating: 5 });
+        const completeRes = await apiForOrder(activeOrder).completeDelivery(orderId, { otp, rating: 5 });
         if (completeRes.data?.success && completeRes.data?.data?.order) {
           finalOrder = completeRes.data.data.order;
         } else {
@@ -164,7 +169,7 @@ export const useOrderManager = () => {
         }
         
         // Update local order state so Summary Modal shows 'delivered' status
-        if (finalOrder) setActiveOrder(finalOrder);
+        if (finalOrder) setActiveOrder(tagOrder(finalOrder, activeOrder?.service));
         
         updateTripStatus('COMPLETED');
         // toast.success('Delivery Success!');
