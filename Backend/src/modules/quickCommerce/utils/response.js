@@ -1,14 +1,3 @@
-export const sendResponse = (res, statusCode, message, data = null) => {
-    return res.status(statusCode).json({
-        success: true,
-        message,
-        data
-    });
-};
-
-export const sendError = (res, statusCode, message) => {
-    return res.status(statusCode).json({
-        success: false,
-        message
-    });
-};
+// One copy: this file was identical to utils/response.js and bound to the same code,
+// so it now re-exports it (Phase 3 fork collapse; see FORK_COLLAPSE.md).
+export * from '../../../utils/response.js';

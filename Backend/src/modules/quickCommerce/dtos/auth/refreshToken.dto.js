@@ -1,14 +1,3 @@
-import { z } from 'zod';
-import { ValidationError } from '../../core/auth/errors.js';
-
-const schema = z.object({
-    refreshToken: z.string().min(1, 'Refresh token is required')
-});
-
-export const validateRefreshTokenDto = (body) => {
-    const result = schema.safeParse(body);
-    if (!result.success) {
-        throw new ValidationError(result.error.errors[0].message);
-    }
-    return result.data;
-};
+// One copy: this file was identical to dtos/auth/refreshToken.dto.js and bound to the same code,
+// so it now re-exports it (Phase 3 fork collapse; see FORK_COLLAPSE.md).
+export * from '../../../../dtos/auth/refreshToken.dto.js';

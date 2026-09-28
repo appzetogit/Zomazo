@@ -1,14 +1,3 @@
-import crypto from 'crypto';
-
-const HEADER = 'x-request-id';
-
-/**
- * Assigns a request ID from X-Request-ID header or generates one.
- * Attaches to req.requestId and sets response header.
- */
-export const requestIdMiddleware = (req, res, next) => {
-    const id = req.headers[HEADER] || crypto.randomUUID();
-    req.requestId = id;
-    res.setHeader(HEADER, id);
-    next();
-};
+// One copy: this file was identical to middleware/requestId.js and bound to the same code,
+// so it now re-exports it (Phase 3 fork collapse; see FORK_COLLAPSE.md).
+export * from '../../../middleware/requestId.js';

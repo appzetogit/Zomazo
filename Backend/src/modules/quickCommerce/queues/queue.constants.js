@@ -1,19 +1,3 @@
-/**
- * Centralized queue names for BullMQ.
- * Used by producers, workers, and queue initialization.
- */
-export const OTP_QUEUE = 'otp';
-export const NOTIFICATION_QUEUE = 'notification';
-export const ORDER_QUEUE = 'order';
-export const PAYMENT_QUEUE = 'payment';
-export const TRACKING_QUEUE = 'tracking';
-export const MAINTENANCE_QUEUE = 'maintenance';
-
-export const QUEUE_NAMES = Object.freeze([
-    OTP_QUEUE,
-    NOTIFICATION_QUEUE,
-    ORDER_QUEUE,
-    PAYMENT_QUEUE,
-    TRACKING_QUEUE,
-    MAINTENANCE_QUEUE
-]);
+// One copy: this file was identical to queues/queue.constants.js and bound to the same code,
+// so it now re-exports it (Phase 3 fork collapse; see FORK_COLLAPSE.md).
+export * from '../../../queues/queue.constants.js';

@@ -1,18 +1,3 @@
-import { z } from 'zod';
-import { ValidationError } from '../../core/auth/errors.js';
-
-const schema = z.object({
-    name: z.string().max(200).optional(),
-    email: z.string().trim().toLowerCase().email('Invalid email').max(200).optional(),
-    phone: z.string().max(30).optional(),
-    profileImage: z.string().max(2000).optional()
-});
-
-export const validateAdminProfileUpdateDto = (body) => {
-    const result = schema.safeParse(body);
-    if (!result.success) {
-        const msg = result.error.errors[0]?.message || 'Invalid profile data';
-        throw new ValidationError(msg);
-    }
-    return result.data;
-};
+// One copy: this file was identical to dtos/auth/adminProfileUpdate.dto.js and bound to the same code,
+// so it now re-exports it (Phase 3 fork collapse; see FORK_COLLAPSE.md).
+export * from '../../../../dtos/auth/adminProfileUpdate.dto.js';

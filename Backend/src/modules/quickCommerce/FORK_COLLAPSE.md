@@ -98,7 +98,34 @@ fork. It is why the collapse is worth finishing.
 
 ---
 
+## 5. Scan before collapsing, and compare the schemas too
+
+Two checks found more in an afternoon than reading did:
+
+- **Import-aware identity scan.** A copy is only collapsible when its text is
+  identical AND every relative import resolves to the same file, or to this
+  fork's own copy of that file which is itself collapsible. Most identical files
+  fail this: they bind to this fork's `core`, `utils` or models.
+- **Field drift.** Load each forked model beside its original and diff
+  `Object.keys(schema.paths)`. Deliberate differences (pharmacy fields here,
+  `seller` for `restaurant` in the Shop) are expected; a field the original has
+  and the copy lacks is usually a fix that never crossed over. The Mongoose
+  default of dropping unknown fields means the copy fails silently.
+
+Found that way (28 Sep 2026), and fixed:
+
+| what | found |
+|---|---|
+| referral: one reward per phone number | the platform sign-in had it; this fork's sign-in and the Shop's invite path did not, and their logs had no `refereePhone` to check. Now shared: `food/admin/models/referralLog.model.js` exports `buildReferralLogSchema()`. |
+| referral: the cap claimed atomically | same: read-then-increment here let parallel sign-ups run past it |
+| Cash on Delivery block | set on the platform account, read only by Food's checkout; Quick and the Shop now check it (`core/identity/codBlock.js`) |
+| coupon usage | `offerUsage.model.js` fell back to food's model by load order, so live usage went to `food_offer_usages`; it now says so explicitly and stays there |
+
 ## Progress
+
+Phase 3 of the super-app work (28 Sep 2026): 24 files that passed the scan in
+this fork and the Shop's now re-export the original; 19 empty, unimported files
+were deleted.
 
 `modules/quickCommerce/core`: **36 files → 27**.
 
