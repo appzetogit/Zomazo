@@ -190,61 +190,80 @@ export function EmptyState({ title, text, action }) {
 /* ─── Appointment slots ─────────────────────────────────────────────────── */
 
 const pad = (n) => String(n).padStart(2, "0")
-const label12 = (h) => `${((h + 11) % 12) + 1}:00 ${h < 12 ? "AM" : "PM"}`
+const label12 = (h) => `${((h + 11) % 12) + 1}:00 ${h < 12 || h === 24 ? "AM" : "PM"}`
 
-/** Two-hour windows from 8 AM to 8 PM. */
-const SLOT_STARTS = [8, 10, 12, 14, 16, 18]
+/*
+ * When visits can be booked. The server's rules (settings, served on
+ * /public/config as bookingSlots) are what count: it refuses anything outside
+ * them. These defaults match the server's and only stand in until the config
+ * has loaded. Times are wall-clock in the business timezone, so a customer
+ * whose phone is set elsewhere still sees the slots the professionals work.
+ */
+export const DEFAULT_SLOT_RULES = Object.freeze({
+  startHour: 8,
+  endHour: 20,
+  slotHours: 2,
+  leadMinutes: 60,
+  advanceDays: 7,
+  timezoneOffsetMinutes: 330,
+})
 
-/** yyyy-mm-dd in the customer's own timezone (not UTC, which shifts the day). */
-export const localDateKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+const rulesOf = (rules) => ({ ...DEFAULT_SLOT_RULES, ...(rules || {}) })
+const DAY_MS = 86400000
 
-/** The next `days` days, today first. */
-export function upcomingDays(days = 7) {
+/** A Date whose UTC fields read as the business timezone's wall clock. */
+const businessClock = (instant, rules) => new Date(instant + rulesOf(rules).timezoneOffsetMinutes * 60000)
+const keyOf = (d) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
+
+/** Today and the days after it, as far ahead as bookings are taken. */
+export function upcomingDays(rules) {
+  const r = rulesOf(rules)
+  const today = businessClock(Date.now(), r)
   const out = []
-  const now = new Date()
-  for (let i = 0; i < days; i += 1) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i)
+  for (let i = 0; i < r.advanceDays; i += 1) {
+    const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + i, 12))
     out.push({
-      key: localDateKey(d),
-      date: d,
-      weekday: i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString("en-IN", { weekday: "short" }),
-      day: d.getDate(),
-      month: d.toLocaleDateString("en-IN", { month: "short" }),
+      key: keyOf(d),
+      weekday: i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString("en-IN", { weekday: "short", timeZone: "UTC" }),
+      day: d.getUTCDate(),
+      month: d.toLocaleDateString("en-IN", { month: "short", timeZone: "UTC" }),
     })
   }
   return out
 }
 
 /**
- * The slots for one day. A slot today needs an hour's notice so a professional
- * can actually get there; earlier ones are shown but disabled.
+ * The slots for one day. One starting sooner than the notice a professional
+ * needs is shown but disabled.
  */
-export function slotsFor(dateKey) {
-  const now = new Date()
-  const today = localDateKey(now)
-  return SLOT_STARTS.map((h) => {
+export function slotsFor(dateKey, rules) {
+  const r = rulesOf(rules)
+  const [y, m, d] = dateKey.split("-").map(Number)
+  const dayStart = Date.UTC(y, m - 1, d) - r.timezoneOffsetMinutes * 60000
+  const earliest = Date.now() + r.leadMinutes * 60000
+  const out = []
+  for (let h = r.startHour; h + r.slotHours <= r.endHour; h += r.slotHours) {
     const start = `${pad(h)}:00`
-    const end = `${pad(h + 2)}:00`
-    const past = dateKey === today && h * 60 < now.getHours() * 60 + now.getMinutes() + 60
-    return {
+    const end = `${pad(h + r.slotHours)}:00`
+    out.push({
       id: `${dateKey}-${start}`,
       start,
       end,
-      label: `${label12(h)} - ${label12(h + 2)}`,
-      disabled: past,
-    }
-  })
+      label: `${label12(h)} - ${label12(h + r.slotHours)}`,
+      disabled: dayStart + h * 3600000 < earliest,
+      // Noon of that day in the business timezone: the calendar day survives
+      // the trip through UTC whichever side of midnight anyone is on.
+      scheduledDate: new Date(dayStart + DAY_MS / 2).toISOString(),
+    })
+  }
+  return out
 }
 
-/**
- * The fields the booking and reschedule endpoints take for a picked slot.
- * scheduledDate is noon local time as ISO, so the calendar day survives the
- * trip through UTC whichever side of midnight the customer is on.
- */
+/** The fields the booking and reschedule endpoints take for a picked slot. */
 export function slotPayload(dateKey, slot) {
   const [y, m, d] = dateKey.split("-").map(Number)
   return {
-    scheduledDate: new Date(y, m - 1, d, 12, 0, 0).toISOString(),
+    scheduledDate: slot.scheduledDate || new Date(Date.UTC(y, m - 1, d, 12) - DEFAULT_SLOT_RULES.timezoneOffsetMinutes * 60000).toISOString(),
     scheduledTime: slot.label,
     timeSlot: { start: slot.start, end: slot.end },
   }

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { Banknote, CreditCard, LocateFixed, MapPin, Minus, Plus, Trash2 } from "lucide-react"
+import { Banknote, CreditCard, LocateFixed, MapPin, Minus, Plus, TicketPercent, Trash2, X } from "lucide-react"
 import { servicesAPI, errorMessage } from "../api"
-import { useLoad } from "../hooks"
+import { useLoad, useServicesConfig } from "../hooks"
 import { useBasket } from "../context/BasketContext"
 import SlotPicker from "../components/SlotPicker"
 import { payForBooking } from "../payment"
@@ -169,6 +169,87 @@ function AddressForm({ initial, onCancel, onDone }) {
   )
 }
 
+/** What a coupon gives, in a few words. */
+const couponOffer = (c) =>
+  c.discountType === "flat-price"
+    ? `${formatMoney(c.discountValue)} off`
+    : `${c.discountValue}% off${Number(c.maxDiscount) > 0 ? ` up to ${formatMoney(c.maxDiscount)}` : ""}`
+
+/** The coupons the customer can use, in a sheet over the checkout. */
+function CouponSheet({ amount, onApply, onClose, busyCode }) {
+  const list = useLoad(() => servicesAPI.coupons(), [])
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose()
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose])
+  const coupons = list.data || []
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Offers"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-extrabold text-gray-900">Offers for you</h2>
+          <button type="button" onClick={onClose} className={cx("rounded-full p-1.5 text-gray-500 hover:bg-gray-100", focusRing)} aria-label="Close">
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="mt-3 space-y-3">
+          {list.loading ? (
+            <>
+              <Skeleton className="h-20" />
+              <Skeleton className="h-20" />
+            </>
+          ) : list.error ? (
+            <p className="text-sm text-red-600">{list.error}</p>
+          ) : coupons.length ? (
+            coupons.map((c) => {
+              const short = Number(c.minOrderValue) > amount
+              return (
+                <div key={c._id || c.couponCode} className="rounded-xl border border-dashed border-violet-300 bg-violet-50/50 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-mono text-sm font-extrabold tracking-wide text-violet-700">{c.couponCode}</p>
+                      <p className="mt-0.5 text-sm font-bold text-gray-900">{c.title || couponOffer(c)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={short || Boolean(busyCode)}
+                      onClick={() => onApply(c.couponCode)}
+                      className={cx("shrink-0 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50", focusRing)}
+                    >
+                      {busyCode === c.couponCode ? "Applying..." : "Apply"}
+                    </button>
+                  </div>
+                  {c.description ? <p className="mt-1 text-xs text-gray-600">{c.description}</p> : null}
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    {couponOffer(c)}
+                    {Number(c.minOrderValue) > 0 ? ` on bookings of ${formatMoney(c.minOrderValue)} or more` : ""}
+                    {c.customerScope === "first-time" ? ". First booking only" : ""}
+                    {c.endDate ? `. Valid till ${new Date(c.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}
+                  </p>
+                  {short ? (
+                    <p className="mt-1 text-[11px] font-bold text-amber-700">
+                      Add {formatMoney(Number(c.minOrderValue) - amount)} more to use this
+                    </p>
+                  ) : null}
+                </div>
+              )
+            })
+          ) : (
+            <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">No offers right now. You can still enter a code you have.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Section({ n, title, children }) {
   return (
     <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
@@ -191,7 +272,7 @@ export default function Checkout() {
     if (basket.count) requireLogin()
   }, [basket.count, requireLogin])
 
-  const config = useLoad(() => servicesAPI.config(), [])
+  const config = useServicesConfig()
   const profile = useLoad(() => (signedIn ? servicesAPI.profile() : Promise.resolve(null)), [signedIn])
   const platform = useLoad(
     () => (signedIn ? servicesAPI.platformAddresses().catch(() => []) : Promise.resolve([])),
@@ -218,6 +299,12 @@ export default function Checkout() {
   const [method, setMethod] = useState("pay_at_home")
   const [placing, setPlacing] = useState(false)
   const placed = useRef(false)
+  // The applied coupon, as the server priced it for the amount below.
+  const [coupon, setCoupon] = useState(null)
+  const [codeInput, setCodeInput] = useState("")
+  const [couponBusy, setCouponBusy] = useState("")
+  const [couponError, setCouponError] = useState("")
+  const [showOffers, setShowOffers] = useState(false)
 
   const selected = allAddresses.find((a) => a.key === addressKey) || null
 
@@ -229,7 +316,35 @@ export default function Checkout() {
   const settings = config.data || {}
   const onlineEnabled = settings.isOnlinePaymentEnabled !== false
   const visiting = Math.max(0, Number(settings.visitedCharges) || 0)
-  const total = Math.round((basket.subtotal + basket.tax + visiting) * 100) / 100
+  // What the coupon applies to: the services, their GST and the visit.
+  const beforeDiscount = Math.round((basket.subtotal + basket.tax + visiting) * 100) / 100
+  // A cancellation fee still owed from an earlier booking is collected with this one.
+  const penalty = Math.max(0, Number(profile.data?.wallet?.penalty) || 0)
+  const discount = coupon ? Math.min(coupon.discount, beforeDiscount) : 0
+  const total = Math.max(1, Math.round((beforeDiscount - discount + penalty) * 100) / 100)
+
+  // The basket changed under an applied coupon: price it again for the new amount.
+  const couponCode = coupon?.code
+  const pricedFor = coupon?.amount
+  useEffect(() => {
+    if (!couponCode || !beforeDiscount || placed.current || pricedFor === beforeDiscount) return undefined
+    let live = true
+    servicesAPI
+      .validateCoupon(couponCode, beforeDiscount)
+      .then(
+        (res) =>
+          live &&
+          setCoupon((c) => (c?.code === couponCode ? { ...c, discount: Number(res.discount) || 0, amount: beforeDiscount } : c))
+      )
+      .catch((err) => {
+        if (!live) return
+        setCoupon(null)
+        setCouponError(errorMessage(err, "The coupon no longer applies."))
+      })
+    return () => {
+      live = false
+    }
+  }, [couponCode, beforeDiscount, pricedFor])
 
   if (!basket.count && !placed.current) {
     return (
@@ -245,6 +360,24 @@ export default function Checkout() {
     )
   }
   if (!signedIn) return null
+
+  const applyCoupon = async (raw) => {
+    const code = String(raw || "").trim().toUpperCase()
+    if (!code) return setCouponError("Enter a coupon code.")
+    setCouponBusy(code)
+    setCouponError("")
+    try {
+      const res = await servicesAPI.validateCoupon(code, beforeDiscount)
+      setCoupon({ code: res.coupon.couponCode, title: res.coupon.title, discount: Number(res.discount) || 0, amount: beforeDiscount })
+      setCodeInput("")
+      toast.success(`${res.coupon.couponCode} applied. You save ${formatMoney(res.discount)}.`)
+    } catch (err) {
+      setCouponError(errorMessage(err, "This coupon cannot be used."))
+    } finally {
+      setCouponBusy("")
+      setShowOffers(false)
+    }
+  }
 
   const place = async () => {
     if (!selected) return toast.error("Choose an address for the visit.")
@@ -272,12 +405,14 @@ export default function Checkout() {
         bookingType: "scheduled",
         paymentMethod: method,
         // The server re-prices from its catalogue and never charges less than
-        // that; these figures are what the customer was shown.
-        amount: total,
+        // that; these figures are what the customer was shown. The coupon is
+        // named, not priced: the server works out its discount itself.
+        amount: beforeDiscount,
         basePrice: basket.subtotal,
         tax: basket.tax,
         discount: 0,
         visitingCharges: visiting,
+        ...(coupon ? { promoCode: coupon.code } : {}),
         serviceCategory: basket.category?.title,
         brandName: main.brandName || undefined,
         brandIcon: main.brandIcon || undefined,
@@ -308,7 +443,15 @@ export default function Checkout() {
       }
       navigate(`/services/bookings/${booking._id}`, { replace: true })
     } catch (err) {
-      toast.error(errorMessage(err, "Could not place the booking."))
+      if (err?.response?.data?.code === "COUPON_INVALID") {
+        setCoupon(null)
+        setCouponError(errorMessage(err))
+        toast.error(`${errorMessage(err)}. The coupon was removed; check the new total and book again.`)
+      } else {
+        // The slot closed (or was never open): make the customer pick again.
+        if (err?.response?.data?.code === "SLOT_UNAVAILABLE") setSlot((s) => (s ? { ...s, slot: null } : s))
+        toast.error(errorMessage(err, "Could not place the booking."))
+      }
     } finally {
       setPlacing(false)
     }
@@ -459,6 +602,74 @@ export default function Checkout() {
         </div>
       </Section>
 
+      <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm" aria-labelledby="svc-offers">
+        <h2 id="svc-offers" className="flex items-center gap-2 text-base font-extrabold text-gray-900">
+          <TicketPercent className="h-5 w-5 text-violet-600" aria-hidden="true" /> Offers
+        </h2>
+        {coupon ? (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+            <div className="min-w-0">
+              <p className="font-mono text-sm font-extrabold text-emerald-800">{coupon.code}</p>
+              <p className="text-xs text-emerald-800">
+                You save {formatMoney(discount)}
+                {coupon.title ? ` · ${coupon.title}` : ""}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCoupon(null)
+                setCouponError("")
+              }}
+              className={cx("shrink-0 rounded text-xs font-bold text-red-600", focusRing)}
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <>
+            <form
+              className="mt-3 flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                applyCoupon(codeInput)
+              }}
+            >
+              <label className="flex-1">
+                <span className="sr-only">Coupon code</span>
+                <input
+                  value={codeInput}
+                  onChange={(e) => {
+                    setCodeInput(e.target.value.toUpperCase())
+                    setCouponError("")
+                  }}
+                  placeholder="Enter coupon code"
+                  autoCapitalize="characters"
+                  aria-invalid={Boolean(couponError)}
+                  aria-describedby={couponError ? "svc-coupon-error" : undefined}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 font-mono text-sm uppercase outline-none focus:border-violet-500"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={Boolean(couponBusy) || !codeInput.trim()}
+                className={cx("rounded-xl bg-violet-600 px-4 text-sm font-bold text-white disabled:opacity-50", focusRing)}
+              >
+                {couponBusy && couponBusy === codeInput.trim().toUpperCase() ? "Checking..." : "Apply"}
+              </button>
+            </form>
+            {couponError ? (
+              <p id="svc-coupon-error" className="mt-2 text-xs font-bold text-red-600" role="alert">
+                {couponError}
+              </p>
+            ) : null}
+            <button type="button" onClick={() => setShowOffers(true)} className={cx("mt-2 rounded text-sm font-bold text-violet-700", focusRing)}>
+              View available offers
+            </button>
+          </>
+        )}
+      </section>
+
       <section className="rounded-2xl border border-gray-100 bg-white p-4 text-sm shadow-sm" aria-label="Price">
         <dl className="space-y-1.5">
           <div className="flex justify-between"><dt className="text-gray-600">Services</dt><dd>{formatMoney(basket.subtotal)}</dd></div>
@@ -466,19 +677,34 @@ export default function Checkout() {
           {visiting ? (
             <div className="flex justify-between"><dt className="text-gray-600">Visiting charges</dt><dd>{formatMoney(visiting)}</dd></div>
           ) : null}
+          {discount ? (
+            <div className="flex justify-between text-emerald-700">
+              <dt>Coupon {coupon.code}</dt>
+              <dd>- {formatMoney(discount)}</dd>
+            </div>
+          ) : null}
+          {penalty ? (
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-600">Cancellation fee from an earlier booking</dt>
+              <dd>{formatMoney(penalty)}</dd>
+            </div>
+          ) : null}
           <div className="flex justify-between border-t border-gray-100 pt-2 text-base font-extrabold">
             <dt>Total</dt>
             <dd>{formatMoney(total)}</dd>
           </div>
         </dl>
         <p className="mt-2 text-xs text-gray-500">
-          Parts or extra work the professional adds are billed at the visit. Any unpaid cancellation fee from an earlier
-          booking is added to this one.
+          Parts or extra work the professional adds are billed at the visit.
           {Number(settings.cancellationPenalty) > 0
             ? ` Cancelling after the professional sets out costs ${formatMoney(settings.cancellationPenalty)}.`
             : ""}
         </p>
       </section>
+
+      {showOffers ? (
+        <CouponSheet amount={beforeDiscount} busyCode={couponBusy} onApply={applyCoupon} onClose={() => setShowOffers(false)} />
+      ) : null}
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-100 bg-white p-4">
         <button

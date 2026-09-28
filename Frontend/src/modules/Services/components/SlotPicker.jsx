@@ -1,16 +1,40 @@
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useServicesConfig } from "../hooks"
 import { cx, focusRing, slotsFor, upcomingDays } from "../helpers"
 
 /**
- * Date and two-hour window for a visit, over the next week.
- * `value` is { dateKey, slot } or null; onChange gets the same shape.
+ * Date and time window for a visit, drawn from the server's slot rules (hours,
+ * slot length, notice and how far ahead), so every slot offered is one the
+ * booking endpoint accepts. `value` is { dateKey, slot } or null; onChange gets
+ * the same shape.
  */
 export default function SlotPicker({ value, onChange }) {
-  const days = useMemo(() => upcomingDays(7), [])
-  const dateKey = value?.dateKey || days[0].key
-  const slots = useMemo(() => slotsFor(dateKey), [dateKey])
-  // Late in the evening today has nothing left; say so rather than show a wall of disabled slots.
-  const noneToday = slots.every((s) => s.disabled)
+  const config = useServicesConfig()
+  const rules = config.data?.bookingSlots
+  // Re-drawn every minute, so a slot open when the screen loaded does not stay
+  // offered after its notice has run out.
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 60000)
+    return () => clearInterval(t)
+  }, [])
+
+  const days = useMemo(() => upcomingDays(rules), [rules, tick])
+  // Late in the evening today has nothing left, so start on the first day that does.
+  const firstOpen = useMemo(
+    () => days.find((d) => slotsFor(d.key, rules).some((s) => !s.disabled))?.key || days[0].key,
+    [days, rules]
+  )
+  const dateKey = value?.dateKey && days.some((d) => d.key === value.dateKey) ? value.dateKey : firstOpen
+  const slots = useMemo(() => slotsFor(dateKey, rules), [dateKey, rules, tick])
+  const noneLeft = slots.every((s) => s.disabled)
+
+  // A picked slot that has since closed is dropped rather than sent and refused.
+  useEffect(() => {
+    if (value?.slot && slots.find((s) => s.id === value.slot.id)?.disabled !== false) {
+      onChange({ dateKey, slot: null })
+    }
+  }, [slots, value, dateKey, onChange])
 
   return (
     <div>
@@ -37,9 +61,7 @@ export default function SlotPicker({ value, onChange }) {
           )
         })}
       </div>
-      {noneToday ? (
-        <p className="mt-3 text-sm text-gray-500">No more slots today. Pick another day.</p>
-      ) : null}
+      {noneLeft ? <p className="mt-3 text-sm text-gray-500">No more slots on this day. Pick another day.</p> : null}
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Time">
         {slots.map((s) => {
           const active = value?.slot?.id === s.id

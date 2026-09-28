@@ -35,6 +35,26 @@ export function useLoad(loader, deps) {
 }
 
 /*
+ * The public Services settings (/sp/public/config): charges, payment switches,
+ * support contacts and the appointment slot rules. Fetched once per visit and
+ * shared by every screen that needs it; a failure is retried on the next ask.
+ */
+let configPromise = null
+export const loadServicesConfig = () => {
+  if (!configPromise) {
+    configPromise = servicesAPI.config().catch((err) => {
+      configPromise = null
+      throw err
+    })
+  }
+  return configPromise
+}
+
+export function useServicesConfig() {
+  return useLoad(() => loadServicesConfig(), [])
+}
+
+/*
  * Categories and brands, fetched once per visit. A service carries a
  * categoryId only when an admin set one; otherwise it belongs to its brand's
  * category. The basket and the booking need the category either way, so

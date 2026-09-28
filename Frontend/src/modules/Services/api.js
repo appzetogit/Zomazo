@@ -28,6 +28,7 @@ export const servicesAPI = {
   service: (id) => apiClient.get(`/sp/public/services/${id}`, USER).then(body),
   providers: (categoryId) =>
     apiClient.get("/sp/public/providers", { ...USER, params: { categoryId, limit: 30 } }).then(body),
+  provider: (id) => apiClient.get(`/sp/public/providers/${id}`, USER).then(body),
   config: () => apiClient.get("/sp/public/config", USER).then((r) => body(r).settings || {}),
 
   // Signed-in customer.
@@ -39,6 +40,21 @@ export const servicesAPI = {
       return d?.data?.addresses || d?.addresses || (Array.isArray(d?.data) ? d.data : [])
     }),
   savePlatformAddress: (address) => apiClient.post("/food/user/addresses", address, USER).then(body),
+
+  // Coupons: the list offered at checkout, and a check of one code against the
+  // amount. The booking itself is priced on the server from the code alone.
+  coupons: () => apiClient.get("/sp/users/coupons", USER).then((r) => body(r).data || []),
+  validateCoupon: (code, amount) =>
+    apiClient.post("/sp/users/coupons/validate", { code, amount }, USER).then((r) => body(r).data),
+
+  // Refer and earn.
+  referral: () => apiClient.get("/sp/users/referral", USER).then((r) => body(r).data || {}),
+  applyReferral: (code) => apiClient.post("/sp/users/referral/apply", { code }, USER).then(body),
+
+  // Saved services.
+  favourites: () => apiClient.get("/sp/users/favourites", USER).then(body),
+  saveFavourite: (serviceId) => apiClient.put(`/sp/users/favourites/${serviceId}`, null, USER).then((r) => body(r).ids || []),
+  removeFavourite: (serviceId) => apiClient.delete(`/sp/users/favourites/${serviceId}`, USER).then((r) => body(r).ids || []),
 
   createBooking: (payload) => apiClient.post("/sp/users/bookings", payload, USER).then((r) => body(r).data),
   bookings: (params = {}) => apiClient.get("/sp/users/bookings", { ...USER, params }).then(body),
