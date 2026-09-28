@@ -129,6 +129,16 @@ export const authAPI = {
   },
 };
 
+/**
+ * The super app's help centre (core/support/customerSupport.*): tickets about
+ * any service's order, ride or booking, filed with the service that owns it.
+ */
+export const helpDeskAPI = {
+  getTickets: () => apiClient.get("/platform/me/support/tickets", { contextModule: "user" }),
+  createTicket: (body) =>
+    apiClient.post("/platform/me/support/tickets", body ?? {}, { contextModule: "user" }),
+};
+
 export const supportAPI = {
   createTicket: (body) =>
     apiClient.post("/food/user/support/ticket", body ?? {}, {

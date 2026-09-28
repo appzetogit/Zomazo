@@ -1,4 +1,5 @@
 import { useSearchParams, Link, useNavigate } from "@shop/router";
+import SuperAppSwitcher from "@/shared/superapp/SuperAppSwitcher";
 import { QUICK_MODE_ENABLED } from "@shop/context/StoreModeContext"
 import { SHOP_FEATURES } from "@shop/platform/config/shopFeatures"
 import { useStoreMode } from "@shop/context/StoreModeContext"
@@ -2954,6 +2955,8 @@ export default function Home() {
 
     <div className="relative min-h-screen bg-white dark:bg-[#0a0a0a] pb-16 md:pb-6 overflow-x-clip">
       <div className="transition-all duration-300">
+        {/* Across to the super app's other services. */}
+        <SuperAppSwitcher className="relative z-20 px-4 pt-3" />
         {/* Unified Background for Entire Page - Vibrant Food Theme */}
         <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none overflow-hidden z-0">
           {/* Main Background */}

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import SupportContact from "@/shared/superapp/SupportContact"
 import { Link } from "react-router-dom"
 import {
   Search,
@@ -374,72 +375,12 @@ export default function Help() {
                 Still Need Help?
               </CardTitle>
               <CardDescription className="text-sm md:text-base">
-                Our support team is here to assist you 24/7
+                Raise a ticket about anything, or reach us directly
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 md:space-y-5 lg:space-y-6 p-4 md:p-5 lg:p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
-                <div className="flex items-start gap-3 p-4 bg-white rounded-lg">
-                  <div className="p-2 bg-primary-orange/10 rounded-lg">
-                    <Phone className="h-5 w-5 text-[#EB590E]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">Phone Support</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Call us anytime
-                    </p>
-                    <a
-                      href="tel:+1-800-123-4567"
-                      className="text-sm text-primary hover:underline font-medium"
-                    >
-                      +1 (800) 123-4567
-                    </a>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-4 bg-white rounded-lg">
-                  <div className="p-2 bg-primary-orange/10 rounded-lg">
-                    <Mail className="h-5 w-5 text-[#EB590E]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">Email Support</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      We'll respond within 24 hours
-                    </p>
-                    <a
-                      href="mailto:support@quickdropsindia.com"
-                      className="text-sm text-primary hover:underline font-medium"
-                    >
-                      support@quickdropsindia.com
-                    </a>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-4 bg-white rounded-lg">
-                  <div className="p-2 bg-primary-orange/10 rounded-lg">
-                    <MessageCircle className="h-5 w-5 text-[#EB590E]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">Live Chat</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Available 24/7
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-1"
-                      onClick={() => alert("Live chat would open here")}
-                    >
-                      Start Chat
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground mb-3">
-                  <Clock className="h-4 w-4 inline mr-1" />
-                  Average response time: Less than 5 minutes
-                </p>
-              </div>
-            </CardContent>
+              <SupportContact />
+              </CardContent>
           </Card>
         </ScrollReveal>
       </div>

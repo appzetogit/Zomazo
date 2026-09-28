@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
+import SuperAppSwitcher from '@/shared/superapp/SuperAppSwitcher';
 
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, ChevronDown, Search, Mic, Bell, CheckCircle2, Tag, Gift, AlertCircle, Clock, BellOff, X, ChevronRight, ShoppingBag, Sparkles, Utensils, Car, Menu, User, Zap, Wrench } from 'lucide-react';
-import { ECOMMERCE_ENABLED, SERVICE_PROVIDER_ENABLED } from '@/config/features';
 import {
   Popover,
   PopoverContent,
@@ -171,56 +171,8 @@ export default function HomeHeader({
             <MapPin className={`h-5 w-5 ${isTaxi ? 'text-blue-600' : 'text-[#d82c23]'}`} />
           </div>
 
-          {/* Center: Service Tabs (acting as logo) */}
-          <div className="flex bg-gray-100/80 p-1 rounded-2xl shadow-inner">
-            <button
-              onClick={() => navigate('/food/user')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-300 ${
-                routeLocation.pathname.includes('/food')
-                  ? 'bg-white shadow-sm text-[#d82c23]'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <img src={foodIcon} alt="Food" className="w-4 h-4 object-contain" />
-              <span className="font-extrabold text-[11px] tracking-wide">Food</span>
-            </button>
-            <button
-              onClick={() => navigate('/taxi/user')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-300 ${
-                routeLocation.pathname.includes('/taxi')
-                  ? 'bg-white shadow-sm text-[#2563eb]'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <img src={taxiIcon} alt="Rides" className="w-5 h-5 object-contain -ml-0.5" />
-              <span className="font-extrabold text-[11px] tracking-wide">Rides</span>
-            </button>
-            <button
-              onClick={() => navigate('/quick')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-300 text-gray-500 hover:text-gray-700"
-            >
-              <Zap className="w-4 h-4 text-amber-500" aria-hidden="true" />
-              <span className="font-extrabold text-[11px] tracking-wide">Quick</span>
-            </button>
-            {ECOMMERCE_ENABLED && (
-              <button
-                onClick={() => navigate('/shop')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-300 text-gray-500 hover:text-gray-700"
-              >
-                <ShoppingBag className="w-4 h-4" aria-hidden="true" />
-                <span className="font-extrabold text-[11px] tracking-wide">Shop</span>
-              </button>
-            )}
-            {SERVICE_PROVIDER_ENABLED && (
-              <button
-                onClick={() => navigate('/services')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-300 text-gray-500 hover:text-gray-700"
-              >
-                <Wrench className="w-4 h-4 text-violet-600" aria-hidden="true" />
-                <span className="font-extrabold text-[11px] tracking-wide">Services</span>
-              </button>
-            )}
-          </div>
+          {/* Center: the super app's services, the same switcher every app uses */}
+          <SuperAppSwitcher className="mx-2 min-w-0 flex-1 justify-center bg-white/15 p-1 rounded-2xl" accent="#d82c23" />
 
           {/* Right: Notifications & Profile/Veg */}
           <div className="flex items-center gap-3">

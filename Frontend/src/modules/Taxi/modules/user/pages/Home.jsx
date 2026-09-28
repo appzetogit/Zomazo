@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarClock, ChevronRight, Clock3, MapPin, ShieldCheck, User, X, ArrowRight } from 'lucide-react';
+import SuperAppSwitcher from '@/shared/superapp/SuperAppSwitcher';
 import HeaderGreeting from '../components/HeaderGreeting';
 import FeaturesHighlight from '../components/FeaturesHighlight';
 import ServiceGrid from '../components/ServiceGrid';
@@ -556,6 +557,7 @@ const Home = () => {
 
 
       <div className="relative z-10 space-y-4 pb-6">
+        <SuperAppSwitcher className="px-5 pt-3" accent="#2563eb" />
         <HeaderGreeting />
 
         {!isScheduledAcceptedRide && (

@@ -1,14 +1,20 @@
-﻿import { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import AnimatedPage from "@food/components/user/AnimatedPage"
 import { Button } from "@food/components/ui/button"
 import { Input } from "@food/components/ui/input"
 import { Textarea } from "@food/components/ui/textarea"
 import { Card, CardContent } from "@food/components/ui/card"
-import { orderAPI, restaurantAPI, supportAPI, authAPI } from "@food/api"
+import { orderAPI, restaurantAPI, supportAPI, helpDeskAPI } from "@food/api"
 import { toast } from "sonner"
 import { ArrowLeft, Building2, HelpCircle, ShoppingBag, ChevronRight } from "lucide-react"
 
+/**
+ * The super app's help centre. A ticket can be about any order, ride or
+ * booking from every service (listed from the cross-service order feed and
+ * filed with the service that owns it -- see core/support/customerSupport),
+ * about a restaurant, or about the account. "My tickets" lists them all.
+ */
 export default function Support() {
   const [step, setStep] = useState("pick")
   const [type, setType] = useState("")
@@ -25,29 +31,31 @@ export default function Support() {
   const [orderSearch, setOrderSearch] = useState("")
   const [restaurantSearch, setRestaurantSearch] = useState("")
 
-  useEffect(() => {
+  const loadTickets = async () => {
     setLoadingTickets(true)
-    authAPI
-      .getCurrentUser()
-      .catch(() => null)
-      .finally(async () => {
-        try {
-          const res = await supportAPI.getMyTickets()
-          const list = res?.data?.data?.tickets || res?.data?.tickets || []
-          setTickets(list)
-        } catch (_) {}
-        setLoadingTickets(false)
-      })
+    try {
+      const res = await helpDeskAPI.getTickets()
+      setTickets(res?.data?.data?.tickets || [])
+    } catch (_) {
+      // The list stays as it was; raising a ticket still works.
+    } finally {
+      setLoadingTickets(false)
+    }
+  }
+
+  useEffect(() => {
+    loadTickets()
   }, [])
 
-  const orderIssues = ["Item missing", "Wrong item", "Not delivered", "Payment issue"]
+  // Worded to fit a food or grocery order, a ride, a booking or a parcel alike.
+  const orderIssues = ["Missing or wrong item", "Late or never arrived", "Payment or refund", "Poor service", "Safety concern", "Something else"]
   const restaurantIssues = ["Bad service", "Wrong info", "Other"]
 
   const fetchOrders = async () => {
     try {
-      const res = await orderAPI.getOrders({ limit: 10, page: 1 })
-      const list = res?.data?.data?.orders || res?.data?.orders || []
-      setOrders(list)
+      // Every service's orders, rides and bookings, newest first.
+      const res = await orderAPI.getAllMyOrders({ limit: 50 })
+      setOrders(res?.data?.data?.items || [])
     } catch {
       toast.error("Failed to load orders")
     }
@@ -78,14 +86,16 @@ export default function Support() {
     }
   }
 
-  const submitTicket = async (payload) => {
+  // Restaurant complaints stay on food's own ticket desk; everything else goes
+  // to the help centre, which files it with the right service.
+  const submitTicket = async (payload, { viaFood = false } = {}) => {
     setSubmitting(true)
     try {
-      const res = await supportAPI.createTicket(payload)
+      const res = viaFood ? await supportAPI.createTicket(payload) : await helpDeskAPI.createTicket(payload)
       const data = res?.data
       if (!data?.success) throw new Error(data?.message || "Failed")
       toast.success("Ticket created")
-      setTickets((prev) => [data?.data?.ticket, ...prev])
+      loadTickets()
       setStep("pick")
       setType("")
       setSelectedOrder(null)
@@ -107,16 +117,15 @@ export default function Support() {
   const statusClasses = (status) => {
     const s = String(status || "").toLowerCase()
     if (s === "resolved" || s === "closed") return "bg-green-100 text-green-700"
+    if (s === "in_progress") return "bg-blue-100 text-blue-700"
     if (s === "open") return "bg-amber-100 text-amber-700"
     return "bg-slate-100 text-slate-700"
   }
 
   const getOrderLabel = (order) => {
-    const restaurantName = order?.restaurantName || order?.restaurant?.restaurantName || "Restaurant"
-    const dateValue = order?.createdAt || order?.date
-    const dateLabel = dateValue ? new Date(dateValue).toLocaleDateString() : "No date"
-    const amount = order?.pricing?.total ?? order?.total ?? 0
-    return `${restaurantName} • ${dateLabel} • ₹${amount}`
+    const dateLabel = order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : "No date"
+    const amount = Number(order?.amount) > 0 ? ` • ₹${order.amount}` : ""
+    return `${order?.serviceLabel || "Order"} • ${order?.title || "Order"} • #${order?.number || ""} • ${dateLabel}${amount}`
   }
 
   const getRestaurantLabel = (restaurant) => {
@@ -128,9 +137,7 @@ export default function Support() {
   const filteredOrders = orders.filter((order) => {
     const q = orderSearch.trim().toLowerCase()
     if (!q) return true
-    const restaurantName = (order?.restaurantName || order?.restaurant?.restaurantName || "").toLowerCase()
-    const orderId = String(order?._id || order?.id || "").toLowerCase()
-    return restaurantName.includes(q) || orderId.includes(q)
+    return getOrderLabel(order).toLowerCase().includes(q)
   })
 
   const filteredRestaurants = restaurants.filter((restaurant) => {
@@ -181,20 +188,21 @@ export default function Support() {
         ) : (
           <div className="space-y-2">
             {tickets.map((t) => (
-              <div key={t._id || t.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 bg-white dark:bg-[#171717]">
+              <div key={t.key} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 bg-white dark:bg-[#171717]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                      #{String(t._id || t.id).slice(-6)} • {t.type} • {t.issueType}
+                      #{t.code} • {t.serviceLabel} • {t.subject}
                     </p>
                     <p className="text-xs text-slate-500 mt-1">{new Date(t.createdAt).toLocaleDateString()}</p>
                   </div>
                   <span className={`text-[11px] font-semibold px-2 py-1 rounded-full ${statusClasses(t.status)}`}>
-                    {t.status}
+                    {String(t.status || "").replace("_", " ")}
                   </span>
                 </div>
-                {t.adminResponse ? (
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-2">Reply: {t.adminResponse}</p>
+                {t.orderRef ? <p className="text-xs text-slate-500 mt-1">About #{t.orderRef}</p> : null}
+                {t.reply ? (
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-2">Reply: {t.reply}</p>
                 ) : null}
               </div>
             ))}
@@ -218,7 +226,7 @@ export default function Support() {
         <Card className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-sm border border-slate-200 dark:border-gray-800 mb-3">
           <CardContent className="p-4">
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">Help & Support</h1>
-            <p className="text-sm text-slate-500 mt-1">Raise a support ticket and track updates in one place.</p>
+            <p className="text-sm text-slate-500 mt-1">Food, rides, groceries, services or the Shop: raise a ticket about anything and track it here.</p>
           </CardContent>
         </Card>
 
@@ -232,7 +240,7 @@ export default function Support() {
                     <ChevronRight className="h-4 w-4 text-slate-400" />
                   </div>
                   <p className="mt-3 font-semibold text-slate-900 dark:text-white">Order Issue</p>
-                  <p className="text-xs text-slate-500 mt-1">Missing item, wrong item, delivery issue</p>
+                  <p className="text-xs text-slate-500 mt-1">An order, ride or booking from any service</p>
                 </button>
 
                 <button onClick={() => handlePick("restaurant")} className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
@@ -268,7 +276,7 @@ export default function Support() {
                     />
                     <datalist id="support-order-options">
                       {filteredOrders.map((o) => (
-                        <option key={o._id || o.id} value={getOrderLabel(o)}>
+                        <option key={o.key} value={getOrderLabel(o)}>
                           {getOrderLabel(o)}
                         </option>
                       ))}
@@ -292,7 +300,7 @@ export default function Support() {
                 </div>
                 <Textarea placeholder="Describe the issue (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
                 <div className="flex gap-2">
-                  <Button onClick={() => submitTicket({ type: "order", orderId: selectedOrder._id || selectedOrder.id, issueType, description })} disabled={!issueType || submitting}>
+                  <Button onClick={() => submitTicket({ service: selectedOrder.service, orderId: selectedOrder.id, issueType, description })} disabled={!issueType || submitting}>
                     {submitting ? "Submitting..." : "Submit Ticket"}
                   </Button>
                   <Button variant="outline" onClick={() => setStep("pick")}>Cancel</Button>
@@ -337,7 +345,7 @@ export default function Support() {
                 </div>
                 <Textarea placeholder="Describe the issue (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
                 <div className="flex gap-2">
-                  <Button onClick={() => submitTicket({ type: "restaurant", restaurantId: selectedRestaurant._id || selectedRestaurant.id, issueType, description })} disabled={!issueType || submitting}>
+                  <Button onClick={() => submitTicket({ type: "restaurant", restaurantId: selectedRestaurant._id || selectedRestaurant.id, issueType, description }, { viaFood: true })} disabled={!issueType || submitting}>
                     {submitting ? "Submitting..." : "Submit Ticket"}
                   </Button>
                   <Button variant="outline" onClick={() => setStep("pick")}>Cancel</Button>
@@ -350,7 +358,7 @@ export default function Support() {
                 <Input placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
                 <Textarea placeholder="Describe your issue" value={description} onChange={(e) => setDescription(e.target.value)} />
                 <div className="flex gap-2">
-                  <Button onClick={() => submitTicket({ type: "other", issueType: subject || "Other", description })} disabled={!subject || submitting}>
+                  <Button onClick={() => submitTicket({ service: "other", issueType: subject || "Other", description })} disabled={!subject || submitting}>
                     {submitting ? "Submitting..." : "Submit Ticket"}
                   </Button>
                   <Button variant="outline" onClick={() => setStep("pick")}>Cancel</Button>

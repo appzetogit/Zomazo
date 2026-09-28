@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { Link as RouterLink } from "react-router-dom"
+import { ALL_ORDERS_PATH } from "@/shared/superapp/services"
 import { SHOP_FEATURES } from "@shop/platform/config/shopFeatures"
 import { Link, useNavigate } from "@shop/router";
 import { motion } from "framer-motion";
@@ -394,6 +396,15 @@ export default function Profile() {
             Edit Profile
           </Link>
         </div>
+
+        {/* Every order across the super app: food, rides, groceries, services and the Shop. */}
+        <RouterLink
+          to={ALL_ORDERS_PATH}
+          className="mb-3 flex items-center justify-between rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#1a1a1a] px-4 py-3 text-sm font-semibold text-gray-800 dark:text-gray-200 shadow-sm hover:border-orange-300"
+        >
+          All orders across the app
+          <span aria-hidden="true" className="text-orange-500">&rarr;</span>
+        </RouterLink>
 
         {/* 4 Quick-Action Cards (Matching Screen 7) */}
         <div className="grid grid-cols-4 gap-2.5 sm:gap-3.5 mb-5">
