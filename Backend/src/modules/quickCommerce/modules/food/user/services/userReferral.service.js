@@ -7,12 +7,50 @@ import { FoodReferralLog } from '../../admin/models/referralLog.model.js';
 import { buildReferralLinkFromTemplate } from '../../delivery/services/deliveryReferral.service.js';
 
 import { referralSettingsFor } from '../../../../../../core/referral/referralSettings.service.js';
+// The platform's own referral programme: the one /login credits.
+import * as platformReferral from '../../../../../food/user/services/userReferral.service.js';
+import { FoodReferralSettings as PlatformReferralSettings } from '../../../../../food/admin/models/referralSettings.model.js';
+
+/**
+ * A customer who signed in on the platform refers people through the platform.
+ *
+ * The invite link is the platform sign-in (/login?ref=CODE), and the platform
+ * login credits `ref` only when it is the referrer's PLATFORM account id (see
+ * core/auth/auth.service.js). This service used to hand out the Quick account's
+ * own code, which that login never recognises, and to count Quick's own
+ * referrals, which nothing increments for such a customer -- so the screen
+ * showed a code that paid no one and a count stuck at zero.
+ *
+ * For a linked customer the code is therefore the platform id and the numbers
+ * are the platform's (referrals, earnings in the one shared wallet, reward and
+ * limit). A Quick-only account with no platform link keeps the old behaviour.
+ */
+const platformIdFor = async (oid) => {
+    const row = await FoodUser.findById(oid).select('platformUserId').lean();
+    const pid = row?.platformUserId ? String(row.platformUserId) : '';
+    return mongoose.Types.ObjectId.isValid(pid) ? pid : null;
+};
+
+const platformInvite = async (pid) => {
+    const settings = await referralSettingsFor('food', PlatformReferralSettings);
+    return {
+        referralCode: pid,
+        referralLink: `/login?ref=${encodeURIComponent(pid)}`,
+        referralLimit: Math.max(0, Number(settings?.referralLimitUser) || 0),
+    };
+};
+
 export const getUserReferralStats = async (userId) => {
     const id = String(userId || '');
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
         throw new ValidationError('User not found');
     }
     const oid = new mongoose.Types.ObjectId(id);
+    const pid = await platformIdFor(oid);
+    if (pid) {
+        const [stats, invite] = await Promise.all([platformReferral.getUserReferralStats(pid), platformInvite(pid)]);
+        return { ...stats, ...invite };
+    }
     const [user, wallet, settingsDoc] = await Promise.all([
         FoodUser.findById(oid).select('_id referralCount referralCode').lean(),
         FoodUserWallet.findOne({ userId: oid }).select('referralEarnings').lean(),
@@ -40,6 +78,11 @@ export const getUserReferralDetails = async (userId) => {
     }
 
     const oid = new mongoose.Types.ObjectId(id);
+    const pid = await platformIdFor(oid);
+    if (pid) {
+        const [details, invite] = await Promise.all([platformReferral.getUserReferralDetails(pid), platformInvite(pid)]);
+        return { ...details, stats: { ...(details?.stats || {}), ...invite } };
+    }
     const [user, wallet, settingsDoc, logs] = await Promise.all([
         FoodUser.findById(oid).select('_id referralCount referralCode').lean(),
         FoodUserWallet.findOne({ userId: oid }).select('referralEarnings').lean(),

@@ -20,6 +20,8 @@ import { getRestaurantSubscriptionHistory } from '../services/subscriptionHistor
 import { validateRestaurantRegisterDto } from '../validators/restaurant.validator.js';
 import { sendResponse, sendError } from '../../../../utils/response.js';
 import { FoodUnregisteredRestaurant } from '../models/unregisteredRestaurant.model.js';
+import mongoose from 'mongoose';
+import { FoodUser as QuickUser } from '../../../../core/users/user.model.js';
 
 
 export const uploadRestaurantAttachmentController = async (req, res, next) => {
@@ -183,9 +185,26 @@ export const uploadRestaurantMenuImagesController = async (req, res, next) => {
     }
 };
 
+/**
+ * The Quick account behind an optional customer token.
+ *
+ * optionalAuth passes the token's id through untranslated, and a customer who
+ * signed in on the platform carries the PLATFORM id -- which no Quick order or
+ * coupon usage is keyed on. Filtering by it treated every such customer as
+ * brand new: first-order coupons they could no longer use, and coupons they had
+ * used up, were listed and then refused at checkout.
+ */
+const quickCustomerId = async (user) => {
+    if (!user?.userId || String(user.role || '').toUpperCase() !== 'USER') return undefined;
+    const id = String(user.userId);
+    if (!mongoose.Types.ObjectId.isValid(id)) return undefined;
+    const row = await QuickUser.findOne({ $or: [{ _id: id }, { platformUserId: id }] }).select('_id').lean();
+    return row ? String(row._id) : undefined;
+};
+
 export const listPublicOffersController = async (req, res, next) => {
     try {
-        const data = await listPublicOffers({ ...req.query, userId: req.user?.userId });
+        const data = await listPublicOffers({ ...req.query, userId: await quickCustomerId(req.user) });
         return sendResponse(res, 200, 'Offers fetched successfully', data);
     } catch (error) {
         next(error);
