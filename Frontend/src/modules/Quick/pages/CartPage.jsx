@@ -6,6 +6,7 @@ import { initRazorpayPayment } from "@food/utils/razorpay"
 import { quickAPI, errorMessage } from "../api"
 import { useQuickCart } from "../context/QuickCartContext"
 import { useQuickLocation } from "../context/QuickLocationContext"
+import CouponBox from "../components/CouponBox"
 import { ImagePlaceholder, cx, focusRing, formatMoney, isRealImage, isSignedIn } from "../helpers"
 
 /**
@@ -158,6 +159,9 @@ export default function CartPage() {
   const [quoting, setQuoting] = useState(false)
   const [method, setMethod] = useState("razorpay")
   const [placing, setPlacing] = useState(false)
+  // The code the customer asked for, and one the server just refused.
+  const [couponCode, setCouponCode] = useState("")
+  const [couponRefused, setCouponRefused] = useState("")
   const idemKey = useRef(newIdempotencyKey())
 
   const items = useMemo(
@@ -184,8 +188,22 @@ export default function CartPage() {
     setQuoteError("")
     const timer = setTimeout(() => {
       quickAPI
-        .calculate({ items, restaurantId: cart.storeId, deliveryAddressId: address?._id, zoneId: zoneId || undefined, deliveryMode: "quick" })
-        .then((d) => !cancelled && setQuote(d.pricing || null))
+        .calculate({
+          items, restaurantId: cart.storeId, deliveryAddressId: address?._id, zoneId: zoneId || undefined, deliveryMode: "quick",
+          couponCode: couponCode || undefined,
+        })
+        .then((d) => {
+          if (cancelled) return
+          const pricing = d.pricing || null
+          // The server prices a code it will not honour as no discount at all,
+          // without saying why; the box explains it and the code is dropped, so
+          // the bill shown is the one that will be charged.
+          if (couponCode && pricing && !pricing.appliedCoupon) {
+            setCouponRefused(couponCode)
+            setCouponCode("")
+          }
+          setQuote(pricing)
+        })
         .catch((err) => {
           if (cancelled) return
           setQuote(null)
@@ -197,7 +215,17 @@ export default function CartPage() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [items, cart.storeId, address?._id, zoneId, signedIn])
+  }, [items, cart.storeId, address?._id, zoneId, signedIn, couponCode])
+
+  const applyCoupon = (code) => {
+    setCouponRefused("")
+    setCouponCode(code)
+  }
+  const removeCoupon = () => {
+    setCouponRefused("")
+    setCouponCode("")
+  }
+  const appliedCoupon = couponCode && quote?.appliedCoupon ? quote.appliedCoupon : null
 
   const itemTotal = cart.lines.reduce((s, l) => s + l.price * l.quantity, 0)
 
@@ -213,7 +241,8 @@ export default function CartPage() {
           items,
           restaurantId: cart.storeId,
           restaurantName: cart.storeName,
-          pricing: { subtotal: quote.subtotal, total: quote.total, couponCode: quote.couponCode || undefined },
+          // Only a code the quote actually applied; the server re-checks it.
+          pricing: { subtotal: quote.subtotal, total: quote.total, couponCode: appliedCoupon?.code || undefined },
           paymentMethod: method,
           address: {
             label: address.label, street: address.street, additionalDetails: address.additionalDetails,
@@ -327,6 +356,20 @@ export default function CartPage() {
       </div>
 
       <aside className="flex flex-col gap-3 lg:sticky lg:top-[132px] lg:self-start">
+        {signedIn ? (
+          <section className="rounded-[8px] bg-wh-surface p-4">
+            <h2 className="mb-3 text-[16px] font-bold text-wh-text">Offers</h2>
+            <CouponBox
+              storeId={cart.storeId}
+              subtotal={Number(quote?.subtotal ?? itemTotal)}
+              applied={appliedCoupon}
+              refused={couponRefused}
+              pending={quoting && Boolean(couponCode) && !appliedCoupon}
+              onApply={applyCoupon}
+              onRemove={removeCoupon}
+            />
+          </section>
+        ) : null}
         <section className="rounded-[8px] bg-wh-surface p-4">
           <h2 className="mb-3 text-[16px] font-bold text-wh-text">Bill</h2>
           {quote ? (
@@ -338,9 +381,15 @@ export default function CartPage() {
               {row("Surge (busy area)", quote.surgeAmount)}
               {row("Platform fee", quote.platformFee)}
               {row("Taxes", quote.tax)}
-              {quote.discount ? <div className="flex justify-between text-[14px] text-wh-success"><span>Discount</span><span>−₹{formatMoney(quote.discount)}</span></div> : null}
+              {quote.discount ? (
+                <div className="flex justify-between text-[14px] text-wh-success">
+                  <span>{appliedCoupon ? `Coupon ${appliedCoupon.code}` : "Discount"}</span>
+                  <span>−₹{formatMoney(quote.discount)}</span>
+                </div>
+              ) : null}
               <div className="my-1 border-t border-wh-border" />
               {row("To pay", quote.total, true)}
+              {quote.discount ? <p className="text-[12px] font-semibold text-wh-success">You save ₹{formatMoney(quote.discount)} on this order</p> : null}
               {quote.deliveryPromiseMinutes ? <p className="text-[12px] font-semibold text-wh-success">Arrives in about {quote.deliveryPromiseMinutes} minutes</p> : null}
             </div>
           ) : (
@@ -364,7 +413,7 @@ export default function CartPage() {
                 <span className="text-[14px] text-wh-text">{label}</span>
               </label>
             ))}
-            <button type="button" onClick={placeOrder} disabled={placing || !quote || !address}
+            <button type="button" onClick={placeOrder} disabled={placing || quoting || !quote || !address}
               className={cx("mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-[10px] bg-wh-brand-ink text-[15px] font-bold text-white disabled:opacity-50", focusRing)}>
               {placing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
               {placing ? "Placing order…" : quote ? `Place order · ₹${formatMoney(quote.total)}` : "Place order"}

@@ -29,6 +29,17 @@ export const quickAPI = {
     apiClient
       .get("/qc/restaurant/restaurants", { ...USER, params: { zoneId, lat, lng, limit, sortBy: lat && lng ? "nearest" : undefined } })
       .then((r) => data(r).restaurants || []),
+  /**
+   * A page of stores with the listing's own sort: nearest (needs lat/lng),
+   * rating or deliveryTime. Returns { restaurants, total, page }.
+   */
+  storesPage: ({ zoneId, lat, lng, sortBy, page = 1, limit = 24 } = {}) =>
+    apiClient
+      .get("/qc/restaurant/restaurants", { ...USER, params: { zoneId, lat, lng, sortBy, page, limit } })
+      .then((r) => {
+        const d = data(r)
+        return { restaurants: d.restaurants || [], total: Number(d.total) || 0, page: Number(d.page) || page }
+      }),
   store: (idOrSlug) => apiClient.get(`/qc/restaurant/restaurants/${idOrSlug}`, USER).then((r) => data(r).restaurant),
   menu: (id) => apiClient.get(`/qc/restaurant/restaurants/${id}/menu`, USER).then((r) => data(r).menu || { sections: [] }),
   heroBanners: () => apiClient.get("/qc/showcase-items/public", USER).then((r) => data(r).banners || []),
@@ -49,6 +60,24 @@ export const quickAPI = {
   orders: (page = 1) => apiClient.get("/qc/orders", { ...USER, params: { page, limit: 20 } }).then(data),
   order: (id) => apiClient.get(`/qc/orders/${id}`, USER).then((r) => data(r).order),
   cancelOrder: (id, reason) => apiClient.patch(`/qc/orders/${id}/cancel`, { reason }, USER).then((r) => data(r).order),
+  // The rider's live route to their next stop (store before pickup, customer after).
+  orderRoute: (id) => apiClient.get(`/qc/orders/${id}/route`, USER).then(data),
+  // Once, after delivery. deliveryPartnerRating is required when a rider delivered it.
+  rateOrder: (id, body) => apiClient.patch(`/qc/orders/${id}/ratings`, body, USER).then((r) => data(r).order),
+
+  // Coupons the customer can use at this store (admin-wide and the store's own).
+  offers: (restaurantId) =>
+    apiClient.get("/qc/restaurant/offers", { ...USER, params: { restaurantId } }).then((r) => data(r).allOffers || []),
+
+  // Favourites: stores ("restaurants") and products ("foods").
+  favorites: () => apiClient.get("/qc/user/favorites", USER).then(data),
+  setFavorite: (kind, id, on) => {
+    const path = `/qc/user/favorites/${kind === "store" ? "restaurants" : "foods"}/${id}`
+    return (on ? apiClient.post(path, {}, USER) : apiClient.delete(path, USER)).then(data)
+  },
+
+  // Refer & earn.
+  referrals: () => apiClient.get("/qc/user/referrals/details", USER).then(data),
 }
 
 export const errorMessage = (err, fallback = "Something went wrong. Please try again.") =>
