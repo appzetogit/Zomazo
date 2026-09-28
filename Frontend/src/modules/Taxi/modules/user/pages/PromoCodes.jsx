@@ -3,13 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Tag, CheckCircle2, X, ChevronRight, Ticket } from 'lucide-react';
 import BottomNavbar from '../components/BottomNavbar';
+import { userService } from '../services/userService';
 
-const MOCK_PROMOS = [
-  { id: '1', code: 'Quick Drop50',  discount: 50,  type: 'flat',    service: 'All Rides',    expiry: '30 Apr 2026', minFare: 100 },
-  { id: '2', code: 'GOFREE',   discount: 100, type: 'flat',    service: 'Cab Only',     expiry: '15 Apr 2026', minFare: 150 },
-  { id: '3', code: 'SAVE20',   discount: 20,  type: 'percent', service: 'Parcel',       expiry: '30 Apr 2026', minFare: 50  },
-  { id: '4', code: 'NEWUSER',  discount: 75,  type: 'flat',    service: 'First Ride',   expiry: '30 Apr 2026', minFare: 80  },
-];
+const TRANSPORT_LABEL = { all: 'All rides', taxi: 'Rides', delivery: 'Parcel', both: 'Rides & parcel' };
+
+const fmtDate = (value) => {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+/** The server's promo in the shape the cards show. */
+const toCard = (p) => ({
+  id: String(p._id),
+  code: p.code,
+  percent: Number(p.discount_percentage) || 0,
+  maxOff: Number(p.maximum_discount_amount) || 0,
+  minFare: Number(p.minimum_trip_amount) || 0,
+  service: p.audience_type === 'new_users' ? 'First ride' : (TRANSPORT_LABEL[p.transport_type] || 'Rides'),
+  expiry: fmtDate(p.to_date),
+});
 
 const SkeletonCard = () => (
   <div className="animate-pulse rounded-[20px] bg-white/70 border border-white/80 p-4 space-y-3">
@@ -22,23 +34,29 @@ const SkeletonCard = () => (
   </div>
 );
 
+/**
+ * The rider's live promo codes, from the server. A code is applied at booking
+ * (Select vehicle checks it against the fare and location), so here it is
+ * copied, not applied. This page used to show made-up codes.
+ */
 const PromoCodes = () => {
   const navigate = useNavigate();
   const [promos, setPromos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [appliedCode, setAppliedCode] = useState(null);
-  const [manualCode, setManualCode] = useState('');
   const [toast, setToast] = useState(null);
   const [errorBanner, setErrorBanner] = useState(null);
-  const [applying, setApplying] = useState(null);
 
   useEffect(() => {
-    const load = async () => {
-      await new Promise(r => setTimeout(r, 700));
-      setPromos(MOCK_PROMOS);
-      setLoading(false);
-    };
-    load();
+    let alive = true;
+    userService.getAvailablePromos({ limit: 50 })
+      .then((res) => {
+        const list = res?.data?.data ?? res?.data ?? [];
+        if (alive) setPromos(Array.isArray(list) ? list.map(toCard) : []);
+      })
+      .catch(() => alive && setErrorBanner('Could not load promo codes. Please try again.'))
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
   }, []);
 
   const showToast = (msg, type = 'success') => {
@@ -46,28 +64,14 @@ const PromoCodes = () => {
     setTimeout(() => setToast(null), 2500);
   };
 
-  const applyCode = async (code) => {
-    if (appliedCode === code) return; // idempotence guard
-    setApplying(code);
+  const copyCode = async (code) => {
     try {
-      await new Promise(r => setTimeout(r, 600));
-      // POST /api/v1/request/promocode-redeem
-      if (code === 'INVALID') throw new Error('Promo code is expired or invalid');
+      await navigator.clipboard.writeText(code);
       setAppliedCode(code);
-      showToast(`"${code}" applied successfully!`, 'success');
-      setErrorBanner(null);
-    } catch (err) {
-      setErrorBanner(err.message || 'Failed to apply promo code');
-    } finally {
-      setApplying(null);
+      showToast(`"${code}" copied. Apply it when you book.`, 'success');
+    } catch {
+      showToast('Could not copy. Note the code and apply it when you book.', 'error');
     }
-  };
-
-  const handleManualApply = () => {
-    const code = manualCode.trim().toUpperCase();
-    if (!code) return;
-    applyCode(code);
-    setManualCode('');
   };
 
   return (
@@ -103,29 +107,10 @@ const PromoCodes = () => {
           )}
         </AnimatePresence>
 
-        {/* Manual entry */}
-        <div className="rounded-[20px] border border-white/80 bg-white/90 shadow-[0_4px_14px_rgba(15,23,42,0.06)] p-4">
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 mb-2">Enter Code Manually</p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={manualCode}
-              onChange={e => setManualCode(e.target.value.toUpperCase())}
-              onKeyDown={e => e.key === 'Enter' && handleManualApply()}
-              placeholder="e.g. Quick Drop50"
-              className="flex-1 bg-slate-50 border border-slate-100 rounded-[12px] px-4 py-2.5 text-[14px] font-black text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-primary-orange/20"
-            />
-            <motion.button whileTap={{ scale: 0.96 }} onClick={handleManualApply}
-              className="bg-slate-900 text-white px-4 py-2.5 rounded-[12px] text-[12px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm">
-              Apply <ChevronRight size={13} strokeWidth={3} />
-            </motion.button>
-          </div>
-        </div>
-
         {/* Section label */}
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.26em] text-slate-400">Available Offers</p>
-          <h2 className="mt-0.5 text-[16px] font-black tracking-tight text-slate-900">Pick a promo</h2>
+          <h2 className="mt-0.5 text-[16px] font-black tracking-tight text-slate-900">Copy a code, apply it when you book</h2>
         </div>
 
         {/* Promo cards */}
@@ -142,7 +127,6 @@ const PromoCodes = () => {
 
         {!loading && promos.map((promo, i) => {
           const isApplied = appliedCode === promo.code;
-          const isApplying = applying === promo.code;
           return (
             <motion.div key={promo.id}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -156,29 +140,26 @@ const PromoCodes = () => {
                     <span className="text-[16px] font-black text-slate-900 tracking-wider">{promo.code}</span>
                     {isApplied && <CheckCircle2 size={16} className="text-emerald-500" strokeWidth={2.5} />}
                   </div>
-                  <p className="text-[11px] font-bold text-slate-400 mt-0.5">{promo.service} · Min fare ₹{promo.minFare}</p>
+                  <p className="text-[11px] font-bold text-slate-400 mt-0.5">{promo.service}{promo.minFare ? ` · Min fare ₹${promo.minFare}` : ''}{promo.maxOff ? ` · Up to ₹${promo.maxOff}` : ''}</p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-[18px] font-black text-slate-900">
-                    {promo.type === 'flat' ? `₹${promo.discount}` : `${promo.discount}%`}
+                    {`${promo.percent}%`}
                     <span className="text-[11px] font-bold text-slate-400 ml-1">off</span>
                   </p>
-                  <p className="text-[9px] font-bold text-slate-400">Expires {promo.expiry}</p>
+                  {promo.expiry ? <p className="text-[9px] font-bold text-slate-400">Expires {promo.expiry}</p> : null}
                 </div>
               </div>
               <motion.button whileTap={{ scale: 0.97 }}
-                onClick={() => applyCode(promo.code)}
-                disabled={isApplied || isApplying}
+                onClick={() => copyCode(promo.code)}
                 className={`w-full py-2.5 rounded-[12px] text-[12px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
                   isApplied
                     ? 'bg-emerald-100 text-emerald-700 cursor-default'
                     : 'bg-slate-900 text-white shadow-sm active:bg-black'
                 }`}>
-                {isApplying ? (
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : isApplied ? (
-                  <><CheckCircle2 size={13} strokeWidth={2.5} /> Applied</>
-                ) : 'Apply Code'}
+                {isApplied ? (
+                  <><CheckCircle2 size={13} strokeWidth={2.5} /> Copied</>
+                ) : 'Copy Code'}
               </motion.button>
             </motion.div>
           );

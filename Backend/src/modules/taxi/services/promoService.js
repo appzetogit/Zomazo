@@ -417,11 +417,13 @@ export const applyPromoToRideInTransaction = async ({
 export const listAvailablePromosForUser = async ({
   userId,
   service_location_id,
-  transport_type = 'taxi',
+  transport_type = '',
   now = new Date(),
   limit = 50,
 }) => {
-  const serviceLocationId = toObjectIdOrThrow(service_location_id, 'service location id');
+  // With no service location (the promo list in the rider's profile) every
+  // location's live codes are listed; booking still checks the location.
+  const serviceLocationId = service_location_id ? toObjectIdOrThrow(service_location_id, 'service location id') : null;
   const transportType = normalizeTransportType(transport_type);
   const safeLimit = Math.min(100, Math.max(1, Number(limit) || 50));
 
@@ -429,15 +431,10 @@ export const listAvailablePromosForUser = async ({
     active: true,
     from_date: { $lte: now },
     to_date: { $gte: now },
-    transport_type: { $in: ['all', transportType] },
-    $and: [
-      {
-        $or: [
-          { service_location_id: serviceLocationId },
-          { service_location_ids: serviceLocationId },
-        ],
-      },
-    ],
+    ...(transport_type ? { transport_type: { $in: ['all', transportType] } } : {}),
+    $and: serviceLocationId
+      ? [{ $or: [{ service_location_id: serviceLocationId }, { service_location_ids: serviceLocationId }] }]
+      : [],
   };
 
   if (userId) {
