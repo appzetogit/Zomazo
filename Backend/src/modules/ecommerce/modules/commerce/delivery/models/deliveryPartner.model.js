@@ -91,6 +91,8 @@ const deliveryPartnerSchema = new mongoose.Schema(
         bankName: { type: String },
         upiId: { type: String },
         upiQrCode: { type: String },
+        /** When payout details last changed: withdrawals pause for 24h after. */
+        bankDetailsChangedAt: { type: Date, default: null },
         availabilityStatus: {
             type: String,
             enum: ['online', 'offline'],

@@ -337,6 +337,9 @@ export const updateDeliveryPartnerBankDetails = async (userId, payload, files) =
         panDetails = { number: payload['documents[pan][number]'] };
     }
 
+    // Where payouts go: a change pauses withdrawals for 24 hours (deliveryFinance).
+    const payoutBefore = [partner.bankAccountNumber, partner.bankIfscCode, partner.upiId].map((v) => String(v || ''));
+    const hadQr = Boolean(partner.upiQrCode);
     if (bankDetails) {
         const b = bankDetails;
         if (b.accountHolderName !== undefined) partner.bankAccountHolderName = b.accountHolderName ? String(b.accountHolderName).trim() : '';
@@ -353,6 +356,10 @@ export const updateDeliveryPartnerBankDetails = async (userId, payload, files) =
     if (files?.upiQrCode?.[0]) {
         partner.upiQrCode = await uploadImageBuffer(files.upiQrCode[0].buffer, 'delivery/upi');
     }
+
+    const payoutAfter = [partner.bankAccountNumber, partner.bankIfscCode, partner.upiId].map((v) => String(v || ''));
+    const qrReplaced = hadQr && Boolean(files?.upiQrCode?.[0]);
+    if (qrReplaced || payoutBefore.some((v, i) => v && v !== payoutAfter[i])) partner.bankDetailsChangedAt = new Date();
 
     await partner.save();
     return partner.toObject();

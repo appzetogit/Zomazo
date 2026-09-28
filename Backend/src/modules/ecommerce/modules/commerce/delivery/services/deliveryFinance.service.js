@@ -181,6 +181,25 @@ export const requestDeliveryWithdrawal = async (deliveryPartnerId, payload) => {
 
     if (!Number.isFinite(amount) || amount < 1) throw new ValidationError('Invalid amount');
 
+    /*
+     * Payouts go only to the details on file, and not for 24 hours after they
+     * change. The request's own bankDetails used to be stored as the payout
+     * account, so a stolen rider login could send the balance anywhere in one
+     * sitting. Food riders have had this since 22 Sep.
+     */
+    const onFile = await DeliveryPartner.findById(deliveryPartnerId).select('bankDetailsChangedAt bankAccountNumber').lean();
+    if (!onFile) throw new ValidationError('Delivery partner not found');
+    const changedAt = onFile.bankDetailsChangedAt ? new Date(onFile.bankDetailsChangedAt).getTime() : 0;
+    const waitMs = changedAt + 24 * 60 * 60 * 1000 - Date.now();
+    if (waitMs > 0) {
+        const hours = Math.ceil(waitMs / 3600000);
+        throw new ValidationError(`Your payout details changed recently. For your safety, withdrawals open again in about ${hours} hour${hours === 1 ? '' : 's'}.`);
+    }
+    const inlineAccount = String(bankDetails?.accountNumber || '').trim();
+    if (inlineAccount && inlineAccount !== String(onFile.bankAccountNumber || '').trim()) {
+        throw new ValidationError('Withdrawals go to the bank account in your profile. Update it there first.');
+    }
+
     const wallet = await getDeliveryPartnerWalletEnhanced(deliveryPartnerId);
     if (amount < wallet.deliveryWithdrawalLimit) {
         throw new ValidationError(`Minimum withdrawal amount is ₹${wallet.deliveryWithdrawalLimit}`);
@@ -227,7 +246,7 @@ export const requestDeliveryWithdrawal = async (deliveryPartnerId, payload) => {
         deliveryPartnerId: partnerId,
         amount,
         paymentMethod,
-        bankDetails: bankDetails || {
+        bankDetails: {
             accountNumber: partner.bankAccountNumber,
             ifscCode: partner.bankIfscCode,
             bankName: partner.bankName,

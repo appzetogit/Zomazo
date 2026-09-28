@@ -22,18 +22,23 @@ import {
     retryCheckoutPaymentController
 } from '../controllers/checkout.controller.js';
 import { getOrderReturnsUserController, createReturnUserController } from '../controllers/shipmentReturn.controller.js';
+import { idempotency } from '../../../../../../middleware/idempotency.js';
 
 const router = express.Router();
 
 router.post('/checkout/calculate', calculateCheckoutController);
-router.post('/checkout', createCheckoutController);
+// A double tap placed two orders (the apps send no Idempotency-Key): the same
+// customer sending the same body within 10 s is one request, as in Food and Quick.
+const placeOnce = idempotency({ implicitWindowMs: 10_000 });
+
+router.post('/checkout', placeOnce, createCheckoutController);
 router.get('/checkout/:checkoutId', getCheckoutByIdController);
 router.post('/checkout/:checkoutId/verify-payment', verifyCheckoutPaymentController);
 router.post('/checkout/:checkoutId/abandon', abandonCheckoutController);
 router.post('/checkout/:checkoutId/retry-payment', retryCheckoutPaymentController);
 
 router.post('/calculate', calculateOrderController);
-router.post('/', createOrderController);
+router.post('/', placeOnce, createOrderController);
 router.post('/verify-payment', verifyPaymentController);
 router.delete('/:orderId/pending-payment', abandonOnlinePaymentController);
 router.get('/', listOrdersUserController);
