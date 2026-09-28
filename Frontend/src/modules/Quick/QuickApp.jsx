@@ -11,6 +11,8 @@ import Stores from "./pages/Stores"
 import CartPage from "./pages/CartPage"
 import { OrderDetail, OrdersList } from "./pages/Orders"
 import Favorites from "./pages/Favorites"
+import ReferEarn from "./pages/ReferEarn"
+import Account from "./pages/Account"
 
 /**
  * Quick commerce for customers, at /quick.
@@ -41,6 +43,8 @@ export default function QuickApp() {
                 <Route path="orders" element={<OrdersList />} />
                 <Route path="orders/:orderId" element={<OrderDetail />} />
                 <Route path="favorites" element={<Favorites />} />
+                <Route path="refer" element={<ReferEarn />} />
+                <Route path="account" element={<Account />} />
                 <Route path="*" element={<Navigate to="/quick" replace />} />
               </Routes>
             </main>

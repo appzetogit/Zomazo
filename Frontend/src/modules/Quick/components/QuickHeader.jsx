@@ -5,7 +5,8 @@
  */
 import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { ArrowLeft, ChevronDown, MapPin, Search, ShoppingCart, User } from "lucide-react"
+import { ArrowLeft, ChevronDown, Heart, MapPin, Search, ShoppingCart, User } from "lucide-react"
+import SuperAppSwitcher from "@/shared/superapp/SuperAppSwitcher"
 import { useQuickCart } from "../context/QuickCartContext"
 import { useQuickLocation } from "../context/QuickLocationContext"
 import { cx, focusRing } from "../helpers"
@@ -98,10 +99,25 @@ export default function QuickHeader({ etaMinutes = 10 }) {
             Quick <span className="text-[12px] font-bold text-wh-success">· {etaMinutes} min</span>
           </Link>
         ) : null}
-        <Link to="/quick/orders" aria-label="Your orders" className={cx("rounded-full bg-white p-2 shadow-sm", focusRing)}>
+        <Link to="/quick/favorites" aria-label="Favourites" className={cx("hidden rounded-full bg-white p-2 shadow-sm sm:block", focusRing)}>
+          <Heart className="h-5 w-5" aria-hidden="true" />
+        </Link>
+        <Link to="/quick/account" aria-label="Account, orders and help" className={cx("rounded-full bg-white p-2 shadow-sm", focusRing)}>
           <User className="h-5 w-5" aria-hidden="true" />
         </Link>
       </div>
+
+      {/*
+        Across to the super app's other services, and every order in one list.
+        On the home screen only: inner screens pin their own bars (store
+        sections, category rail, bill) just under this header's height, and
+        keep the way home through the back arrow and the Quick title.
+      */}
+      {isHome ? (
+        <div className="mx-auto max-w-[1500px] px-4 pt-2 lg:px-6">
+          <SuperAppSwitcher showOrders accent="#B45309" />
+        </div>
+      ) : null}
 
       <form onSubmit={submit} role="search" className="mx-auto flex max-w-[1500px] items-center gap-2 px-4 py-3 lg:px-6">
         <label className="relative flex-1">
