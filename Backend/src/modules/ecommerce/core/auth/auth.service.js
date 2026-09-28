@@ -25,6 +25,7 @@ import {
   upsertFirebaseDeviceToken,
 } from "../notifications/firebase.service.js";
 import { assertStrongAdminPassword } from "../admin/adminPassword.js";
+import { withSharedProfile } from "../../../../core/identity/sharedProfile.js";
 
 const ROLES = {
   USER: "USER",
@@ -568,7 +569,9 @@ export const getProfile = async (userId, role) => {
 
   switch (role) {
     case ROLES.USER:
-      profile = await User.findById(id).lean();
+      // Name, email and photo from the customer's platform account (one profile
+      // across services -- core/identity/sharedProfile.js).
+      profile = await withSharedProfile(await User.findById(id).lean());
       break;
     case ROLES.ADMIN:
       profile = await Admin.findById(id).select("-password").lean();

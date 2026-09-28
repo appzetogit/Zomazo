@@ -10,13 +10,13 @@ const parseIsoDateOrNull = (value) => {
     return Number.isNaN(d.getTime()) ? null : d;
 };
 
-export const getCurrentUserProfile = async (userId) => {
+const own_getCurrentUserProfile = async (userId) => {
     const user = await User.findById(userId).lean();
     if (!user) throw new AuthError('Profile not found');
     return { user };
 };
 
-export const updateCurrentUserProfile = async (userId, body) => {
+const own_updateCurrentUserProfile = async (userId, body) => {
     const user = await User.findById(userId);
     if (!user) throw new AuthError('Profile not found');
 
@@ -61,7 +61,7 @@ export const updateCurrentUserProfile = async (userId, body) => {
     return { user: user.toObject() };
 };
 
-export const uploadCurrentUserProfileImage = async (userId, file) => {
+const own_uploadCurrentUserProfileImage = async (userId, file) => {
     if (!file || !file.buffer) {
         throw new ValidationError('File is required');
     }
@@ -93,3 +93,30 @@ export const deleteCurrentUserAccount = async (userId) => {
     return { success: true };
 };
 
+
+/*
+ * One profile across services (core/identity/sharedProfile.js): the customer's
+ * name, email, photo and dates are shown from their platform account, and an
+ * edit here is saved there too.
+ */
+import { SHARED_PROFILE_FIELDS, saveSharedProfile, withSharedProfile } from '../../../../../../core/identity/sharedProfile.js';
+
+export const getCurrentUserProfile = async (userId) => {
+    const result = await own_getCurrentUserProfile(userId);
+    return { ...result, user: await withSharedProfile(result.user) };
+};
+
+export const updateCurrentUserProfile = async (userId, body = {}) => {
+    const result = await own_updateCurrentUserProfile(userId, body);
+    const changed = Object.fromEntries(
+        SHARED_PROFILE_FIELDS.filter((f) => body[f] !== undefined).map((f) => [f, result.user?.[f]]),
+    );
+    await saveSharedProfile(userId, changed);
+    return { ...result, user: await withSharedProfile(result.user) };
+};
+
+export const uploadCurrentUserProfileImage = async (userId, file) => {
+    const result = await own_uploadCurrentUserProfileImage(userId, file);
+    await saveSharedProfile(userId, { profileImage: result.profileImage });
+    return result;
+};

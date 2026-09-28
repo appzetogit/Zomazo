@@ -4,6 +4,12 @@ const Settings = require('../../models/Settings');
 const { validationResult } = require('express-validator');
 const cloudinaryService = require('../../services/cloudinaryService');
 
+// One profile across services (core/identity/sharedProfile.js, an ES module):
+// shown from the platform account, and edits saved there too. Services calls
+// the photo profilePhoto; the account calls it profileImage.
+const sharedProfile = () => import('../../../../core/identity/sharedProfile.js');
+const PHOTO_ALIAS = { profilePhoto: 'profileImage' };
+
 /**
  * Get user profile
  */
@@ -28,16 +34,18 @@ const getProfile = async (req, res) => {
       }
     }
 
+    const shown = await (await sharedProfile()).withSharedProfile(user.toObject(), PHOTO_ALIAS);
+
     res.status(200).json({
       success: true,
       user: {
         id: user._id,
-        name: user.name || 'Verified Customer',
-        email: user.email || null,
+        name: shown.name || 'Verified Customer',
+        email: shown.email || null,
         phone: user.phone || null,
         isPhoneVerified: user.isPhoneVerified || false,
         isEmailVerified: user.isEmailVerified || false,
-        profilePhoto: user.profilePhoto || null,
+        profilePhoto: shown.profilePhoto || null,
         addresses: user.addresses || [],
         plans: user.plans || {},
         settings: user.settings || {},
@@ -150,6 +158,11 @@ const updateProfile = async (req, res) => {
     ).select('-password -otp -__v');
 
     console.log('[Profile Update] Updated user:', updatedUser?.name, updatedUser?.email);
+
+    const shared = Object.fromEntries(
+      ['name', 'email', 'profilePhoto'].filter((k) => k in updateData).map((k) => [k, updateData[k]]),
+    );
+    await (await sharedProfile()).saveSharedProfile(userId, shared, PHOTO_ALIAS);
 
     res.status(200).json({
       success: true,
