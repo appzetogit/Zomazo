@@ -1605,6 +1605,11 @@ export const restaurantAPI = {
     apiClient.patch(`/food/restaurant/foods/${String(id)}`, body ?? {}, {
       contextModule: "restaurant",
     }),
+  /** DELETE /food/restaurant/foods/:id (rewritten to /qc for quick-commerce sellers). */
+  deleteFood: (id) =>
+    apiClient.delete(`/food/restaurant/foods/${String(id)}`, {
+      contextModule: "restaurant",
+    }),
   bulkUploadTemplate: () =>
     apiClient.get("/food/restaurant/bulk-upload/template", { 
       responseType: 'blob', 

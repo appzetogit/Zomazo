@@ -61,6 +61,7 @@ import {
 } from '../controllers/outletTimings.controller.js';
 import {
     createRestaurantFoodController,
+    deleteRestaurantFoodController,
     updateRestaurantFoodController
 } from '../controllers/restaurantFood.controller.js';
 import {
@@ -279,6 +280,9 @@ router.patch('/foods/:id', authMiddleware, requireRestaurant, async (req, res, n
     await invalidateCache('restaurants:*');
     next();
 }, updateRestaurantFoodController);
+// The service clears the menu caches itself and re-checks any combo that
+// contained the dish, so no cache middleware is needed here.
+router.delete('/foods/:id', authMiddleware, requireRestaurant, deleteRestaurantFoodController);
 
 // Bulk Menu Upload
 router.get('/bulk-upload/template', authMiddleware, requireRestaurant, downloadBulkMenuTemplateController);

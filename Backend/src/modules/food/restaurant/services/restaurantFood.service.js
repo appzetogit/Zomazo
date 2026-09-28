@@ -584,3 +584,49 @@ export async function updateRestaurantFood(restaurantId, foodId, body = {}) {
 
     return updated;
 }
+
+/**
+ * Remove one of the restaurant's own dishes.
+ *
+ * Same rule as the quick-commerce fork: the owner may delete a dish whatever
+ * its approval state, and the delete is scoped to their restaurant so an id
+ * from another outlet is simply "not found". Past orders are unaffected --
+ * they snapshot the name and price of every line.
+ *
+ * Food has two things quick-commerce does not, and both would otherwise keep
+ * pointing at the deleted dish:
+ *  - combos: a combo containing it must stop being sold, which is what
+ *    syncComboAvailability does when a component is missing;
+ *  - "goes well with" suggestions on sibling dishes, pulled here so the menu
+ *    does not carry dangling ids.
+ */
+export async function deleteRestaurantFood(restaurantId, foodId) {
+    const context = await getRestaurantContext(restaurantId);
+    if (!foodId || !mongoose.Types.ObjectId.isValid(String(foodId))) {
+        throw new ValidationError('Invalid food id');
+    }
+    const id = new mongoose.Types.ObjectId(String(foodId));
+
+    const deleted = await FoodItem.findOneAndDelete({ _id: id, restaurantId: context.restaurantId })
+        .select('_id name isCombo')
+        .lean();
+    if (!deleted) return null;
+
+    await FoodItem.updateMany(
+        { restaurantId: context.restaurantId, suggestedItemIds: id },
+        { $pull: { suggestedItemIds: id } }
+    );
+
+    if (!deleted.isCombo) {
+        try {
+            const { syncComboAvailability } = await import('../../shared/combo.service.js');
+            await syncComboAvailability(context.restaurantId);
+        } catch (e) {
+            console.error('Combo availability sync failed after a dish delete:', e?.message || e);
+        }
+    }
+
+    await invalidateMenuCaches();
+
+    return { id: String(deleted._id), name: deleted.name };
+}

@@ -1040,9 +1040,25 @@ export default function ItemDetailsPage() {
     setVariants((prev) => prev.filter((variant) => variant.localId !== localId))
   }
 
-  const handleDelete = () => {
-    debugLog("Deleting item:", id)
-    goBack()
+  const [deleting, setDeleting] = useState(false)
+  // This used to just navigate back, so "Delete" looked like it worked and the
+  // dish was still on the menu. It now removes the item on the server, then
+  // goes back to the inventory, which reloads the menu when it mounts.
+  const handleDelete = async () => {
+    if (isNewItem || !id || deleting) return
+    if (!window.confirm(`Delete "${itemName || "this item"}" from your menu? This cannot be undone.`)) return
+    setDeleting(true)
+    try {
+      await restaurantAPI.deleteFood(id)
+      toast.success("Item deleted")
+      window.dispatchEvent(new CustomEvent("foodsChanged"))
+      goBack()
+    } catch (error) {
+      debugError("Error deleting item:", error)
+      toast.error(getServerMessage(error, "Could not delete this item. Please try again."))
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const filteredCategories = useMemo(() => {
@@ -1109,7 +1125,8 @@ export default function ItemDetailsPage() {
               <button
                 type="button"
                 onClick={handleDelete}
-                className="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors flex items-center gap-1.5"
+                disabled={deleting}
+                className="px-4 py-2 disabled:opacity-50 text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors flex items-center gap-1.5"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Delete</span>
@@ -2252,7 +2269,8 @@ export default function ItemDetailsPage() {
               <button
                 type="button"
                 onClick={handleDelete}
-                className="py-3 px-5 border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                disabled={deleting}
+                className="py-3 px-5 disabled:opacity-50 border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
               >
                 <Trash2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Delete Dish</span>
