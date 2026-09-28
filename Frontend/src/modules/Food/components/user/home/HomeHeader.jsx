@@ -95,30 +95,13 @@ export default function HomeHeader({
     }
   };
 
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem('food_user_notifications');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // The bell shows the server inbox only. It used to merge in a device-kept
+  // list that the Notifications page seeded with made-up sample entries.
   const {
     items: broadcastNotifications,
     unreadCount: broadcastUnreadCount,
     dismiss: dismissBroadcastNotification,
   } = useNotificationInbox("user", { limit: 20 });
-
-  useEffect(() => {
-    const syncNotifications = () => {
-      const saved = localStorage.getItem('food_user_notifications');
-      setNotifications(saved ? JSON.parse(saved) : []);
-    };
-
-    // Listen for updates from the main Notifications page
-    window.addEventListener('notificationsUpdated', syncNotifications);
-    // Also listen for new notifications being added via listeners in Notifications.jsx (indirectly via localStorage update)
-    // But since localStorage doesn't fire events on same window, we can use a custom event or a simple interval if needed.
-    // However, the Notifications.jsx already multi-dispatches.
-
-    return () => window.removeEventListener('notificationsUpdated', syncNotifications);
-  }, []);
 
   const festCategories = [
     { id: "food", name: "Food", icon: foodIcon, bgColor: "bg-white dark:bg-[#1a1a1a]" },
@@ -128,9 +111,6 @@ export default function HomeHeader({
   ];
 
   const mergedNotifications = useMemo(() => {
-    const localItems = Array.isArray(notifications)
-      ? notifications.map((item) => ({ ...item, source: "local" }))
-      : [];
     const broadcastItems = (broadcastNotifications || []).map((item) => ({
       ...item,
       source: "broadcast",
@@ -148,26 +128,17 @@ export default function HomeHeader({
       iconColor: "text-blue-600",
     }));
 
-    return [...broadcastItems, ...localItems].sort(
+    return broadcastItems.sort(
       (a, b) =>
         new Date(b.createdAt || b.timestamp || 0).getTime() -
         new Date(a.createdAt || a.timestamp || 0).getTime()
     );
-  }, [broadcastNotifications, notifications]);
+  }, [broadcastNotifications]);
 
-  const unreadCount = notifications.filter(n => !n.read).length + broadcastUnreadCount;
+  const unreadCount = broadcastUnreadCount;
 
-  const handleDeleteNotification = (id, source = "local") => {
-    if (source === "broadcast") {
-      dismissBroadcastNotification(id);
-      return;
-    }
-    setNotifications((prev) => {
-      const next = prev.filter((notification) => notification.id !== id);
-      localStorage.setItem('food_user_notifications', JSON.stringify(next));
-      window.dispatchEvent(new CustomEvent('notificationsUpdated', { detail: { count: next.filter((n) => !n.read).length } }));
-      return next;
-    });
+  const handleDeleteNotification = (id) => {
+    dismissBroadcastNotification(id);
   };
 
   const [isScrolled, setIsScrolled] = useState(false);

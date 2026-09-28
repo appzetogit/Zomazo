@@ -1,37 +1,12 @@
-import { useState, useEffect, useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import { Link } from "react-router-dom"
-import { ArrowLeft, Bell, CheckCircle2, Clock, Tag, Gift, AlertCircle, Trash2, X } from "lucide-react"
+import { ArrowLeft, Bell, CheckCircle2, Clock, Tag, Gift, AlertCircle, Trash2, X, Loader2 } from "lucide-react"
 import AnimatedPage from "@food/components/user/AnimatedPage"
 import { Button } from "@food/components/ui/button"
 import { Card, CardContent } from "@food/components/ui/card"
 import { Badge } from "@food/components/ui/badge"
 import useNotificationInbox from "@food/hooks/useNotificationInbox"
 
-// Initial mock notification data (fallback if localStorage is empty)
-const DEFAULT_NOTIFICATIONS = [
-  {
-    id: "1",
-    type: "order",
-    title: "Order Confirmed",
-    message: "Your order #12345 has been confirmed and is being prepared",
-    time: "2 minutes ago",
-    timestamp: Date.now() - 120000,
-    read: false,
-    icon: "CheckCircle2",
-    iconColor: "text-[#EB590E]"
-  },
-  {
-    id: "2",
-    type: "offer",
-    title: "Special Offer",
-    message: "Get 50% off on your next order above ₹500",
-    time: "1 hour ago",
-    timestamp: Date.now() - 3600000,
-    read: false,
-    icon: "Tag",
-    iconColor: "text-[#EB590E]"
-  }
-]
 
 // Icon mapping for dynamic icons
 const ICON_MAP = {
@@ -41,76 +16,45 @@ const ICON_MAP = {
   AlertCircle
 }
 
+/**
+ * The customer's inbox, straight from the server. Every push a customer is
+ * sent is filed there (order updates from Food, Quick, rides and Services
+ * included), so it is the whole record. This page used to show a device-kept
+ * list seeded with made-up sample entries ("Order #12345 confirmed") that a
+ * new customer saw as real.
+ */
 export default function Notifications() {
-  const [notificationsList, setNotificationsList] = useState(() => {
-    const saved = localStorage.getItem('food_user_notifications')
-    return saved ? JSON.parse(saved) : DEFAULT_NOTIFICATIONS
-  })
   const {
     items: broadcastNotifications,
-    unreadCount: broadcastUnreadCount,
+    unreadCount,
+    loading,
+    refresh,
     markAsRead: markBroadcastAsRead,
     dismiss: dismissBroadcastNotification,
     dismissAll: dismissAllBroadcastNotifications,
   } = useNotificationInbox("user", { limit: 100 })
 
-  // Persistence: Save to localStorage whenever list updates
+  // The device-kept list is gone; drop what older builds left behind.
   useEffect(() => {
-    localStorage.setItem('food_user_notifications', JSON.stringify(notificationsList))
-    // Also dispatch an event to update other components (like navbar badge)
-    window.dispatchEvent(new CustomEvent('notificationsUpdated', { detail: { count: notificationsList.filter(n => !n.read).length } }))
-  }, [notificationsList])
-
-  // Real-time: Listen for status updates from useUserNotifications hook
-  useEffect(() => {
-    const handleOrderUpdate = (event) => {
-      const { orderId, status, message, title } = event.detail
-      const isCancelled = String(status || "").toLowerCase().includes('cancel')
-      
-      const newNotification = {
-        id: `order-${Date.now()}`,
-        type: isCancelled ? "alert" : "order",
-        title: title || `Order #${orderId} ${status}`,
-        message: message || `Your order status is now ${status}`,
-        time: "Just now",
-        timestamp: Date.now(),
-        read: false,
-        icon: isCancelled ? "AlertCircle" : "CheckCircle2",
-        iconColor: isCancelled ? "text-red-600" : "text-[#EB590E]"
-      }
-      setNotificationsList(prev => [newNotification, ...prev])
-    }
-
-    const handleDeliveryOtp = (event) => {
-      const { orderId, otp, message } = event.detail
-      const newNotification = {
-        id: `otp-${Date.now()}`,
-        type: "alert",
-        title: "Delivery OTP Received",
-        message: message || `Your OTP for order #${orderId} is ${otp}`,
-        time: "Just now",
-        timestamp: Date.now(),
-        read: false,
-        icon: "AlertCircle",
-        iconColor: "text-accent-orange"
-      }
-      setNotificationsList(prev => [newNotification, ...prev])
-    }
-
-    window.addEventListener('orderStatusNotification', handleOrderUpdate)
-    window.addEventListener('deliveryDropOtp', handleDeliveryOtp)
-
-    return () => {
-      window.removeEventListener('orderStatusNotification', handleOrderUpdate)
-      window.removeEventListener('deliveryDropOtp', handleDeliveryOtp)
+    try {
+      localStorage.removeItem("food_user_notifications")
+    } catch {
+      // Storage blocked: nothing to clean up.
     }
   }, [])
-  
+
+  // A live order update or delivery OTP means the server has just filed a new
+  // entry; fetch it rather than inventing a local copy.
+  useEffect(() => {
+    window.addEventListener("orderStatusNotification", refresh)
+    window.addEventListener("deliveryDropOtp", refresh)
+    return () => {
+      window.removeEventListener("orderStatusNotification", refresh)
+      window.removeEventListener("deliveryDropOtp", refresh)
+    }
+  }, [refresh])
+
   const mergedNotifications = useMemo(() => {
-    const localItems = (notificationsList || []).map((item) => ({
-      ...item,
-      source: "local",
-    }))
     const broadcastItems = (broadcastNotifications || []).map((item) => ({
       ...item,
       source: "broadcast",
@@ -129,36 +73,23 @@ export default function Notifications() {
       iconColor: "text-blue-600",
     }))
 
-    return [...broadcastItems, ...localItems].sort(
+    return broadcastItems.sort(
       (a, b) =>
         new Date(b.timestamp || b.createdAt || 0).getTime() -
         new Date(a.timestamp || a.createdAt || 0).getTime()
     )
-  }, [broadcastNotifications, notificationsList])
+  }, [broadcastNotifications])
 
-  const unreadCount = notificationsList.filter(n => !n.read).length + broadcastUnreadCount
-
-  const handleMarkAsRead = (id, source = "local") => {
-    if (source === "broadcast") {
-      markBroadcastAsRead(id)
-      return
-    }
-    setNotificationsList(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    )
+  const handleMarkAsRead = (id) => {
+    markBroadcastAsRead(id)
   }
 
   const handleClearAll = () => {
-    setNotificationsList([])
     dismissAllBroadcastNotifications()
   }
 
-  const handleDeleteOne = (id, source = "local") => {
-    if (source === "broadcast") {
-      dismissBroadcastNotification(id)
-      return
-    }
-    setNotificationsList((prev) => prev.filter((notification) => notification.id !== id))
+  const handleDeleteOne = (id) => {
+    dismissBroadcastNotification(id)
   }
 
   return (
@@ -254,8 +185,14 @@ export default function Notifications() {
           })}
         </div>
 
+        {loading && mergedNotifications.length === 0 && (
+          <div className="py-12 flex justify-center">
+            <Loader2 className="h-8 w-8 text-[#EB590E] animate-spin" />
+          </div>
+        )}
+
         {/* Empty State (if no notifications) */}
-        {mergedNotifications.length === 0 && (
+        {!loading && mergedNotifications.length === 0 && (
           <div className="text-center py-12 md:py-16 lg:py-20">
             <Bell className="h-16 w-16 md:h-20 md:w-20 lg:h-24 lg:w-24 text-gray-300 dark:text-gray-600 mx-auto mb-4 md:mb-5 lg:mb-6" />
             <h3 className="text-lg md:text-xl lg:text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-2 md:mb-3">No notifications</h3>
