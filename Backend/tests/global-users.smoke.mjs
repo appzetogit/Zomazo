@@ -102,6 +102,27 @@ await check('an UNLINKED services account is still matched, by phone', async () 
   assert.ok(users[0].apps.includes('services'), `apps were ${users[0].apps}`);
 });
 
+await check('Shop orders count against their owner, and only while the Shop is on', async () => {
+  const { setModuleEnabled } = await import('../src/core/modules/moduleState.service.js');
+  const shopRow = (await mongoose.connection.collection('ecom_users').insertOne({ platformUserId: asha, phone: '9876543210' })).insertedId;
+  await mongoose.connection.collection('ecom_orders').insertOne({ userId: shopRow, pricing: { total: 99 } });
+  try {
+    let a = (await listGlobalUsers({ search: 'Asha' })).users[0];
+    assert.equal(a.shopOrders, 1);
+    assert.equal(a.orders, 5);
+    assert.equal(a.orderValue, 649);
+    assert.ok(a.apps.includes('shop'), `apps were ${a.apps}`);
+    await setModuleEnabled('ecommerce', false, { reason: 'test' });
+    a = (await listGlobalUsers({ search: 'Asha' })).users[0];
+    assert.equal(a.shopOrders, 0);
+    assert.ok(!a.apps.includes('shop'));
+  } finally {
+    await setModuleEnabled('ecommerce', true);
+    await mongoose.connection.collection('ecom_orders').deleteMany({});
+    await mongoose.connection.collection('ecom_users').deleteOne({ _id: shopRow });
+  }
+});
+
 await check('a phone is found however it was typed', async () => {
   for (const term of ['9876543210', '+919876543210', '919876543210']) {
     const { users } = await listGlobalUsers({ search: term });

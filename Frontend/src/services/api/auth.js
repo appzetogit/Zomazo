@@ -37,7 +37,7 @@ export function requestUnifiedOtp(phone) {
 /**
  * Verify Unified OTP for both Food and Taxi.
  */
-export function verifyUnifiedOtp(phone, otp, ref, name, fcmToken, platform) {
+export function verifyUnifiedOtp(phone, otp, ref, name, fcmToken, platform, refService) {
   const digits = normalizePhone(phone);
   const normalized = digits.length > USER_PHONE_LENGTH ? digits.slice(-USER_PHONE_LENGTH) : digits;
   const otpStr = String(otp ?? "").replace(/\D/g, "").slice(0, 4);
@@ -49,6 +49,8 @@ export function verifyUnifiedOtp(phone, otp, ref, name, fcmToken, platform) {
 
   const refValue = typeof ref === "string" ? ref.trim() : "";
   if (refValue) payload.ref = refValue;
+  // Whose referral programme the code belongs to; the backend defaults to Food.
+  if (refValue && typeof refService === "string" && refService.trim()) payload.refService = refService.trim();
   if (typeof name === "string" && name.trim()) payload.name = name.trim();
   if (typeof fcmToken === "string" && fcmToken.trim()) {
     payload.fcmToken = fcmToken.trim();

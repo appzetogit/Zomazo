@@ -8,6 +8,7 @@ import { useCompanyName } from "@shop/hooks/useCompanyName";
 import { useProfile } from "@shop/context/ProfileContext";
 import { toast } from "sonner";
 import { userAPI } from "@shop/api";
+import { inviteLink } from "@/shared/superapp/services";
 
 const statusMeta = {
   credited: {
@@ -79,9 +80,8 @@ export default function ReferEarn() {
   }, []);
 
   const refId = userProfile?._id || userProfile?.id || userProfile?.referralCode || "";
-  const referralLink = refId
-    ? `${window.location.origin}/auth/login?ref=${encodeURIComponent(String(refId))}`
-    : "";
+  // The platform sign-in, credited to the Shop's referral programme.
+  const referralLink = inviteLink(refId, "shop");
 
   const shareText = useMemo(() => {
     const rewardText = stats.rewardAmount > 0 ? `\u20B9${stats.rewardAmount}` : "rewards";

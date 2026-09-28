@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { ApiError } from '../../utils/ApiError.js';
 import { decideAdminAccess } from '../admin/adminAccessPolicy.js';
+import { isModuleEnabled } from '../modules/moduleState.service.js';
+import { MODULES } from '../modules/moduleRegistry.js';
 
 /**
  * One support inbox for the whole platform (Master > Help & Support).
@@ -96,6 +98,20 @@ const SOURCES = {
     toOwn: (s) => s,
     update: async (id, { status, reply }) => (await quickAdmin()).updateDeliverySupportTicket(id, { status, adminResponse: reply }),
   },
+  // The Shop's customers, raised from the help centre or the Shop itself. Only
+  // while the Shop's module is on (see shopFilter).
+  shop_customer: {
+    label: 'Shop · Customer',
+    service: 'ecommerce',
+    requesterType: 'customer',
+    load: () => model('../../modules/ecommerce/modules/commerce/user/models/supportTicket.model.js', 'SupportTicket'),
+    people: { field: 'userId', collection: 'ecom_users', name: (d) => d.name, phone: (d) => d.phone },
+    toInbox: (s) => ({ 'in-progress': 'in_progress' }[s] || s),
+    toOwn: (s) => ({ in_progress: 'in-progress' }[s] || s),
+    update: async (id, { status, reply }) =>
+      (await import('../../modules/ecommerce/modules/commerce/admin/services/admin.service.js'))
+        .updateSupportTicket(id, { source: 'user', status, adminResponse: reply }),
+  },
   taxi: {
     label: 'Taxi',
     service: 'taxi',
@@ -116,6 +132,19 @@ const canSee = (admin, source, write = false) =>
   decideAdminAccess(admin, { service: SOURCES[source].service, resource: 'support', write }).allowed;
 
 const visibleSources = (admin) => Object.keys(SOURCES).filter((key) => canSee(admin, key));
+
+/** The sources an admin sees right now: the Shop's only while its module is on. */
+const liveSources = async (admin) => {
+  const shopOn = await isModuleEnabled(MODULES.ECOMMERCE);
+  return visibleSources(admin).filter((key) => shopOn || SOURCES[key].service !== 'ecommerce');
+};
+
+/*
+ * A Food customer ticket raised from the help centre about a service with no
+ * ticket desk of its own (core/support/customerSupport.service.js) says which,
+ * so the inbox shows "Services · Customer" rather than Food.
+ */
+const TAGGED_LABEL = { services: 'Services · Customer' };
 
 /* -------------------------------------------------------------- reading */
 
@@ -145,7 +174,7 @@ function toRow(source, doc, person) {
     key: `${source}:${doc._id}`,
     id: String(doc._id),
     source,
-    sourceLabel: def.label,
+    sourceLabel: TAGGED_LABEL[doc.service] || def.label,
     service: def.service,
     code: doc.ticketId || doc.ticketCode || String(doc._id).slice(-6).toUpperCase(),
     requesterType: def.requesterType || doc.requesterRole || doc.userType || 'user',
@@ -198,7 +227,7 @@ function ownFilter(source, { status, q }) {
  * across sources is the fix if an inbox ever holds thousands.
  */
 export async function listInbox(admin, query = {}) {
-  const allowed = visibleSources(admin);
+  const allowed = await liveSources(admin);
   const wanted = String(query.source || '').trim();
   const service = String(query.service || '').trim();
   const sources = allowed.filter((s) => (!wanted || s === wanted) && (!service || SOURCES[s].service === service));
@@ -232,7 +261,7 @@ export async function listInbox(admin, query = {}) {
 
 /** Open / in progress / resolved per source, for the header. */
 export async function inboxStats(admin) {
-  const sources = visibleSources(admin);
+  const sources = await liveSources(admin);
   const counts = { open: 0, in_progress: 0, resolved: 0 };
   const bySource = {};
   await Promise.all(

@@ -25,5 +25,29 @@ export const ALL_ORDERS_PATH = '/food/user/orders/all'
 /** Help and tickets for any service. */
 export const SUPPORT_PATH = '/food/user/profile/support'
 
+/** The one sign-in for every customer app (modules/auth). */
+export const LOGIN_PATH = '/login'
+
+/*
+ * Whose referral programme an invite link credits. Food and Taxi customers are
+ * one account, but each pays referrals by its own rules, and the Shop keeps its
+ * own. Food is the default, so a bare ?ref= keeps crediting what it always did.
+ */
+export const REFERRAL_VIA = ['food', 'taxi', 'shop']
+
+/**
+ * A friend's invite link: the platform sign-in with the code, and the service
+ * whose programme it came from. Every service shares the same page, so a link
+ * can never land on a sign-in screen that drops the code.
+ */
+export const inviteLink = (ref, via = 'food') => {
+  const code = String(ref || '').trim()
+  if (!code) return ''
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const params = new URLSearchParams({ ref: code })
+  if (via && via !== 'food') params.set('via', via)
+  return `${origin}${LOGIN_PATH}?${params.toString()}`
+}
+
 export const currentServiceKey = (pathname) =>
   SUPERAPP_SERVICES.find((s) => s.match(pathname || ''))?.key || null

@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import apiClient, { authAPI } from "@food/api"
 import { setUnifiedAuthData, isUnifiedAuthenticated } from "@food/utils/auth"
 import { useSettings } from "../../Taxi/shared/context/SettingsContext"
+import { REFERRAL_VIA } from "@/shared/superapp/services"
 
 // Fallback only -- the logo an admin uploads in business settings wins. The
 // file path is unchanged because the asset itself still lives there; note that
@@ -29,6 +30,24 @@ export default function UnifiedOTPFastLogin({ viewType = "auth" }) {
   const location = useLocation()
   const submitting = useRef(false)
   const { activeLogo } = useSettings()
+
+  // A friend's invite: /login?ref=<code>[&via=food|taxi|shop]. Kept for the
+  // whole visit, so going back to edit the number does not lose it; the
+  // backend credits it only when this sign-in creates a new account.
+  const [invite] = useState(() => {
+    const params = new URLSearchParams(location.search)
+    const ref = String(params.get("ref") || "").trim().slice(0, 64)
+    const via = String(params.get("via") || "").trim().toLowerCase()
+    return { ref, via: REFERRAL_VIA.includes(via) ? via : "food" }
+  })
+  // Where a new customer lands when nothing sent them here: the app they were
+  // invited to.
+  const INVITE_HOME = { food: "/food/user", taxi: "/taxi/user", shop: "/shop" }
+  const landingPath = () => {
+    const from = location.state?.from?.pathname
+    if (from && from !== "/") return from
+    return invite.ref ? INVITE_HOME[invite.via] || "/food/user" : "/food/user"
+  }
 
   const getWebFcmTokenForLogin = async () => {
     if (typeof window === "undefined" || typeof navigator === "undefined") {
@@ -256,7 +275,7 @@ export default function UnifiedOTPFastLogin({ viewType = "auth" }) {
       })
 
       const response = await withTimeout(
-        authAPI.verifyUnifiedOTP(phoneNumber, otpDigits, null, null, fcmToken, platform),
+        authAPI.verifyUnifiedOTP(phoneNumber, otpDigits, invite.ref || null, null, fcmToken, platform, invite.ref ? invite.via : undefined),
         VERIFY_REQUEST_TIMEOUT_MS,
         "OTP verification request",
       )
@@ -288,8 +307,7 @@ export default function UnifiedOTPFastLogin({ viewType = "auth" }) {
         console.warn("[Auth] FCM save route failed after login:", fcmSaveError?.message || fcmSaveError)
       }
       toast.success("Authentication successful!")
-      const from = location.state?.from?.pathname === "/" ? "/food/user" : (location.state?.from?.pathname || "/food/user");
-      navigate(from, { replace: true })
+      navigate(landingPath(), { replace: true })
     } catch (err) {
       const status = err?.response?.status
       let msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Invalid OTP. Please try again."
@@ -347,8 +365,7 @@ export default function UnifiedOTPFastLogin({ viewType = "auth" }) {
 
       setUnifiedAuthData(nextData)
       toast.success("Profile completed successfully!")
-      const from = location.state?.from?.pathname === "/" ? "/food/user" : (location.state?.from?.pathname || "/food/user");
-      navigate(from, { replace: true })
+      navigate(landingPath(), { replace: true })
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -481,6 +498,11 @@ export default function UnifiedOTPFastLogin({ viewType = "auth" }) {
                 <p className="text-[#1A1A1A] text-[15px] font-medium max-w-[28ch] mx-auto">
                   Enter your phone number to<br />access the unified ecosystem.
                 </p>
+                {invite.ref && step !== 3 ? (
+                  <p className="mt-3 text-[13px] font-semibold text-[#F38F24]">
+                    Invite code applied. It counts when you create a new account.
+                  </p>
+                ) : null}
               </div>
 
               <form

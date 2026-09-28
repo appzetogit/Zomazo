@@ -68,8 +68,11 @@ const storeLabel = (s) => STORE_LABEL[s] || (String(s).startsWith('cancelled') ?
 
 /* ------------------------------------------------------------- identity */
 
-/** The customer's own ids in the services that keep their own customer rows. */
-async function linkedIds(collection, platformId, phone) {
+/**
+ * The customer's own ids in the services that keep their own customer rows.
+ * Also used by the help centre (core/support/customerSupport.service.js).
+ */
+export async function linkedIds(collection, platformId, phone) {
   const or = [{ platformUserId: oid(platformId) }];
   const ten = lastTen(phone);
   if (ten.length === 10) or.push({ phone: { $in: [ten, `+91${ten}`, `91${ten}`, `+91 ${ten}`] } });

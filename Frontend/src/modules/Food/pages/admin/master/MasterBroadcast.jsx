@@ -3,7 +3,7 @@ import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { Loader2, Send, CheckCircle2, XCircle, MinusCircle, ExternalLink } from "lucide-react"
 import { masterBroadcastAPI } from "@food/api"
-import { SERVICE_PROVIDER_ENABLED } from "@/config/features"
+import { ECOMMERCE_ENABLED, SERVICE_PROVIDER_ENABLED } from "@/config/features"
 
 /**
  * Master > Broadcast: one push message to several services at once.
@@ -63,6 +63,16 @@ const SERVICES = [
       own: "/admin/sp/broadcast",
       target: { all: "all", customers: "customers", partners: "vendors", fleet: "workers" },
       send: (t, msg) => masterBroadcastAPI.services({ title: msg.title, message: msg.message, link: msg.link || undefined, audiences: t }),
+    }]
+    : []),
+  // The Shop ships by courier: it has sellers but no riders of its own.
+  ...(ECOMMERCE_ENABLED
+    ? [{
+      key: "shop",
+      label: "Shop",
+      own: "/admin/shop/broadcast-notification",
+      target: { all: "ALL", customers: "USER", partners: "SELLER", fleet: null },
+      send: (t, msg) => masterBroadcastAPI.shop({ title: msg.title, message: msg.message, link: msg.link || undefined, targetType: t }),
     }]
     : []),
 ]

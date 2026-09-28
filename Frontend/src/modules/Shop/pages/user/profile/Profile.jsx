@@ -57,6 +57,7 @@ const USER_SESSION_PREFERENCE_KEYS = ["userVegMode"];
 import { registerWebPushForCurrentModule } from "@shop/utils/firebaseMessaging";
 import DeleteAccountModal from "@shop/components/DeleteAccountModal";
 import MarketingPushToggle from "@shop/components/user/MarketingPushToggle";
+import { inviteLink } from "@/shared/superapp/services";
 
 export default function Profile() {
   const { userProfile, vegMode, setVegMode, getDefaultAddress, addresses } =
@@ -275,9 +276,8 @@ export default function Profile() {
 
   const refId =
     userProfile?._id || userProfile?.id || userProfile?.referralCode || "";
-  const referralLink = refId
-    ? `${window.location.origin}/auth/login?ref=${encodeURIComponent(String(refId))}`
-    : "";
+  // The platform sign-in, credited to the Shop's referral programme.
+  const referralLink = inviteLink(refId, "shop");
 
   const handleShareReferral = async () => {
     if (!referralLink) return;

@@ -27,6 +27,7 @@ const ServiceWorkerApp = lazy(() => import('../modules/ServiceProvider/worker/Wo
 // Service booking for customers (home services) on the /sp backend.
 const ServicesApp = lazy(() => import('../modules/Services/ServicesApp'))
 import ProtectedRoute from '@food/components/ProtectedRoute'
+import LoginRedirect from '../shared/superapp/LoginRedirect'
 
 const PageLoader = () => <AppShellSkeleton />
 
@@ -188,6 +189,9 @@ const AppRoutes = () => {
           <>
             <Route path="/shop/*" element={<Suspense fallback={<PageLoader />}><ShopApp /></Suspense>} />
             <Route path="/admin/shop/*" element={<Suspense fallback={<PageLoader />}><ShopAdminApp /></Suspense>} />
+            {/* The Shop's invite links once pointed at /auth/login?ref=, a page
+                only its standalone app had. They land on the one sign-in. */}
+            <Route path="/auth/*" element={<LoginRedirect via="shop" />} />
           </>
         )}
 

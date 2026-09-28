@@ -42,10 +42,13 @@ const supportTicketSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
+    // Null for a ticket with its own title: createSupportTicket has always
+    // allowed one (a custom title, or none picked), but this used to be
+    // required, so those tickets failed validation instead of being saved.
     titleId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'TaxiSupportTicketTitle',
-      required: true,
+      default: null,
     },
     title: {
       type: String,

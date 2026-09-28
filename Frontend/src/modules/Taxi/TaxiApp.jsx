@@ -17,14 +17,12 @@ import { syncUpcomingRideReminders } from './modules/user/utils/upcomingRideRemi
 import { getAuthenticatedDriverRole, getLocalDriverToken } from './modules/driver/services/registrationService';
 import { installBrowserFcmRegistration } from './shared/push/browserFcmRegistration';
 import { installNativeFcmBridge } from './shared/push/nativeFcmBridge';
+import LoginRedirect from '@/shared/superapp/LoginRedirect';
 import './App.css';
 
 
 // Lazy loading pages for performance
 import UserHome from './modules/user/pages/Home';
-const Login = lazy(() => import('./modules/user/pages/auth/Login'));
-const VerifyOTP = lazy(() => import('./modules/user/pages/auth/VerifyOTP'));
-const Signup = lazy(() => import('./modules/user/pages/auth/Signup'));
 
 // Ride Module Pages
 const SelectLocation = lazy(() => import('./modules/user/pages/ride/SelectLocation'));
@@ -102,7 +100,6 @@ const BusDetails = lazy(() => import('./modules/user/pages/bus/BusDetails'));
 const BusConfirm = lazy(() => import('./modules/user/pages/bus/BusConfirm'));
 
 // Phase 5 — Onboarding
-const Onboarding = lazy(() => import('./modules/user/pages/auth/Onboarding'));
 
 // New Feature Pages
 // const BikeRentalHome = lazy(() => import('./modules/user/pages/rental/BikeRentalHome'));
@@ -707,7 +704,8 @@ function TaxiApp() {
             <Route path="login" element={<Navigate to="/login" replace />} />
             <Route path="onboarding" element={<Navigate to="/login" replace />} />
             <Route path="verify-otp" element={<Navigate to="/login" replace />} />
-            <Route path="signup" element={<Signup />} />
+            {/* Sign-up is the platform sign-in; an old invite link keeps its code. */}
+            <Route path="signup" element={<LoginRedirect via="taxi" />} />
 
             <Route element={<UserProtectedRoute />}>
               <Route
@@ -808,7 +806,7 @@ function TaxiApp() {
             <Route path="user/privacy" element={<LegalPage />} />
             <Route path="user/refund" element={<LegalPage />} />
             <Route path="user/verify-otp" element={<Navigate to="/login" replace />} />
-            <Route path="user/signup" element={<Signup />} />
+            <Route path="user/signup" element={<LoginRedirect via="taxi" />} />
             <Route path="user" element={<UserHomeRoute taxiPrefixed />} />
 
             <Route element={<UserProtectedRoute />}>

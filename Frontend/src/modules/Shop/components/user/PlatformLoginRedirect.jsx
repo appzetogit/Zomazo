@@ -18,5 +18,10 @@ export default function PlatformLoginRedirect() {
   const raw = location.state?.from;
   const fromApp = typeof raw === "string" ? raw : raw?.pathname || "/";
   const returnTo = toPlatformPath(toAppPath(fromApp) || "/");
-  return <Navigate to="/login" replace state={{ from: { pathname: returnTo } }} />;
+  // A friend's invite (/shop/auth/login?ref=...) keeps its code, credited to
+  // the Shop's referral programme.
+  const params = new URLSearchParams(location.search);
+  if (params.get("ref") && !params.get("via")) params.set("via", "shop");
+  const qs = params.toString();
+  return <Navigate to={`/login${qs ? `?${qs}` : ""}`} replace state={{ from: { pathname: returnTo } }} />;
 }

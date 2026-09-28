@@ -3,7 +3,7 @@ import { Link } from "react-router-dom"
 import { platformSettingsAPI } from "@food/api"
 import { toast } from "sonner"
 import { Loader2, Gift, Info, ExternalLink } from "lucide-react"
-import { SERVICE_PROVIDER_ENABLED } from "@/config/features"
+import { ECOMMERCE_ENABLED, SERVICE_PROVIDER_ENABLED } from "@/config/features"
 
 /**
  * Master > Referral: what a referral pays, set once for every service.
@@ -32,9 +32,12 @@ const SCOPES = [
   // Services has no referral screen of its own: what is set here (or under
   // "All services") is all it pays, to customers, at sign-up.
   ...(SERVICE_PROVIDER_ENABLED ? [{ id: "serviceProvider", level: "vertical", label: "Services" }] : []),
+  // The Shop pays at sign-up, like Food; its own screen keeps its numbers
+  // until something is set here.
+  ...(ECOMMERCE_ENABLED ? [{ id: "ecommerce", level: "vertical", label: "Shop" }] : []),
 ]
 
-const SERVICE_LABEL = { food: "Food", quickCommerce: "Quick & Medical", taxi: "Taxi", serviceProvider: "Services" }
+const SERVICE_LABEL = { food: "Food", quickCommerce: "Quick & Medical", taxi: "Taxi", serviceProvider: "Services", ecommerce: "Shop" }
 
 // Each service's own referral screen, for the rules Master does not set.
 const OWN_SCREENS = [
@@ -42,6 +45,7 @@ const OWN_SCREENS = [
   { label: "Quick & Medical referral rules", path: "/admin/quick-commerce/referral-settings" },
   { label: "Taxi customer referral rules", path: "/taxi/admin/referrals/user-settings" },
   { label: "Taxi driver referral rules", path: "/taxi/admin/referrals/driver-settings" },
+  ...(ECOMMERCE_ENABLED ? [{ label: "Shop referral rules", path: "/admin/shop/referral-settings" }] : []),
 ]
 
 const inputCls =
@@ -196,7 +200,7 @@ export default function MasterReferral() {
                     </td>
                   </tr>
                 ) : (
-                  overview.services.filter((s) => s.vertical !== "serviceProvider" || SERVICE_PROVIDER_ENABLED).map((s) => (
+                  overview.services.filter((s) => (s.vertical !== "serviceProvider" || SERVICE_PROVIDER_ENABLED) && (s.vertical !== "ecommerce" || ECOMMERCE_ENABLED)).map((s) => (
                     <tr key={s.vertical}>
                       <td className="px-5 py-3 font-medium text-neutral-900">
                         {SERVICE_LABEL[s.vertical] || s.vertical}

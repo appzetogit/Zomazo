@@ -61,6 +61,7 @@ import {
   saveFoodUserTheme,
 } from "@/shared/utils/theme.js";
 import DeleteAccountModal from "@food/components/DeleteAccountModal";
+import { inviteLink } from "@/shared/superapp/services";
 
 export default function Profile() {
   const { userProfile, vegMode, setVegMode, getDefaultAddress, addresses } =
@@ -271,9 +272,7 @@ export default function Profile() {
 
   const refId =
     userProfile?._id || userProfile?.id || userProfile?.referralCode || "";
-  const referralLink = refId
-    ? `${window.location.origin}/food/food/user/auth/login?ref=${encodeURIComponent(String(refId))}`
-    : "";
+  const referralLink = inviteLink(refId);
 
   const handleShareReferral = async () => {
     if (!referralLink) return;

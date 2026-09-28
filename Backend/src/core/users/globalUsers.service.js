@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import { logger } from '../../utils/logger.js';
 import { FoodUser } from './user.model.js';
 import { toTenDigits } from '../identity/phoneMatch.js';
+import { isModuleEnabled } from '../modules/moduleState.service.js';
+import { MODULES } from '../modules/moduleRegistry.js';
 
 /**
  * Every customer on the platform, in one list.
@@ -11,7 +13,8 @@ import { toTenDigits } from '../identity/phoneMatch.js';
  * `collection: 'users'`. So this is not a migration -- it is the read that was
  * never written. Quick commerce (`qc_users`) and service provider (`sp_users`)
  * still keep their own documents, linked by `platformUserId` where it has been
- * stamped and by phone where it has not (core/identity).
+ * stamped and by phone where it has not (core/identity), and so does the Shop
+ * (`ecom_users`), counted only while its module is on.
  *
  * STRICTLY READ ONLY, and deliberately so. Two mongoose schemas share the
  * `users` collection and they diverge additively -- food alone has
@@ -90,7 +93,7 @@ export function buildUserFilter({ search = '', status = '', from = '', to = '' }
 export async function enrichUsers(users = []) {
     const ids = users.map((u) => u._id).filter(Boolean);
     const out = new Map(ids.map((id) => [String(id), {
-        orders: 0, orderValue: 0, foodOrders: 0, quickOrders: 0, rides: 0, walletBalance: 0, apps: [],
+        orders: 0, orderValue: 0, foodOrders: 0, quickOrders: 0, shopOrders: 0, rides: 0, walletBalance: 0, apps: [],
     }]));
     if (!ids.length) return out;
 
@@ -188,14 +191,15 @@ export async function enrichUsers(users = []) {
     };
 
     /*
-     * Quick commerce and medical orders. They are keyed by the customer's
-     * `qc_users` id, not the platform one, so each qc_users row is first mapped
-     * to its owner -- by `platformUserId`, or by phone where the backfill has
-     * not reached -- and the orders summed onto that owner.
+     * Quick commerce and medical orders, and the Shop's. They are keyed by the
+     * customer's own row in that service (`qc_users`, `ecom_users`), not the
+     * platform id, so each row is first mapped to its owner -- by
+     * `platformUserId`, or by phone where the backfill has not reached -- and
+     * the orders summed onto that owner.
      */
-    jobs.push((async () => {
+    const satelliteOrders = async (usersColl, ordersColl, field) => {
         try {
-            const qcUsers = await mongoose.connection.collection('qc_users').find(
+            const own = await mongoose.connection.collection(usersColl).find(
                 {
                     $or: [
                         { platformUserId: { $in: ids } },
@@ -205,37 +209,46 @@ export async function enrichUsers(users = []) {
                 { projection: { platformUserId: 1, phone: 1 } },
             ).toArray();
             const ownerOf = new Map();
-            for (const q of qcUsers) {
+            for (const q of own) {
                 let owner = q.platformUserId && out.has(String(q.platformUserId)) ? String(q.platformUserId) : null;
                 if (!owner && q.phone) owner = idByPhone.get(toTenDigits(q.phone)) || null;
                 if (owner) ownerOf.set(String(q._id), owner);
             }
             if (!ownerOf.size) return;
-            const rows = await mongoose.connection.collection('qc_orders').aggregate([
+            const rows = await mongoose.connection.collection(ordersColl).aggregate([
                 { $match: { userId: { $in: [...ownerOf.keys()].map((id) => new mongoose.Types.ObjectId(id)) } } },
                 { $group: { _id: '$userId', n: { $sum: 1 }, value: { $sum: { $ifNull: ['$pricing.total', 0] } } } },
             ]).toArray();
             for (const r of rows) {
                 const e = out.get(ownerOf.get(String(r._id)));
                 if (!e) continue;
-                e.quickOrders += r.n;
+                e[field] += r.n;
                 e.orderValue += Math.round((r.value || 0) * 100) / 100;
             }
         } catch (err) {
-            logger.warn(`globalUsers: quick-commerce order counts failed: ${err.message}`);
+            logger.warn(`globalUsers: ${ordersColl} order counts failed: ${err.message}`);
         }
-    })());
+    };
+    jobs.push(satelliteOrders('qc_users', 'qc_orders', 'quickOrders'));
+    // The Shop only while its module is switched on (Master > Modules).
+    const shopOn = await isModuleEnabled(MODULES.ECOMMERCE);
+    if (shopOn) jobs.push(satelliteOrders('ecom_users', 'ecom_orders', 'shopOrders'));
 
     await Promise.all(jobs);
-    await Promise.all([satellite('qc_users', 'quick'), satellite('sp_users', 'services')]);
+    await Promise.all([
+        satellite('qc_users', 'quick'),
+        satellite('sp_users', 'services'),
+        ...(shopOn ? [satellite('ecom_users', 'shop')] : []),
+    ]);
 
     // Apps derived from what they actually did, plus the satellites above.
     for (const [, e] of out) {
-        e.orders = e.foodOrders + e.quickOrders;
+        e.orders = e.foodOrders + e.quickOrders + e.shopOrders;
         e.orderValue = Math.round(e.orderValue * 100) / 100;
         if (e.foodOrders > 0 && !e.apps.includes('food')) e.apps.unshift('food');
         if (e.quickOrders > 0 && !e.apps.includes('quick')) e.apps.push('quick');
         if (e.rides > 0 && !e.apps.includes('taxi')) e.apps.push('taxi');
+        if (e.shopOrders > 0 && !e.apps.includes('shop')) e.apps.push('shop');
     }
     return out;
 }
@@ -278,6 +291,7 @@ const shape = (u, e = {}) => ({
     orders: e?.orders || 0,
     foodOrders: e?.foodOrders || 0,
     quickOrders: e?.quickOrders || 0,
+    shopOrders: e?.shopOrders || 0,
     orderValue: e?.orderValue || 0,
     rides: e?.rides || 0,
     walletBalance: e?.walletBalance || 0,
@@ -310,6 +324,7 @@ const CSV_COLUMNS = [
     ['Apps used', (u) => (u.apps || []).join(' / ')],
     ['Food orders', (u) => u.foodOrders],
     ['Quick & medical orders', (u) => u.quickOrders],
+    ['Shop orders', (u) => u.shopOrders],
     ['Order value', (u) => u.orderValue],
     ['Rides', (u) => u.rides],
     ['Wallet balance', (u) => u.walletBalance],

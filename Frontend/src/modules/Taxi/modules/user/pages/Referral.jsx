@@ -15,6 +15,7 @@ import {
   USER_REFERRAL_TRANSLATION_FIELDS,
 } from '../../shared/utils/referralTranslationFields';
 import { useSettings } from '../../../shared/context/SettingsContext';
+import { inviteLink } from '@/shared/superapp/services';
 
 const readStoredUserInfo = () => {
   try {
@@ -161,7 +162,8 @@ const Referral = () => {
     if (!referralCode) {
       return;
     }
-    const signupLink = `${window.location.origin}/taxi/user/signup?ref=${encodeURIComponent(referralCode)}`;
+    // The platform sign-in, credited to the Taxi referral programme.
+    const signupLink = inviteLink(referralCode, 'taxi');
     const shareText = `${bannerText}\nUse my referral code ${referralCode} to sign up.\n${signupLink}`;
 
     try {

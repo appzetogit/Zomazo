@@ -84,7 +84,9 @@ const getUserMeOnce = () => {
 /** Auth API - user OTP + admin login via new backend */
 export const authAPI = {
   sendUnifiedOTP: (phone) => authService.requestUnifiedOtp(phone),
-  verifyUnifiedOTP: (phone, otp, ref, name, fcmToken, platform) => authService.verifyUnifiedOtp(phone, otp, ref, name, fcmToken, platform),
+  // refService: whose referral programme `ref` belongs to ('food' | 'taxi' | 'shop').
+  verifyUnifiedOTP: (phone, otp, ref, name, fcmToken, platform, refService) =>
+    authService.verifyUnifiedOtp(phone, otp, ref, name, fcmToken, platform, refService),
   saveLoginFcmToken: (token, platform = "web") =>
     authService.saveLoginFcmToken(token, platform),
 
@@ -365,6 +367,7 @@ export const masterBroadcastAPI = {
   food: (body) => apiClient.post("/food/admin/notifications/broadcast", body, { contextModule: "admin" }),
   quick: (body) => apiClient.post("/qc/admin/notifications/broadcast", body, { contextModule: "admin" }),
   services: (body) => apiClient.post("/sp/admin/notifications/broadcast", body, { contextModule: "admin" }),
+  shop: (body) => apiClient.post("/ecom/admin/notifications/broadcast", body, { contextModule: "admin" }),
   taxi: (body) => apiClient.post("/taxi/admin/notifications/send", body, { contextModule: "admin" }),
   taxiLocations: () => apiClient.get("/taxi/admin/service-locations", { contextModule: "admin" }),
 };

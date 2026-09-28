@@ -3,6 +3,7 @@ import UserLayout from "./UserLayout"
 import { Suspense, lazy } from "react"
 import Loader from "@food/components/Loader"
 import ProtectedRoute from "@food/components/ProtectedRoute"
+import LoginRedirect from "@/shared/superapp/LoginRedirect"
 
 // Lazy Loading Pages
 
@@ -29,7 +30,6 @@ const ProductDetail = lazy(() => import("@food/pages/user/ProductDetail"))
 
 // Cart
 const Cart = lazy(() => import("@food/pages/user/cart/Cart"))
-const Checkout = lazy(() => import("@food/pages/user/cart/Checkout"))
 const SelectAddress = lazy(() => import("@food/pages/user/cart/SelectAddress"))
 const AddressSelectorPage = lazy(() => import("@food/pages/user/cart/AddressSelectorPage"))
 
@@ -126,7 +126,8 @@ export default function UserRouter() {
 
           {/* Cart - Now Public */}
           <Route path="cart" element={<Cart />} />
-          <Route path="cart/checkout" element={<Checkout />} />
+          {/* Checkout happens on the cart itself; an old link lands there. */}
+          <Route path="cart/checkout" element={<Navigate to="/food/user/cart" replace />} />
           <Route path="cart/select-address" element={<SelectAddress />} />
           <Route path="cart/address-selector" element={<AddressSelectorPage />} />
 
@@ -301,9 +302,10 @@ export default function UserRouter() {
           <Route path="profile/cancellation" element={<Cancellation />} />
 
           {/* Auth - User login is centralized at /user/auth/login */}
-          <Route path="auth/login" element={<Navigate to="/login" replace />} />
-          <Route path="auth/sign-in" element={<Navigate to="/login" replace />} />
-          <Route path="auth/otp" element={<Navigate to="/login" replace />} />
+          {/* LoginRedirect keeps the query, so an invite's ?ref= reaches /login. */}
+          <Route path="auth/login" element={<LoginRedirect />} />
+          <Route path="auth/sign-in" element={<LoginRedirect />} />
+          <Route path="auth/otp" element={<LoginRedirect />} />
           <Route path="auth/callback" element={<AuthCallback />} />
 
           {/* Help */}
