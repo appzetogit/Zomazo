@@ -229,7 +229,7 @@ function buildPushItems(items) {
  *
  * @returns {Promise<Set<string>>} partner ids to skip
  */
-async function getCashBlockedPartnerIds(partnerIds) {
+async function getCashBlockedPartnerIds(partnerIds, orderCash = 0) {
   if (!partnerIds.length) return new Set();
 
   const settings = await DeliveryCashLimit.findOne({ isActive: true })
@@ -238,9 +238,12 @@ async function getCashBlockedPartnerIds(partnerIds) {
   const limit = Number(settings?.deliveryCashLimit) || 0;
   if (limit <= 0) return new Set();
 
+  // The cash this order adds counts too, as in Food and Quick: a rider Rs 100
+  // under the limit could otherwise take a Rs 5000 cash order.
+  const threshold = Math.max(0, limit - Math.max(0, Number(orderCash) || 0));
   const wallets = await DeliveryWallet.find({
     deliveryPartnerId: { $in: partnerIds },
-    cashInHand: { $gte: limit },
+    cashInHand: orderCash > 0 ? { $gt: threshold } : { $gte: limit },
   })
     .select('deliveryPartnerId cashInHand')
     .lean();
@@ -458,7 +461,7 @@ export async function tryAutoAssign(orderId, options = {}) {
 
     // Riders at their cash ceiling are skipped for cash-collect orders only.
     const cashBlockedIds = orderCollectsCash(order)
-      ? await getCashBlockedPartnerIds(partners.map((p) => p.partnerId))
+      ? await getCashBlockedPartnerIds(partners.map((p) => p.partnerId), Number(order?.pricing?.total) || 0)
       : new Set();
 
     const eligible = partners.filter((partner) => {
