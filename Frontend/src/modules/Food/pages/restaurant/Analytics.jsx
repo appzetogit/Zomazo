@@ -13,6 +13,11 @@ import { restaurantAPI } from "@food/api"
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const fmt = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`
 const pct = (a, b) => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0)
+/** A local calendar date as YYYY-MM-DD, which the report reads as that day in IST. */
+const toYmd = (date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+/** "+8.1%" / "-3.2%", or null when there was nothing to compare against. */
+const trendLabel = (value) => (value === null || value === undefined ? null : `${value > 0 ? "+" : ""}${value}%`)
 
 function StatusBadge({ label, color, icon: Icon }) {
   const colorMap = {
@@ -220,28 +225,14 @@ function OrderFunnel({ data, onStatusClick }) {
 export default function Analytics() {
   const goBack = useRestaurantBackNavigation()
   const navigate = useNavigate()
-  const [dbOrders, setDbOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState("")
   const [expandedDay, setExpandedDay] = useState(null)
 
   // Date scroll tabs: month / week / year
   const [periodType, setPeriodType] = useState("week") // "week" | "month" | "year"
   const [periodIndex, setPeriodIndex] = useState(0) // 0 = most recent
   const [pickerOpen, setPickerOpen] = useState(false)
-
-  // Fetch orders once
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await restaurantAPI.getOrders({ page: 1, limit: 2000 })
-        if (res?.data?.success && res?.data?.data?.orders) setDbOrders(res.data.data.orders)
-      } catch (e) {
-        console.error("Analytics order fetch error:", e)
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [])
 
   // ── Build period tabs for the selected type ──────────────────────────────
   const periodTabs = useMemo(() => {
@@ -282,94 +273,101 @@ export default function Analytics() {
 
   const activePeriod = periodTabs[Number(periodIndex)] || periodTabs[0]
 
-  // ── Filter orders for the selected period ────────────────────────────────
-  const periodOrders = useMemo(() => {
-    if (!activePeriod) return []
-    return dbOrders.filter((o) => {
-      const d = new Date(o.createdAt)
-      return d >= activePeriod.start && d <= activePeriod.end
-    })
-  }, [dbOrders, activePeriod])
+  /*
+   * The period's orders come from the server's report (GET /reports/orders),
+   * complete for the range, on both the food and quick-commerce backends.
+   *
+   * This page used to fetch "the latest 2000 orders" -- which the server caps
+   * at 100 -- and filter them here, so any busy period was silently short; and
+   * when that list was empty it drew RANDOM demo orders instead. The window of
+   * the same length just before is fetched too, for the trend badges, which
+   * were hard-coded ("+12.4%") until now.
+   */
+  const [report, setReport] = useState(null)
+  const [priorReport, setPriorReport] = useState(null)
+  const fromKey = activePeriod ? toYmd(activePeriod.start) : ""
+  const toKey = activePeriod ? toYmd(activePeriod.end) : ""
 
-  const isDemo = dbOrders.length === 0
+  useEffect(() => {
+    if (!fromKey || !toKey) return undefined
+    let cancelled = false
+    const days = Math.round((new Date(`${toKey}T00:00:00`) - new Date(`${fromKey}T00:00:00`)) / 86400000) + 1
+    const priorTo = new Date(`${fromKey}T00:00:00`)
+    priorTo.setDate(priorTo.getDate() - 1)
+    const priorFrom = new Date(priorTo)
+    priorFrom.setDate(priorFrom.getDate() - (days - 1))
+
+    setLoading(true)
+    setLoadError("")
+    Promise.all([
+      restaurantAPI.getOrdersReport({ from: fromKey, to: toKey }),
+      // The comparison is a nicety; the page must still load without it.
+      restaurantAPI.getOrdersReport({ from: toYmd(priorFrom), to: toYmd(priorTo) }).catch(() => null),
+    ])
+      .then(([current, prior]) => {
+        if (cancelled) return
+        setReport(current?.data?.data || null)
+        setPriorReport(prior?.data?.data || null)
+      })
+      .catch((e) => {
+        if (cancelled) return
+        setReport(null)
+        setPriorReport(null)
+        setLoadError(e?.response?.data?.message || "Could not load analytics for this period.")
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [fromKey, toKey])
 
   // ── Compute all metrics ──────────────────────────────────────────────────
   const metrics = useMemo(() => {
-    const orders = isDemo
-      ? generateMockOrders(activePeriod?.start, activePeriod?.end)
-      : periodOrders
-
-    const total = orders.length
+    const rows = Array.isArray(report?.rows) ? report.rows : []
+    const total = rows.length
 
     const statusBuckets = { delivered: 0, preparing: 0, outForDelivery: 0, cancelled: 0, rejected: 0, pending: 0 }
-    orders.forEach((o) => {
-      const s = String(o.orderStatus || o.status || "pending").toLowerCase().replace(/_/g, " ")
-      if (s.includes("deliver") && !s.includes("out")) statusBuckets.delivered++
-      else if (s.includes("out")) statusBuckets.outForDelivery++
+    rows.forEach((o) => {
+      const s = String(o.status || "pending").toLowerCase().replace(/_/g, " ")
+      if (o.delivered) statusBuckets.delivered++
+      else if (s.includes("out") || s.includes("picked")) statusBuckets.outForDelivery++
       else if (s.includes("prepar") || s.includes("confirm") || s.includes("ready")) statusBuckets.preparing++
       else if (s.includes("cancel")) statusBuckets.cancelled++
       else if (s.includes("reject")) statusBuckets.rejected++
       else statusBuckets.pending++
     })
 
-    const deliveredOrders = orders.filter((o) => {
-      const s = String(o.orderStatus || o.status || "").toLowerCase()
-      return s.includes("deliver") && !s.includes("out")
-    })
-
     /*
-     * Every figure below is the order's own, never a percentage assumed here.
-     *
-     * This used to read gross sales off the customer's GRAND TOTAL -- delivery
-     * fee, platform fee and the tax itself included, none of it the
-     * restaurant's -- and then invent "commission" as 12% of it and "GST" as
-     * 5% of it. Both percentages were wrong for anyone on a different
-     * commission or GST rate, and the GST was wrong for EVERY restaurant whose
-     * menu prices include tax, where the tax is inside the price and is
-     * extracted (Rs 100 carries Rs 4.76 at 5%), not added on top.
-     *
-     * `restaurantPayout` is the server's own breakdown of the order, summing to
-     * what the payout ledger credits. The fallback reads the stored figures for
-     * an order that predates it, and still never guesses a rate.
+     * Every figure is the order's own, as stored -- never a percentage assumed
+     * here. Sales are the restaurant's menu and packaging on delivered orders,
+     * not the customer's grand total (delivery fee, platform fee and tax are
+     * not the restaurant's money). Payout is the ledger's share, counted as the
+     * Payouts page counts it.
      */
-    const sum = (fn) => deliveredOrders.reduce((total, o) => total + (Number(fn(o)) || 0), 0)
-    const payoutOf = (o) => o?.restaurantPayout || null
-    const grossSales = sum((o) => {
-      const p = payoutOf(o)
-      if (p) return Number(p.subTotal || 0) + Number(p.packagingCharge || 0)
-      return o.pricing?.subtotal ?? o.totalPrice ?? 0
-    })
-    // Only offers the restaurant funded itself. A platform coupon costs it
-    // nothing, and counting those as its discounts overstated them.
-    const discounts = sum((o) => payoutOf(o)?.discountFundedByRestaurant ?? 0)
-    const commission = sum((o) => payoutOf(o)?.commissionAmount ?? o.pricing?.restaurantCommission ?? 0)
-    const tax = sum((o) => {
-      const p = payoutOf(o)
-      if (p) return p.gstOnFood
-      // Pre-breakdown orders: the tax the bill actually charged.
-      return o.pricing?.tax ?? 0
-    })
-    const netPayout = sum((o) => {
-      const p = payoutOf(o)
-      if (p) return p.payout
-      const food = Number(o.pricing?.commissionableAmount ?? o.pricing?.subtotal ?? 0)
-      return food - Number(o.pricing?.restaurantCommission || 0)
-    })
-    const avgOrderValue = total > 0 ? Math.round(grossSales / total) : 0
+    const delivered = rows.filter((o) => o.delivered)
+    const salesOf = (o) => (Number(o.subtotal) || 0) + (Number(o.packaging) || 0)
+    const sumOf = (list, fn) => list.reduce((acc, o) => acc + (Number(fn(o)) || 0), 0)
+    const grossSales = sumOf(delivered, salesOf)
+    const discounts = sumOf(delivered, (o) => o.discount)
+    const commission = sumOf(delivered, (o) => o.commission)
+    const tax = sumOf(delivered, (o) => o.tax)
+    const netPayout = sumOf(rows, (o) => o.payout)
+    // Averaged over the orders the sales came from; dividing by every order,
+    // cancelled ones included, understated it.
+    const avgOrderValue = delivered.length > 0 ? Math.round(grossSales / delivered.length) : 0
 
     // Delivery vs dining
-    let deliveryCount = 0, diningCount = 0
-    orders.forEach((o) => {
-      const type = String(o.orderType || "").toLowerCase()
-      if (type.includes("dine") || !o.deliveryAddress) diningCount++
-      else deliveryCount++
-    })
-    const deliveryPct = total > 0 ? Math.round((deliveryCount / total) * 100) : 100
+    const deliveryCount = rows.filter((o) => o.isDelivery).length
+    const diningCount = total - deliveryCount
+    const deliveryPct = total > 0 ? Math.round((deliveryCount / total) * 100) : 0
+    const deliverySales = sumOf(delivered.filter((o) => o.isDelivery), salesOf)
 
-    // Customer retention
+    // Customer retention within the period
     const custMap = {}
-    orders.forEach((o) => {
-      const id = o.userId?._id || String(o.userId || o.customerName || "guest")
+    rows.forEach((o) => {
+      const id = o.customerId || o.customerName || "guest"
       custMap[id] = (custMap[id] || 0) + 1
     })
     const uniqueCustomers = Object.keys(custMap).length
@@ -377,61 +375,64 @@ export default function Analytics() {
     Object.values(custMap).forEach((c) => (c > 1 ? repeatCustomers++ : newCustomers++))
     const repeatRate = pct(repeatCustomers, uniqueCustomers)
 
-    // Daily grouped details
+    // Daily grouped details, by the IST calendar date the server assigned
     const dayMap = {}
-    orders.forEach((o) => {
-      const key = new Date(o.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
-      if (!dayMap[key]) dayMap[key] = { date: key, orders: [], sales: 0, delivered: 0, cancelled: 0, rejected: 0 }
-      const s = String(o.orderStatus || o.status || "").toLowerCase()
-      dayMap[key].orders.push(o)
-      if (s.includes("deliver") && !s.includes("out")) {
-        dayMap[key].delivered++
-        // The restaurant's own sales, as above: its menu and its packaging,
-        // not the customer's grand total.
-        dayMap[key].sales += Number(
-          o.restaurantPayout
-            ? Number(o.restaurantPayout.subTotal || 0) + Number(o.restaurantPayout.packagingCharge || 0)
-            : (o.pricing?.subtotal ?? o.totalPrice ?? 0),
-        ) || 0
+    rows.forEach((o) => {
+      const key = o.date
+      if (!dayMap[key]) {
+        dayMap[key] = {
+          key,
+          date: new Date(`${key}T00:00:00`).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+          orders: [], sales: 0, delivered: 0, cancelled: 0, rejected: 0, commission: 0, discounts: 0, netPayout: 0,
+        }
       }
-      if (s.includes("cancel")) dayMap[key].cancelled++
-      if (s.includes("reject")) dayMap[key].rejected++
+      const day = dayMap[key]
+      const s = String(o.status || "").toLowerCase()
+      day.orders.push(o)
+      if (o.delivered) {
+        day.delivered++
+        day.sales += salesOf(o)
+        day.commission += Number(o.commission) || 0
+        day.discounts += Number(o.discount) || 0
+      }
+      day.netPayout += Number(o.payout) || 0
+      if (s.includes("cancel")) day.cancelled++
+      if (s.includes("reject")) day.rejected++
     })
 
     const daysDetails = Object.values(dayMap)
       .map((d) => ({
         ...d,
         totalOrders: d.orders.length,
-        // Each day's real commission and payout, per order -- never a flat
-        // percentage of the day's sales.
-        commission: d.orders.reduce(
-          (sum, o) => sum + (Number(o.restaurantPayout?.commissionAmount ?? o.pricing?.restaurantCommission ?? 0) || 0),
-          0,
-        ),
-        discounts: d.orders.reduce(
-          (sum, o) => sum + (Number(o.restaurantPayout?.discountFundedByRestaurant ?? 0) || 0),
-          0,
-        ),
-        netPayout: d.orders.reduce((sum, o) => {
-          const payout = o.restaurantPayout;
-          if (payout) return sum + (Number(payout.payout) || 0);
-          const food = Number(o.pricing?.commissionableAmount ?? o.pricing?.subtotal ?? 0);
-          return sum + food - Number(o.pricing?.restaurantCommission || 0);
-        }, 0),
-        deliveryPct: d.orders.length > 0 ? Math.round(d.orders.filter((o) => o.deliveryAddress).length / d.orders.length * 100) : 100,
+        deliveryPct: d.orders.length > 0 ? Math.round(d.orders.filter((o) => o.isDelivery).length / d.orders.length * 100) : 0,
       }))
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .sort((a, b) => (a.key < b.key ? 1 : -1))
 
     // Trend chart (by sub-periods)
-    const trendData = buildTrendData(orders, periodType, activePeriod)
+    const trendData = buildTrendData(delivered, periodType, activePeriod)
+
+    // Change against the equally long window just before. null (no badge)
+    // when there is nothing to compare with: growth from zero is not a number.
+    const change = (now, before) => (before > 0 ? Math.round(((now - before) / before) * 1000) / 10 : null)
+    const prior = priorReport?.totals
+    const priorDelivered = Number(prior?.deliveredOrders) || 0
+    const trends = {
+      sales: prior ? change(grossSales, Number(prior.sales) || 0) : null,
+      orders: prior ? change(total, Number(prior.orders) || 0) : null,
+      avgOrderValue: prior && priorDelivered > 0
+        ? change(avgOrderValue, (Number(prior.sales) || 0) / priorDelivered)
+        : null,
+      payout: prior ? change(netPayout, Number(prior.payout) || 0) : null,
+    }
 
     return {
       total, statusBuckets, grossSales, discounts, commission, tax, netPayout, avgOrderValue,
-      deliveryPct, diningPct: 100 - deliveryPct, deliveryCount, diningCount,
+      deliveryPct, diningPct: total > 0 ? 100 - deliveryPct : 0, deliveryCount, diningCount,
+      deliverySales, diningSales: grossSales - deliverySales,
       uniqueCustomers, repeatCustomers, newCustomers, repeatRate,
-      daysDetails, trendData
+      daysDetails, trendData, trends,
     }
-  }, [periodOrders, isDemo, periodType, activePeriod])
+  }, [report, priorReport, periodType, activePeriod])
 
   const toggleDay = (d) => setExpandedDay(expandedDay === d ? null : d)
 
@@ -458,8 +459,8 @@ export default function Analytics() {
               <p className="text-xs text-gray-500 hidden sm:block">Performance metrics & order insights</p>
             </div>
           </div>
-          <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${isDemo ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
-            {isDemo ? "Demo Data" : "● Live Analytics"}
+          <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${loadError ? "bg-red-50 text-red-600 border-red-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
+            {loading ? "Loading…" : loadError ? "Unavailable" : "● Live Analytics"}
           </span>
         </div>
       </div>
@@ -520,12 +521,27 @@ export default function Analytics() {
           onChange={(id) => { setPeriodIndex(Number(id)); setExpandedDay(null) }}
         />
 
+        {loadError && (
+          <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-xs font-semibold text-red-700">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {loadError}
+          </div>
+        )}
+        {!loading && !loadError && metrics.total === 0 && (
+          <div className="bg-white border border-gray-100 rounded-3xl p-6 text-center shadow-sm">
+            <ShoppingBag className="w-8 h-8 text-gray-300 mx-auto" />
+            <p className="text-sm font-bold text-gray-800 mt-2">No orders in this period</p>
+            <p className="text-xs text-gray-500 mt-1">Figures appear here as orders come in. Try a longer period to see earlier activity.</p>
+          </div>
+        )}
+
         {/* ── KPI CARDS ───────────────────────────────────────────────────── */}
+        {/* Trends compare with the equally long period just before this one. */}
         <div className="grid grid-cols-2 gap-3">
-          <KPICard icon={DollarSign} iconBg="bg-orange-50" iconColor="text-[#ff6d00]" label="Total Sales" value={fmt(metrics.grossSales)} trend="+12.4%" trendUp />
-          <KPICard icon={ShoppingBag} iconBg="bg-blue-50" iconColor="text-blue-600" label="Orders" value={metrics.total} trend="+8.1%" trendUp />
-          <KPICard icon={TrendingUp} iconBg="bg-purple-50" iconColor="text-purple-600" label="Avg. Order Value" value={fmt(metrics.avgOrderValue)} trend="+3.2%" trendUp />
-          <KPICard icon={Star} iconBg="bg-yellow-50" iconColor="text-yellow-500" label="Net Payout" value={fmt(metrics.netPayout)} trend="+9.7%" trendUp />
+          <KPICard icon={DollarSign} iconBg="bg-orange-50" iconColor="text-[#ff6d00]" label="Total Sales" value={fmt(metrics.grossSales)} trend={trendLabel(metrics.trends.sales)} trendUp={metrics.trends.sales >= 0} />
+          <KPICard icon={ShoppingBag} iconBg="bg-blue-50" iconColor="text-blue-600" label="Orders" value={metrics.total} trend={trendLabel(metrics.trends.orders)} trendUp={metrics.trends.orders >= 0} />
+          <KPICard icon={TrendingUp} iconBg="bg-purple-50" iconColor="text-purple-600" label="Avg. Order Value" value={fmt(metrics.avgOrderValue)} trend={trendLabel(metrics.trends.avgOrderValue)} trendUp={metrics.trends.avgOrderValue >= 0} />
+          <KPICard icon={Star} iconBg="bg-yellow-50" iconColor="text-yellow-500" label="Net Payout" value={fmt(metrics.netPayout)} trend={trendLabel(metrics.trends.payout)} trendUp={metrics.trends.payout >= 0} />
         </div>
 
         {/* ── ORDER STATUS ANALYTICS ──────────────────────────────────────── */}
@@ -674,7 +690,7 @@ export default function Analytics() {
                             <div className="bg-gray-50/50 p-3.5 rounded-xl border border-gray-100 space-y-1">
                               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">Financial Details</span>
                               <StatRow label="Gross Sales" value={fmt(day.sales)} right={fmt(day.sales)} />
-                              <StatRow label="Discounts" right={`- ${fmt(day.discounts)}`} rightColor="text-red-500" />
+                              <StatRow label="Coupon discounts" right={fmt(day.discounts)} rightColor="text-gray-700" />
                               <StatRow label="Platform Commission" right={`- ${fmt(day.commission)}`} rightColor="text-red-500" />
                               <div className="border-t border-gray-200 pt-2 mt-2">
                                 <StatRow label="Net Payout" right={fmt(day.netPayout)} rightColor="text-green-600" />
@@ -726,8 +742,9 @@ export default function Analytics() {
             {[
               { label: "Home Delivery Orders", val: metrics.deliveryCount, color: "bg-orange-50 border-orange-100", tColor: "text-[#ff6d00]" },
               { label: "Dine-in / Takeaway", val: metrics.diningCount, color: "bg-sky-50 border-sky-100", tColor: "text-sky-600" },
-              { label: "Delivery Revenue", val: fmt(Math.round(metrics.grossSales * metrics.deliveryPct / 100)), color: "bg-green-50 border-green-100", tColor: "text-green-700" },
-              { label: "Dining Revenue", val: fmt(Math.round(metrics.grossSales * metrics.diningPct / 100)), color: "bg-purple-50 border-purple-100", tColor: "text-purple-700" },
+              // Each channel's own sales, not total sales split by order count.
+              { label: "Delivery Revenue", val: fmt(Math.round(metrics.deliverySales)), color: "bg-green-50 border-green-100", tColor: "text-green-700" },
+              { label: "Dining Revenue", val: fmt(Math.round(metrics.diningSales)), color: "bg-purple-50 border-purple-100", tColor: "text-purple-700" },
             ].map(({ label, val, color, tColor }) => (
               <div key={label} className={`p-3 rounded-xl border ${color}`}>
                 <p className={`text-sm font-black ${tColor}`}>{val}</p>
@@ -739,8 +756,8 @@ export default function Analytics() {
           {/* Avg delivery value metric */}
           <div className="mt-3 p-3.5 rounded-2xl bg-orange-50 border border-orange-100 flex justify-between items-center">
             <div>
-              <p className="text-xs font-bold text-orange-700">Avg Delivery Order Value</p>
-              <p className="text-[10px] text-orange-500 font-medium">vs dining avg value</p>
+              <p className="text-xs font-bold text-orange-700">Avg Order Value</p>
+              <p className="text-[10px] text-orange-500 font-medium">Sales per delivered order</p>
             </div>
             <div className="text-right">
               <p className="text-lg font-black text-orange-700">{fmt(metrics.avgOrderValue)}</p>
@@ -754,7 +771,10 @@ export default function Analytics() {
           <div className="mt-4 space-y-3">
             {[
               { label: "Gross Sales", val: fmt(metrics.grossSales), color: "text-gray-900" },
-              { label: "Your own offers", val: `- ${fmt(metrics.discounts)}`, color: "text-red-500" },
+              // Every coupon on these orders, whoever funded it -- so it is shown
+              // for information, not subtracted; the payout below is the
+              // ledger's own figure and already reflects what you funded.
+              { label: "Coupon discounts on your orders", val: fmt(metrics.discounts), color: "text-gray-700" },
               { label: "Platform Commission", val: `- ${fmt(metrics.commission)}`, color: "text-red-500" },
               { label: "GST collected from customers", val: fmt(metrics.tax), color: "text-gray-700" },
             ].map(({ label, val, color }) => (
@@ -842,10 +862,12 @@ function KPICard({ icon: Icon, iconBg, iconColor, label, value, trend, trendUp }
         <div className={`p-2 rounded-xl ${iconBg} ${iconColor}`}>
           <Icon className="w-4 h-4" />
         </div>
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${trendUp ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
-          {trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-          {trend}
-        </span>
+        {trend && (
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${trendUp ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
+            {trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+            {trend}
+          </span>
+        )}
       </div>
       <div>
         <p className="text-xs font-semibold text-gray-400">{label}</p>
@@ -856,17 +878,21 @@ function KPICard({ icon: Icon, iconBg, iconColor, label, value, trend, trendUp }
 }
 
 // ─── Build trend sub-period data ──────────────────────────────────────────────
-function buildTrendData(orders, periodType, activePeriod) {
+// Buckets delivered orders' sales (menu + packaging) by the IST date the
+// server stamped on each row, so a late-evening order is never filed under the
+// next day by the browser's clock.
+function buildTrendData(rows, periodType, activePeriod) {
   if (!activePeriod) return []
+  const salesOf = (o) => (Number(o.subtotal) || 0) + (Number(o.packaging) || 0)
+  const dateOf = (o) => new Date(`${o.date}T00:00:00`)
 
   if (periodType === "week") {
     // Day by day (Mon-Sun)
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     const dayTotals = Array(7).fill(0)
-    orders.forEach((o) => {
-      const dayIdx = (new Date(o.createdAt).getDay() + 6) % 7 // Mon=0
-      const amt = Number(o.pricing?.total || o.totalPrice || 0)
-      dayTotals[dayIdx] += amt
+    rows.forEach((o) => {
+      const dayIdx = (dateOf(o).getDay() + 6) % 7 // Mon=0
+      dayTotals[dayIdx] += salesOf(o)
     })
     return days.map((label, i) => ({ label, value: dayTotals[i] }))
   }
@@ -874,47 +900,17 @@ function buildTrendData(orders, periodType, activePeriod) {
   if (periodType === "month") {
     // Week 1 – 4/5
     const weeks = [0, 0, 0, 0, 0]
-    orders.forEach((o) => {
-      const day = new Date(o.createdAt).getDate()
-      const wk = Math.min(Math.floor((day - 1) / 7), 4)
-      weeks[wk] += Number(o.pricing?.total || o.totalPrice || 0)
+    rows.forEach((o) => {
+      const wk = Math.min(Math.floor((dateOf(o).getDate() - 1) / 7), 4)
+      weeks[wk] += salesOf(o)
     })
     return ["Wk 1", "Wk 2", "Wk 3", "Wk 4", "Wk 5"].map((label, i) => ({ label, value: weeks[i] })).filter((_, i) => i < 4 || weeks[4] > 0)
   }
 
   // Year → month by month
   const months = Array(12).fill(0)
-  orders.forEach((o) => {
-    const m = new Date(o.createdAt).getMonth()
-    months[m] += Number(o.pricing?.total || o.totalPrice || 0)
+  rows.forEach((o) => {
+    months[dateOf(o).getMonth()] += salesOf(o)
   })
   return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((label, i) => ({ label, value: months[i] }))
-}
-
-// ─── Mock data generator ──────────────────────────────────────────────────────
-function generateMockOrders(start, end) {
-  if (!start || !end) return []
-  const days = Math.round((end - start) / 86400000) + 1
-  const orders = []
-  const statuses = ["DELIVERED", "DELIVERED", "DELIVERED", "CANCELLED", "REJECTED", "PREPARING", "OUT_FOR_DELIVERY"]
-
-  for (let d = 0; d < days; d++) {
-    const dayOrderCount = 10 + Math.floor(Math.random() * 30)
-    for (let i = 0; i < dayOrderCount; i++) {
-      const date = new Date(start)
-      date.setDate(start.getDate() + d)
-      date.setHours(8 + Math.floor(Math.random() * 14))
-      const status = statuses[Math.floor(Math.random() * statuses.length)]
-      const total = 80 + Math.floor(Math.random() * 400)
-      orders.push({
-        _id: `mock-${d}-${i}`,
-        createdAt: date.toISOString(),
-        orderStatus: status,
-        pricing: { total, discount: status === "DELIVERED" ? Math.floor(total * 0.05) : 0 },
-        deliveryAddress: Math.random() > 0.2 ? { address: "Some Street" } : null,
-        userId: { _id: `user-${Math.floor(Math.random() * 80)}` },
-      })
-    }
-  }
-  return orders
 }
