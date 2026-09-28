@@ -10,6 +10,7 @@ import { useRef } from "react"
 import { Link } from "react-router-dom"
 import { ChevronLeft, ChevronRight, Clock, Minus, Plus } from "lucide-react"
 import { useQuickCart } from "../context/QuickCartContext"
+import FavoriteButton from "./FavoriteButton"
 import {
   ImagePlaceholder,
   cx,
@@ -106,6 +107,9 @@ export default function ProductCard({ product, etaMinutes = 10, store, showStore
           {off}% OFF
         </span>
       ) : null}
+      {/* A size of a product is favourited as the product itself. */}
+      <FavoriteButton kind="product" id={product.itemId || productId(product)} name={name} className="absolute right-2 top-2 z-10" />
+
       <div className="px-3 pt-3">
         <div className="flex aspect-square items-center justify-center overflow-hidden rounded-[6px] bg-[#F7F7F7]">
           {isRealImage(img) ? (

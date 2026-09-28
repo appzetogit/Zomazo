@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { MapPinOff, Star } from "lucide-react"
+import { MapPinOff } from "lucide-react"
 import { quickAPI } from "../api"
 import { useQuickLocation } from "../context/QuickLocationContext"
 import CategoryTiles from "../components/CategoryTiles"
-import { ProductRail } from "../components/ProductCard"
+import { ProductRail, SectionHead } from "../components/ProductCard"
+import StoreCard, { storeId } from "../components/StoreCard"
 import { cx, focusRing, isRealImage, mediaUrl } from "../helpers"
 
 /**
@@ -13,27 +14,6 @@ import { cx, focusRing, isRealImage, mediaUrl } from "../helpers"
  * category (the Shop's Quick home layout, fed by the quick-commerce API).
  */
 const RAIL_CATEGORIES = 4
-
-function StoreCard({ store }) {
-  const id = String(store._id || store.id)
-  const img = mediaUrl(store.profileImage?.url || store.profileImage || store.coverImages?.[0])
-  const eta = Number(store.estimatedDeliveryTimeMinutes) || null
-  return (
-    <Link to={`/quick/store/${id}`} className={cx("flex w-[220px] shrink-0 items-center gap-3 rounded-[10px] border border-wh-border bg-white p-3 hover:shadow-md", focusRing)}>
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-wh-brand-50">
-        {isRealImage(img) ? <img src={img} alt="" className="h-full w-full object-cover" /> : <span className="font-black text-wh-brand-ink">{String(store.restaurantName || store.name || "?").charAt(0)}</span>}
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-[14px] font-semibold text-wh-text">{store.restaurantName || store.name}</span>
-        <span className="flex items-center gap-2 text-[12px] text-wh-muted">
-          {store.rating ? <span className="inline-flex items-center gap-0.5"><Star className="h-3 w-3 fill-current text-amber-500" aria-hidden="true" />{Number(store.rating).toFixed(1)}</span> : null}
-          {eta ? <span>{eta} min</span> : null}
-          {store.isOpenNow === false || store.isAcceptingOrders === false ? <span className="text-wh-deal">Closed</span> : null}
-        </span>
-      </span>
-    </Link>
-  )
-}
 
 function Banners({ banners }) {
   if (!banners.length) return null
@@ -53,7 +33,7 @@ function Banners({ banners }) {
 }
 
 export default function Home() {
-  const { zoneId, zoneStatus, areaLabel, requestLocation } = useQuickLocation()
+  const { zoneId, zoneStatus, areaLabel, requestLocation, location } = useQuickLocation()
   const [categories, setCategories] = useState([])
   const [popular, setPopular] = useState([])
   const [byCategory, setByCategory] = useState({})
@@ -75,7 +55,12 @@ export default function Home() {
     Promise.all([
       quickAPI.categories(zoneId).catch(() => []),
       quickAPI.products({ zoneId, limit: 30 }).catch(() => ({ products: [] })),
-      quickAPI.stores({ zoneId, limit: 20 }).catch(() => []),
+      // Nearest first: the row is "Stores near you". A distance sort leaves out
+      // stores with no map pin yet, so an empty answer falls back to the zone's list.
+      quickAPI
+        .stores({ zoneId, lat: location?.latitude, lng: location?.longitude, limit: 20 })
+        .catch(() => [])
+        .then((list) => (list.length || !location ? list : quickAPI.stores({ zoneId, limit: 20 }).catch(() => []))),
     ]).then(async ([cats, pop, near]) => {
       if (cancelled) return
       setCategories(cats)
@@ -119,9 +104,9 @@ export default function Home() {
       <CategoryTiles categories={categories.slice(0, 16)} loading={loading} />
       {stores.length ? (
         <section className="rounded-[8px] bg-wh-surface px-4 py-4 lg:px-5">
-          <h2 className="mb-3 text-[19px] font-black leading-6 tracking-tight lg:font-bold">Stores near you</h2>
+          <SectionHead title="Stores near you" seeAllTo="/quick/stores" seeAllLabel="See all stores" />
           <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {stores.map((s) => <StoreCard key={String(s._id || s.id)} store={s} />)}
+            {stores.map((s) => <StoreCard key={storeId(s)} store={s} />)}
           </div>
         </section>
       ) : null}

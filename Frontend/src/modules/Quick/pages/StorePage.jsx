@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom"
 import { Clock, Star } from "lucide-react"
 import { quickAPI, errorMessage } from "../api"
 import { GridSkeleton, ProductGrid } from "../components/ProductCard"
+import FavoriteButton from "../components/FavoriteButton"
 import { cx, focusRing, isRealImage, mediaUrl } from "../helpers"
 
 /**
@@ -75,7 +76,7 @@ export default function StorePage() {
         <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-wh-brand-50">
           {isRealImage(logo) ? <img src={logo} alt="" className="h-full w-full object-cover" /> : <span className="text-[22px] font-black text-wh-brand-ink">{String(store?.restaurantName || "").charAt(0)}</span>}
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="truncate text-[20px] font-black tracking-tight text-wh-text">{store?.restaurantName || "Loading…"}</h1>
           <p className="truncate text-[13px] text-wh-muted">{[store?.area, store?.city].filter(Boolean).join(", ")}</p>
           <p className="mt-1 flex flex-wrap items-center gap-3 text-[12px]">
@@ -84,6 +85,7 @@ export default function StorePage() {
             {closed ? <span className="font-bold text-wh-deal">Closed right now</span> : null}
           </p>
         </div>
+        {store ? <FavoriteButton kind="store" id={store._id} name={store.restaurantName} size="h-5 w-5" className="shrink-0 border border-wh-border p-2" /> : null}
       </section>
 
       {sections.length > 1 ? (
