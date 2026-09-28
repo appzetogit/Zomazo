@@ -33,10 +33,27 @@ export function totalQuantityByItem(items = []) {
   return totals;
 }
 
-/** Lines grouped by item + variant. */
+/**
+ * A combo line stands for its parts: two "Milk + Bread" combos are two milks
+ * and two breads off the shelf. Expanded here, where both reserving and
+ * restoring an order's stock group its lines, so the two always agree.
+ */
+function expandCombos(items = []) {
+  return items.flatMap((item) => {
+    if (!item?.isCombo || !Array.isArray(item.comboComponents) || !item.comboComponents.length) return [item];
+    const qty = Math.max(1, Number(item.quantity) || 1);
+    return item.comboComponents.map((c) => ({
+      itemId: c.itemId,
+      variantId: c.variantId || '',
+      quantity: qty * Math.max(1, Number(c.quantity) || 1),
+    }));
+  });
+}
+
+/** Lines grouped by item + variant, combos counted as their parts. */
 function totalsByLine(items = []) {
   const totals = new Map();
-  for (const item of items) {
+  for (const item of expandCombos(items)) {
     const itemId = String(item?.itemId || '');
     if (!itemId || !isId(itemId)) continue;
     const variantId = isId(item?.variantId) ? String(item.variantId) : '';
@@ -59,7 +76,23 @@ const variantOf = (doc, variantId) =>
  * switched it off by hand set stockOffMode, and that outranks a restock.
  */
 export async function syncAvailability(doc, { revive = false } = {}) {
-  if (!doc?._id) return;
+  const flipped = await syncAvailabilityOnly(doc, { revive });
+  // A product going off sale takes any combo containing it off too, and one
+  // coming back restores those combos (unless a seller parked them by hand).
+  if (flipped && doc?.restaurantId) {
+    try {
+      const { qcCombo } = await import('../../shared/combos.js');
+      await qcCombo.syncComboAvailability(doc.restaurantId);
+    } catch (err) {
+      logger.warn(`[stock] combo availability sync failed: ${err?.message || err}`);
+    }
+  }
+  return flipped;
+}
+
+/** Hides or revives one product by its stock; true when that changed it. */
+async function syncAvailabilityOnly(doc, { revive = false } = {}) {
+  if (!doc?._id) return false;
   const variants = doc.variants || [];
   const out = variants.length > 0
     ? variants.every((v) => v.stockQty !== null && v.stockQty !== undefined && Number(v.stockQty) <= 0)
@@ -68,9 +101,13 @@ export async function syncAvailability(doc, { revive = false } = {}) {
 
   if (out && doc.isAvailable !== false) {
     await FoodItem.updateOne({ _id: doc._id }, { $set: { isAvailable: false } });
-  } else if (!out && revive && doc.isAvailable === false && !doc.stockOffMode) {
-    await FoodItem.updateOne({ _id: doc._id, stockOffMode: { $in: [null, undefined] } }, { $set: { isAvailable: true } });
+    return true;
   }
+  if (!out && revive && doc.isAvailable === false && !doc.stockOffMode) {
+    const res = await FoodItem.updateOne({ _id: doc._id, stockOffMode: { $in: [null, undefined] } }, { $set: { isAvailable: true } });
+    return res.modifiedCount > 0;
+  }
+  return false;
 }
 
 /**

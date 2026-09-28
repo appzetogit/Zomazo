@@ -83,6 +83,16 @@ const buildMenuFromFoods = async (foods = []) => {
             barcode: food.barcode || '',
             expiryDate: food.expiryDate ?? null,
             mrp: food.mrp ?? null,
+            // A combo lists what is in it, so the app can say "includes ...".
+            isCombo: food.isCombo === true,
+            comboComponents: food.isCombo === true
+                ? (food.comboComponents || []).map((c) => ({
+                    itemId: String(c.itemId),
+                    name: c.nameSnapshot || '',
+                    variantName: c.variantNameSnapshot || '',
+                    quantity: Number(c.quantity) || 1,
+                }))
+                : [],
             approvalStatus: food.approvalStatus || 'approved',
             rejectionReason: food.rejectionReason || '',
             requestedAt: food.requestedAt,

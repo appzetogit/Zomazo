@@ -408,7 +408,22 @@ export async function updateRestaurantFoodStock(restaurantId, entries = []) {
         }
     }
 
+    if (updated.length) await syncCombos(restaurantId);
     return { updated, failed, updatedCount: updated.length, failedCount: failed.length };
+}
+
+/**
+ * Combos follow their parts: a product going off sale (or deleted) takes the
+ * combos containing it off too, and one coming back restores them. Never
+ * throws -- the seller's own change has already been saved.
+ */
+async function syncCombos(restaurantId) {
+    try {
+        const { qcCombo } = await import('../../shared/combos.js');
+        await qcCombo.syncComboAvailability(restaurantId);
+    } catch (err) {
+        console.error('Combo availability sync failed:', err?.message || err);
+    }
 }
 
 /** Products at or below their own low-stock mark, so the seller knows what to reorder. */
@@ -575,6 +590,8 @@ export async function updateRestaurantFood(restaurantId, foodId, body = {}) {
         { new: true }
     ).lean();
 
+    if (updated && 'isAvailable' in update) await syncCombos(restaurantId);
+
     if (updated && shouldResubmitForApproval) {
         try {
             const { notifyAdminsSafely } = await import('../../../../core/notifications/firebase.service.js');
@@ -631,5 +648,6 @@ export async function deleteRestaurantFood(restaurantId, foodId) {
         console.error('Failed to invalidate cache after product delete:', err);
     }
 
+    await syncCombos(restaurantId);
     return { id: String(deleted._id), name: deleted.name };
 }

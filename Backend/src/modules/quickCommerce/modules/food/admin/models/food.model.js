@@ -155,6 +155,30 @@ const foodSchema = new mongoose.Schema(
         },
         isRecommended: { type: Boolean, default: false, index: true },
         preparationTime: { type: String, trim: true, default: '' },
+        /**
+         * A combo: several of this store's products sold together at one price
+         * (food's combos, over quick commerce's items -- shared/combos.js). The
+         * components are snapshotted like the price is, and it is their stock
+         * an order reserves: the combo itself holds none.
+         */
+        isCombo: { type: Boolean, default: false, index: true },
+        comboComponents: {
+            type: [new mongoose.Schema(
+                {
+                    itemId: { type: mongoose.Schema.Types.ObjectId, ref: 'QCItem', required: true },
+                    variantId: { type: mongoose.Schema.Types.ObjectId, default: null },
+                    quantity: { type: Number, min: 1, default: 1 },
+                    nameSnapshot: { type: String, trim: true, default: '' },
+                    variantNameSnapshot: { type: String, trim: true, default: '' },
+                    listUnitPrice: { type: Number, min: 0, default: 0 },
+                    allocatedLineTotal: { type: Number, min: 0, default: 0 },
+                },
+                { _id: false },
+            )],
+            default: [],
+        },
+        /** Set when a combo went off sale because a component did (never by hand). */
+        comboAutoDisabled: { type: Boolean, default: false },
         approvalStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'approved', index: true },
         rejectionReason: { type: String, trim: true, default: '' },
         requestedAt: { type: Date },

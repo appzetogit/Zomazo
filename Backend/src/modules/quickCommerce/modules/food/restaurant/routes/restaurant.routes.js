@@ -56,6 +56,10 @@ import {
     updateFreebieOfferController,
     getBogoOfferController,
     updateBogoOfferController,
+    listCombosController,
+    createComboController,
+    updateComboController,
+    deleteComboController,
 } from '../controllers/sellerOffers.controller.js';
 import { getMenuController, updateMenuController, getPublicRestaurantMenuController } from '../controllers/restaurantMenu.controller.js';
 import { listPublicFoodsController } from '../controllers/publicFoods.controller.js';
@@ -160,16 +164,20 @@ router.get('/categories/public', cacheResponse(600, 'categories'), listCategorie
 // Restaurant dashboard/profile (Bearer token + RESTAURANT role)
 router.get('/current', authMiddleware, requireRestaurant, getCurrentRestaurantController);
 // The shared panel's item form previews what a product earns. The food-only
-// seller settings (tax-settings, service-radius, combos) are NOT mirrored here:
-// quick-commerce pricing and serviceability read none of them, so the panel
-// hides those screens for these sellers instead.
+// seller settings (tax-settings, service-radius) are NOT mirrored here:
+// quick-commerce pricing and serviceability read neither, so the panel hides
+// those screens for these sellers instead.
 router.get('/commission', authMiddleware, requireRestaurant, getRestaurantCommissionRateController);
-// Buy-one-get-one products and a free item over a spend, on food's screens and
-// rules, over this store's own offers (sellerOffers.controller.js).
+// Buy-one-get-one products, a free item over a spend, and combos, on food's
+// screens and rules over this store's own data (sellerOffers.controller.js).
 router.get('/freebie-offer', authMiddleware, requireRestaurant, getFreebieOfferController);
 router.put('/freebie-offer', authMiddleware, requireRestaurant, updateFreebieOfferController);
 router.get('/bogo-offer', authMiddleware, requireRestaurant, getBogoOfferController);
 router.put('/bogo-offer', authMiddleware, requireRestaurant, updateBogoOfferController);
+router.get('/combos', authMiddleware, requireRestaurant, listCombosController);
+router.post('/combos', authMiddleware, requireRestaurant, createComboController);
+router.put('/combos/:comboId', authMiddleware, requireRestaurant, updateComboController);
+router.delete('/combos/:comboId', authMiddleware, requireRestaurant, deleteComboController);
 /**
  * Account deletion, initiated by the seller themselves.
  *

@@ -189,6 +189,20 @@ export async function resolveOrderCartItems(restaurantId, rawItems = []) {
         isVeg: String(foodDoc.foodType || '').toLowerCase() === 'veg',
         image: String(foodDoc.image || rawItem?.image || ''),
         notes: String(rawItem?.notes || ''),
+        // A combo carries its parts: the packer picks them, and it is their
+        // stock the order reserves (inventory.service.js).
+        ...(foodDoc.isCombo === true
+          ? {
+              isCombo: true,
+              comboComponents: (foodDoc.comboComponents || []).map((c) => ({
+                itemId: String(c.itemId),
+                variantId: c.variantId ? String(c.variantId) : null,
+                quantity: Number(c.quantity) || 1,
+                nameSnapshot: c.nameSnapshot || '',
+                variantNameSnapshot: c.variantNameSnapshot || '',
+              })),
+            }
+          : {}),
       });
       continue;
     }

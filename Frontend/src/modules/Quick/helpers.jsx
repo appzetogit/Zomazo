@@ -37,7 +37,26 @@ export const productName = (p) => p?.name || "Product"
 export const productPrice = (p) => num(p?.price) ?? num(p?.variants?.[0]?.price) ?? 0
 export const productMrp = (p) => num(p?.mrp) ?? num(p?.otherPrice) ?? null
 export const productImage = (p) => mediaUrl(p?.image || (Array.isArray(p?.images) ? p.images[0] : ""))
-export const productPack = (p) => String(p?.packSize || "").trim()
+/**
+ * The line under a product's name: its pack size, or for a combo what is in it
+ * ("Combo: 2 × Milk + Bread"). Menus send component names; search sends the
+ * stored snapshot, so both spellings are read.
+ */
+export const productPack = (p) => {
+  const parts = p?.isCombo && Array.isArray(p.comboComponents) ? p.comboComponents : []
+  if (parts.length) {
+    const label = parts
+      .map((c) => {
+        const name = String(c?.name || c?.nameSnapshot || "").trim()
+        const qty = Number(c?.quantity) || 1
+        return name ? `${qty > 1 ? `${qty} × ` : ""}${name}` : ""
+      })
+      .filter(Boolean)
+      .join(" + ")
+    if (label) return `Combo: ${label}`
+  }
+  return String(p?.packSize || "").trim()
+}
 /** Products with variants need a choice; the card sends those to their store. */
 export const productHasOptions = (p) => Array.isArray(p?.variants) && p.variants.length > 0
 

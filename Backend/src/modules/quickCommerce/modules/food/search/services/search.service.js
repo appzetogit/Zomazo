@@ -241,7 +241,7 @@ export const searchUnified = async (query = {}, options = {}) => {
 };
 
 const PRODUCT_SEARCH_SELECT =
-    '_id restaurantId name brand packSize image images price otherPrice mrp categoryId categoryName foodType rating totalRatings isAvailable stockQty maxQtyPerOrder variants';
+    '_id restaurantId name brand packSize image images price otherPrice mrp categoryId categoryName foodType rating totalRatings isAvailable stockQty maxQtyPerOrder variants isCombo comboComponents';
 
 const PRODUCT_SEARCH_PROJECTION = Object.fromEntries(
     PRODUCT_SEARCH_SELECT.split(' ').filter(Boolean).map((field) => [field, 1]),

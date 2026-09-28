@@ -24,5 +24,16 @@ export async function restoreExpiredFoodAvailability(filter = {}) {
         }
     );
 
+    // Products back on sale bring back the combos they had taken off.
+    if (result.modifiedCount) {
+        try {
+            const { qcCombo } = await import('../../shared/combos.js');
+            const stores = await FoodItem.distinct('restaurantId', { isCombo: true });
+            for (const restaurantId of stores) await qcCombo.syncComboAvailability(restaurantId);
+        } catch (err) {
+            console.error('Combo availability sync after stock resume failed:', err?.message || err);
+        }
+    }
+
     return result.modifiedCount || 0;
 }

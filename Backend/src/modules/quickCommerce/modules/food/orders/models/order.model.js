@@ -24,6 +24,19 @@ const orderItemSchema = new mongoose.Schema(
             rewardType: { type: String, enum: ['item', 'addon'], default: 'item' },
         },
         isBogoFree: { type: Boolean, default: false },
+        /** A combo line and its parts, as sold; stock is reserved and restored on the parts. */
+        isCombo: { type: Boolean, default: false },
+        comboComponents: {
+            type: [{
+                itemId: { type: String, trim: true },
+                variantId: { type: String, trim: true, default: null },
+                quantity: { type: Number, min: 1, default: 1 },
+                nameSnapshot: { type: String, trim: true, default: '' },
+                variantNameSnapshot: { type: String, trim: true, default: '' },
+                _id: false,
+            }],
+            default: undefined,
+        },
         bogo: {
             buyQty: { type: Number, min: 1, default: 1 },
             getQty: { type: Number, min: 1, default: 1 },
