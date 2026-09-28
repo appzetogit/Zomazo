@@ -180,9 +180,7 @@ async function bookings({ userIds, before, limit }) {
     state: bookingState(d.status),
     statusLabel: humanize(d.status),
     createdAt: d.createdAt,
-    // No customer-facing Services app has a booking screen yet, so there is
-    // nowhere to send the customer; the row is listed but does not open.
-    route: null,
+    route: `/services/bookings/${d._id}`,
   }));
 }
 

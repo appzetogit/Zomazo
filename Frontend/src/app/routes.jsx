@@ -24,6 +24,8 @@ const QuickApp = lazy(() => import('../modules/Quick/QuickApp'))
 // module is switched on for this build, so other sites never download them.
 const ServiceVendorApp = lazy(() => import('../modules/ServiceProvider/vendor/VendorApp'))
 const ServiceWorkerApp = lazy(() => import('../modules/ServiceProvider/worker/WorkerApp'))
+// Service booking for customers (home services) on the /sp backend.
+const ServicesApp = lazy(() => import('../modules/Services/ServicesApp'))
 import ProtectedRoute from '@food/components/ProtectedRoute'
 
 const PageLoader = () => <AppShellSkeleton />
@@ -158,6 +160,9 @@ const AppRoutes = () => {
         )}
         {SERVICE_PROVIDER_ENABLED && (
           <Route path="/services/worker/*" element={<Suspense fallback={<PageLoader />}><ServiceWorkerApp /></Suspense>} />
+        )}
+        {SERVICE_PROVIDER_ENABLED && (
+          <Route path="/services/*" element={<Suspense fallback={<PageLoader />}><ServicesApp /></Suspense>} />
         )}
 
         {/* Support Module */}

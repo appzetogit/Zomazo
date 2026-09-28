@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, ChevronDown, Search, Mic, Bell, CheckCircle2, Tag, Gift, AlertCircle, Clock, BellOff, X, ChevronRight, ShoppingBag, Sparkles, Utensils, Car, Menu, User, Zap } from 'lucide-react';
-import { ECOMMERCE_ENABLED } from '@/config/features';
+import { MapPin, ChevronDown, Search, Mic, Bell, CheckCircle2, Tag, Gift, AlertCircle, Clock, BellOff, X, ChevronRight, ShoppingBag, Sparkles, Utensils, Car, Menu, User, Zap, Wrench } from 'lucide-react';
+import { ECOMMERCE_ENABLED, SERVICE_PROVIDER_ENABLED } from '@/config/features';
 import {
   Popover,
   PopoverContent,
@@ -209,6 +209,15 @@ export default function HomeHeader({
               >
                 <ShoppingBag className="w-4 h-4" aria-hidden="true" />
                 <span className="font-extrabold text-[11px] tracking-wide">Shop</span>
+              </button>
+            )}
+            {SERVICE_PROVIDER_ENABLED && (
+              <button
+                onClick={() => navigate('/services')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all duration-300 text-gray-500 hover:text-gray-700"
+              >
+                <Wrench className="w-4 h-4 text-violet-600" aria-hidden="true" />
+                <span className="font-extrabold text-[11px] tracking-wide">Services</span>
               </button>
             )}
           </div>

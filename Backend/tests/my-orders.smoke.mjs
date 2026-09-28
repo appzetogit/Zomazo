@@ -104,7 +104,7 @@ await check('each row names what it was and opens its own detail screen', async 
   assert.match(by.services.subtitle, /^For .*, 10:00$/);
   assert.equal(by.services.amount, 499);
   // No customer app has a booking screen, so the row does not link anywhere.
-  assert.equal(by.services.route, null);
+  assert.equal(by.services.route, `/services/bookings/${by.services.id}`);
 });
 await check('states and labels', async () => {
   const s = Object.fromEntries(all.items.map((i) => [i.number, [i.state, i.statusLabel]]));
