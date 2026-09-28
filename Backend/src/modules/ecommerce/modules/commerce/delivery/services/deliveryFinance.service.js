@@ -321,6 +321,20 @@ export const verifyDeliveryCashDepositPayment = async (deliveryPartnerId, payloa
     if (!signature) throw new ValidationError('razorpaySignature is required');
     if (!Number.isFinite(amount) || amount < 1) throw new ValidationError('amount is required');
 
+    /*
+     * Food's 11 Sep fix, which this copy missed: with no gateway configured the
+     * signature was skipped and the rider's own `amount` cleared their cash;
+     * a row already on file was completed with that amount rather than the
+     * captured one; and two verifies of one payment sent together each wrote a
+     * Completed deposit, clearing the cash twice.
+     */
+    if (!isRazorpayConfigured()) {
+        throw new ValidationError('Razorpay payment gateway is not configured');
+    }
+    if (!verifyPaymentSignature(orderId, paymentId, signature)) {
+        throw new ValidationError('Payment verification failed');
+    }
+
     const existing = await DeliveryCashDeposit.findOne({
         deliveryPartnerId,
         $or: [
@@ -333,40 +347,24 @@ export const verifyDeliveryCashDepositPayment = async (deliveryPartnerId, payloa
         return { deposit: existing, wallet: await getDeliveryPartnerWalletEnhanced(deliveryPartnerId) };
     }
 
-    const isValid = isRazorpayConfigured()
-        ? verifyPaymentSignature(orderId, paymentId, signature)
-        : true;
-
-    if (!isValid) {
-        throw new ValidationError('Payment verification failed');
+    // The signature proves the payment belongs to this order -- it says nothing
+    // about how much was paid. Settle on the amount Razorpay actually captured.
+    const payment = await fetchRazorpayPayment(paymentId);
+    const capturedPaise = Number(payment?.amount);
+    if (!Number.isFinite(capturedPaise) || capturedPaise <= 0) {
+        throw new ValidationError('Could not confirm the paid amount with Razorpay');
     }
-
-    // The signature proves the payment belongs to this order — it says NOTHING about how
-    // much was paid. Trusting the client's `amount` let a rider pay Rs 1 and post
-    // amount: 5000, clearing Rs 5000 of cash-in-hand while pocketing the difference.
-    // Always settle on the amount Razorpay actually captured.
-    let settledAmount = amount;
-    if (isRazorpayConfigured()) {
-        const payment = await fetchRazorpayPayment(paymentId);
-
-        const capturedPaise = Number(payment?.amount);
-        if (!Number.isFinite(capturedPaise) || capturedPaise <= 0) {
-            throw new ValidationError('Could not confirm the paid amount with Razorpay');
-        }
-        if (!['captured', 'authorized'].includes(String(payment?.status || ''))) {
-            throw new ValidationError(`Payment is not captured (status: ${payment?.status || 'unknown'})`);
-        }
-        // Reject a payment belonging to a different Razorpay order.
-        if (payment?.order_id && String(payment.order_id) !== orderId) {
-            throw new ValidationError('Payment does not belong to this order');
-        }
-
-        settledAmount = Math.round((capturedPaise / 100) * 100) / 100;
-        if (Math.abs(settledAmount - amount) > 0.01) {
-            logger.warn(
-                `Cash deposit amount mismatch for partner ${deliveryPartnerId}: client claimed ${amount}, Razorpay captured ${settledAmount}. Using the captured amount.`
-            );
-        }
+    if (!['captured', 'authorized'].includes(String(payment?.status || ''))) {
+        throw new ValidationError(`Payment is not captured (status: ${payment?.status || 'unknown'})`);
+    }
+    if (payment?.order_id && String(payment.order_id) !== orderId) {
+        throw new ValidationError('Payment does not belong to this order');
+    }
+    const settledAmount = Math.round(capturedPaise) / 100;
+    if (Math.abs(settledAmount - amount) > 0.01) {
+        logger.warn(
+            `Cash deposit amount mismatch for partner ${deliveryPartnerId}: client claimed ${amount}, Razorpay captured ${settledAmount}. Using the captured amount.`
+        );
     }
 
     const wallet = await getDeliveryPartnerWalletEnhanced(deliveryPartnerId);
@@ -374,28 +372,44 @@ export const verifyDeliveryCashDepositPayment = async (deliveryPartnerId, payloa
         throw new ValidationError('Deposit amount cannot exceed cash in hand');
     }
 
-    const deposit = existing
-        ? await DeliveryCashDeposit.findByIdAndUpdate(
-            existing._id,
-            {
-                $set: {
-                    amount,
-                    paymentMethod: isRazorpayConfigured() ? 'razorpay' : 'cash',
-                    status: 'Completed',
-                    razorpayOrderId: orderId,
-                    razorpayPaymentId: paymentId
-                }
-            },
-            { new: true }
-        )
-        : await DeliveryCashDeposit.create({
-            deliveryPartnerId,
-            amount: settledAmount,
-            paymentMethod: isRazorpayConfigured() ? 'razorpay' : 'cash',
-            status: 'Completed',
-            razorpayOrderId: orderId,
-            razorpayPaymentId: paymentId
-        });
+    // The write itself is the claim: an upsert keyed on the payment id, backed
+    // by the unique index on the model. The loser gets the winner's row back.
+    const fields = {
+        amount: settledAmount,
+        paymentMethod: 'razorpay',
+        status: 'Completed',
+        razorpayOrderId: orderId,
+        razorpayPaymentId: paymentId
+    };
+    let deposit = null;
+    try {
+        if (existing) {
+            deposit = await DeliveryCashDeposit.findOneAndUpdate(
+                { _id: existing._id, status: { $ne: 'Completed' } },
+                { $set: fields },
+                { new: true }
+            );
+        } else {
+            const claim = await DeliveryCashDeposit.findOneAndUpdate(
+                { razorpayPaymentId: paymentId },
+                { $setOnInsert: { deliveryPartnerId, ...fields } },
+                { upsert: true, new: true, includeResultMetadata: true }
+            );
+            deposit = claim?.lastErrorObject?.upserted ? claim.value : null;
+        }
+    } catch (err) {
+        if (err?.code !== 11000) throw err;
+    }
+
+    if (!deposit) {
+        // Somebody else recorded this payment first. Hand back their row if it is
+        // this rider's; a payment belonging to another rider is never theirs to settle.
+        const winner = await DeliveryCashDeposit.findOne({ razorpayPaymentId: paymentId }).lean();
+        if (!winner || winner.status !== 'Completed' || String(winner.deliveryPartnerId) !== String(deliveryPartnerId)) {
+            throw new ValidationError('This payment has already been used');
+        }
+        deposit = winner;
+    }
 
     return {
         deposit,

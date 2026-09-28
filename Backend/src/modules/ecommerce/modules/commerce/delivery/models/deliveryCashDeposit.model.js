@@ -40,5 +40,12 @@ const deliveryCashDepositSchema = new mongoose.Schema({
 });
 
 deliveryCashDepositSchema.index({ createdAt: -1 });
+// One Razorpay payment settles cash once: this is what makes the upsert in
+// verifyDeliveryCashDepositPayment hold under concurrency. Partial, so rows
+// without a payment id (manual cash entries) are not constrained.
+deliveryCashDepositSchema.index(
+    { razorpayPaymentId: 1 },
+    { unique: true, partialFilterExpression: { razorpayPaymentId: { $type: 'string' } } }
+);
 
 export const DeliveryCashDeposit = ecomModel('DeliveryCashDeposit', deliveryCashDepositSchema);

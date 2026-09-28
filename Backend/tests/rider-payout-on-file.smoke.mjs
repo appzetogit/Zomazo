@@ -52,6 +52,19 @@ await check('changing the account pauses withdrawals for about a day', async () 
     await assert.rejects(requestDeliveryWithdrawal(String(riderId), { amount: 500 }), /changed recently.*24 hours/);
 });
 
+await check('Shop: a cash deposit is never settled without the gateway confirming it', async () => {
+    const { verifyDeliveryCashDepositPayment } = await import('../src/modules/ecommerce/modules/commerce/delivery/services/deliveryFinance.service.js');
+    const { DeliveryCashDeposit } = await import('../src/modules/ecommerce/modules/commerce/delivery/models/deliveryCashDeposit.model.js');
+    await assert.rejects(
+        verifyDeliveryCashDepositPayment(String(riderId), { razorpayOrderId: 'order_x', razorpayPaymentId: 'pay_x', razorpaySignature: 'sig', amount: 5000 }),
+        /not configured/,
+    );
+    assert.equal(await DeliveryCashDeposit.countDocuments({ razorpayPaymentId: 'pay_x' }), 0);
+    await DeliveryCashDeposit.syncIndexes();
+    const idx = (await DeliveryCashDeposit.collection.indexes()).find((i) => i.key?.razorpayPaymentId === 1);
+    assert.ok(idx?.unique, 'one payment id, one deposit row');
+});
+
 const qc = {
     partner: (await import('../src/modules/quickCommerce/modules/food/delivery/models/deliveryPartner.model.js')).FoodDeliveryPartner,
     finance: await import('../src/modules/quickCommerce/modules/food/delivery/services/deliveryFinance.service.js'),
