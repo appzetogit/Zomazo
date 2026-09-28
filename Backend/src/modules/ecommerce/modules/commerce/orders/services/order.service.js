@@ -157,23 +157,32 @@ export async function deletePendingPaymentOrder(orderLike) {
   const payStatus = String(orderLike.payment?.status || "").toLowerCase();
   if (payStatus === "paid" || payStatus === "refunded") return false;
 
-  // An abandoned payment must not hold units forever. Restocked before the
-  // delete, since the order rows are what say how much to give back.
-  await restoreOrderStock(orderLike);
+  // Kept, cancelled -- not deleted. A deleted order could still be paid on the
+  // payment sheet the customer left open, and that capture then matched
+  // nothing: charged, no order, no refund. The webhook refunds a capture on a
+  // cancelled order (core/payments/controllers/razorpayWebhook.controller.js);
+  // Quick has kept its abandoned orders this way since 22 Sep. The claim is
+  // conditional, so a payment landing at the same moment wins and the order is
+  // neither cancelled nor restocked under it.
+  const claimed = await Order.collection.updateOne(
+    { _id: orderLike._id, orderStatus: "pending_payment", "payment.status": { $nin: ["paid", "refunded"] } },
+    {
+      $set: { orderStatus: "cancelled_by_user", "payment.status": "failed", abandonedAt: new Date() },
+      $push: {
+        statusHistory: {
+          at: new Date(),
+          byRole: "SYSTEM",
+          from: "pending_payment",
+          to: "cancelled_by_user",
+          note: "Payment not completed in time",
+        },
+      },
+    },
+  );
+  if (!claimed.modifiedCount) return false;
 
-  await Promise.all([
-    SupportTicket.updateMany(
-      { orderId: orderLike._id },
-      { $set: { orderId: null } },
-    ),
-    OrderTransaction.deleteOne({
-      $or: [
-        { orderId: orderLike._id },
-        { orderReadableId: String(orderLike._id.toString()) },
-      ],
-    }),
-    Order.deleteOne({ _id: orderLike._id }),
-  ]);
+  // An abandoned payment must not hold units forever.
+  await restoreOrderStock(orderLike);
 
   // Part of a split checkout: give back this order's coins, and once none of
   // the checkout's orders are left, close the checkout and return the rest.
@@ -188,7 +197,7 @@ export async function deletePendingPaymentOrder(orderLike) {
           note: 'Payment not completed',
         });
       }
-      const left = await Order.countDocuments({ checkoutId: orderLike.checkoutId });
+      const left = await Order.countDocuments({ checkoutId: orderLike.checkoutId, abandonedAt: { $exists: false } });
       if (left === 0) {
         const { Checkout } = await import('../models/checkout.model.js');
         await Checkout.updateOne(
@@ -1867,6 +1876,9 @@ export async function listOrdersSeller(sellerId, query) {
   });
   const { page, limit, skip } = buildPaginationOptions(query);
   const filter = {
+    // Never-paid orders given up by the customer: kept for late payments, not
+    // the seller's business.
+    abandonedAt: { $exists: false },
     sellerId: new mongoose.Types.ObjectId(sellerId),
     $or: [
       // razorpay_qr = collected at the door, same as cash — see canExposeOrderToSeller.
@@ -1965,6 +1977,14 @@ export async function updateOrderStatusSeller(
   orderStatus,
   note = "",
 ) {
+  // Pickup and delivery are the rider's steps (handover code, cash, ledger). A
+  // seller could mark its own order delivered -- which also recorded a cash
+  // order as paid and counted it toward the payout -- with nothing delivered.
+  // Food and Quick refuse this since 22 Sep; courier orders are delivered
+  // through the shipment service, not here.
+  if (["picked_up", "reached_pickup", "reached_drop", "delivered"].includes(String(orderStatus || "").toLowerCase())) {
+    throw new ForbiddenError("Pickup and delivery are marked by the delivery partner");
+  }
   await expireUnacceptedOrders({
     sellerId: new mongoose.Types.ObjectId(sellerId),
   });

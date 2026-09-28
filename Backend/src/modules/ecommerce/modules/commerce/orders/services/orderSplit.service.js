@@ -213,7 +213,11 @@ async function unwindCheckout(checkout, orders) {
     for (const order of orders) {
         try {
             if (order.orderStatus === 'pending_payment') {
+                // Restock and coins as for any abandoned order, then removed:
+                // this checkout never reached a payment sheet, so no late
+                // capture can come looking for it.
                 await deletePendingPaymentOrder(order);
+                await Order.deleteOne({ _id: order._id });
             } else {
                 await restoreOrderStock(order);
                 await Order.deleteOne({ _id: order._id });

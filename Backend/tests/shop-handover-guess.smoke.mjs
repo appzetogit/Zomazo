@@ -1,5 +1,6 @@
 /**
- * A Shop rider cannot guess the customer's handover code.
+ * A Shop rider cannot guess the customer's handover code, and a seller cannot
+ * skip the rider by marking its own order picked up or delivered.
  *
  * Run: node tests/shop-handover-guess.smoke.mjs
  */
@@ -59,6 +60,14 @@ await check('the old code no longer works; the new one does', async () => {
     await assert.rejects(delivery.verifyDropOtpDelivery(String(orderId), rider, '4321'), /Invalid OTP/);
     await delivery.verifyDropOtpDelivery(String(orderId), rider, await codeNow());
     assert.equal((await Order.collection.findOne({ _id: orderId })).deliveryVerification.dropOtp.verified, true);
+});
+
+await check('a seller cannot mark its own order picked up or delivered', async () => {
+    const { updateOrderStatusSeller } = await import('../src/modules/ecommerce/modules/commerce/orders/services/order.service.js');
+    const seller = (await Order.collection.findOne({ _id: orderId })).sellerId;
+    for (const step of ['picked_up', 'reached_drop', 'delivered']) {
+        await assert.rejects(updateOrderStatusSeller(String(orderId), String(seller), step), /delivery partner/);
+    }
 });
 
 await mongoose.disconnect();

@@ -391,6 +391,8 @@ const orderSchema = new mongoose.Schema(
          * twice silently inflates inventory, and nothing downstream would notice.
          */
         stockRestoredAt: { type: Date, default: null },
+        /** Set when an unpaid online order is given up (kept cancelled, not deleted). */
+        abandonedAt: { type: Date, default: undefined },
         deliveryFleet: { type: String, default: 'standard', trim: true },
         scheduledAt: { type: Date, default: null },
         /** Quick orders: delivery promise (minutes from placing) quoted at checkout; the SLA report measures against it. */

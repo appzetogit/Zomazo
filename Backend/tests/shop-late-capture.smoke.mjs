@@ -32,6 +32,7 @@ await mongoose.connect(mongo.getUri('shop_late_capture'));
 
 const { Order } = await import('../src/modules/ecommerce/modules/commerce/orders/models/order.model.js');
 const { Checkout } = await import('../src/modules/ecommerce/modules/commerce/orders/models/checkout.model.js');
+const { deletePendingPaymentOrder } = await import('../src/modules/ecommerce/modules/commerce/orders/services/order.service.js');
 const { handleEcomRazorpayEvent } = await import('../src/modules/ecommerce/core/payments/controllers/razorpayWebhook.controller.js');
 
 const oid = () => new mongoose.Types.ObjectId();
@@ -81,6 +82,29 @@ await check('a capture on an abandoned checkout does not mark it paid', async ()
     const c = await Checkout.collection.findOne({ _id });
     assert.equal(c.status, 'cancelled');
     assert.notEqual(c.payment.status, 'paid');
+});
+
+await check('an abandoned unpaid order is kept cancelled, so a late payment on it is still found', async () => {
+    const _id = oid();
+    const checkoutId = oid();
+    await Checkout.collection.insertOne({
+        _id: checkoutId, checkoutId: 'CHK-AB', userId: oid(), status: 'pending', pricing: { grandTotal: 300 },
+        payment: { method: 'razorpay', status: 'pending', gatewayOrderId: 'order_chk_ab' },
+    });
+    const doc = {
+        _id, orderId: 'AB1', checkoutId, orderStatus: 'pending_payment', pricing: { total: 300 }, items: [],
+        payment: { method: 'razorpay', status: 'pending', razorpay: { orderId: 'order_ab1' } },
+    };
+    await Order.collection.insertOne(doc);
+    assert.equal(await deletePendingPaymentOrder(doc), true);
+    const kept = await Order.collection.findOne({ _id });
+    assert.ok(kept, 'the order still exists');
+    assert.equal(kept.orderStatus, 'cancelled_by_user');
+    assert.equal((await Checkout.collection.findOne({ _id: checkoutId })).status, 'cancelled', 'its checkout closes once no order is left waiting');
+
+    assert.equal(await handleEcomRazorpayEvent('payment.captured', captured('order_ab1', 'pay_ab1', 30000)), true, 'the capture is owned, not dropped');
+    assert.equal((await Order.collection.findOne({ _id })).orderStatus, 'cancelled_by_user');
+    assert.equal(await deletePendingPaymentOrder(kept), false, 'a second abandon is a no-op');
 });
 
 await mongoose.disconnect();
