@@ -293,9 +293,15 @@ export function OrderDetail() {
         <p className="mb-3 flex items-center gap-2 text-[15px] font-bold text-wh-text"><Store className="h-4 w-4 text-wh-brand-ink" aria-hidden="true" />{storeName(order)}</p>
         <ul className="flex flex-col gap-1.5">
           {(order.items || []).map((i, idx) => (
-            <li key={`${i.itemId}-${i.variantId || idx}`} className="flex justify-between text-[14px] text-wh-text">
+            // A buy-one-get-one unit is its own line of the same product, so the
+            // key needs the position; free lines (that and a free item) say so.
+            <li key={`${i.itemId}-${i.variantId || ""}-${idx}`} className="flex justify-between text-[14px] text-wh-text">
               <span>{i.quantity} × {i.name}{i.variantName ? ` · ${i.variantName}` : ""}</span>
-              <span>₹{formatMoney((i.variantPrice || i.price) * i.quantity)}</span>
+              {i.isBogoFree || i.isFreebie ? (
+                <span className="font-semibold text-wh-success">{i.isFreebie ? "Free gift" : "Free"}</span>
+              ) : (
+                <span>₹{formatMoney((i.variantPrice || i.price) * i.quantity)}</span>
+              )}
             </li>
           ))}
         </ul>
@@ -304,6 +310,7 @@ export function OrderDetail() {
           Number(v) ? <div key={l} className="flex justify-between text-[13px] text-wh-muted"><span>{l}</span><span>₹{formatMoney(v)}</span></div> : null,
         )}
         {Number(p.discount) ? <div className="flex justify-between text-[13px] text-wh-success"><span>Discount</span><span>−₹{formatMoney(p.discount)}</span></div> : null}
+        {Number(p.bogoSavings) ? <div className="flex justify-between text-[13px] text-wh-success"><span>Buy 1 get 1 saving</span><span>₹{formatMoney(p.bogoSavings)}</span></div> : null}
         <div className="mt-1 flex justify-between text-[15px] font-bold text-wh-text"><span>Total</span><span>₹{formatMoney(p.total)}</span></div>
         <p className="mt-2 text-[12px] text-wh-muted">
           {order.payment?.method === "cash" ? "Pay cash on delivery" : order.payment?.status === "paid" ? "Paid online" : `Payment: ${order.payment?.status || "pending"}`}

@@ -13,6 +13,23 @@ const orderItemSchema = new mongoose.Schema(
         quantity: { type: Number, required: true, min: 1 },
         isVeg: { type: Boolean, default: true },
         /**
+         * The seller's spend-threshold free item, added by pricing (not the
+         * cart), and the free half of a buy-one-get-one line. Stored so the
+         * packer sends them, the invoice can say why they cost nothing, and
+         * support can tell a granted free unit from a mispriced one.
+         */
+        isFreebie: { type: Boolean, default: false },
+        freebie: {
+            minOrderValue: { type: Number, min: 0, default: 0 },
+            rewardType: { type: String, enum: ['item', 'addon'], default: 'item' },
+        },
+        isBogoFree: { type: Boolean, default: false },
+        bogo: {
+            buyQty: { type: Number, min: 1, default: 1 },
+            getQty: { type: Number, min: 1, default: 1 },
+            sourceItemId: { type: String, trim: true, default: '' },
+        },
+        /**
          * Rate this line was taxed at, snapshotted like the price is: a
          * product's GST slab can be reclassified, and the invoice has to keep
          * saying what was actually charged. null means the order-wide rate.
@@ -84,6 +101,8 @@ const pricingSchema = new mongoose.Schema(
     {
         subtotal: { type: Number, required: true, min: 0 },
         tax: { type: Number, default: 0, min: 0 },
+        /** What buy-one-get-one saved; already out of the subtotal, recorded for the invoice. */
+        bogoSavings: { type: Number, default: 0, min: 0 },
         /**
          * The order-wide GST rate that lines with no slab of their own (gstRate null)
          * were taxed at. Snapshotted because the fee settings can change afterwards,

@@ -22,18 +22,16 @@ export const isQcSeller = () => {
  * Panel pages that exist only for food restaurants, by their path under
  * /food/restaurant. Each is a food feature with no quick-commerce counterpart:
  *
- *  - free-item-offers, bogo-offers, combos: food's order pricing applies these
- *    (shared/freebieOffer, bogoOffer, combo); quick-commerce pricing does not,
- *    so porting only the settings routes would let a seller configure an offer
- *    customers never receive.
+ *  - combos: a combo is a special menu item food's pricing understands and
+ *    quick-commerce pricing does not. (Free item and buy-one-get-one offers
+ *    are shared: quick-commerce pricing applies them too, from the store's own
+ *    offers -- Backend quickCommerce shared/offers.js.)
  *  - gst-settings: the "prices include GST" flag. Quick-commerce restaurants
  *    have no such field and its pricing always treats prices as net.
  *  - delivery-radius: food's per-outlet serviceRadiusKm. Quick-commerce
  *    serviceability is decided by zones, and nothing there reads a radius.
  */
 export const FOOD_ONLY_SELLER_PAGES = Object.freeze([
-  "free-item-offers",
-  "bogo-offers",
   "combos",
   "gst-settings",
   "delivery-radius",

@@ -374,7 +374,8 @@ export default function CartPage() {
           <h2 className="mb-3 text-[16px] font-bold text-wh-text">Bill</h2>
           {quote ? (
             <div className="flex flex-col gap-1.5">
-              {row("Items", quote.subtotal)}
+              {/* Before buy-one-get-one, so the free units' line below adds up. */}
+              {row("Items", Number(quote.subtotal || 0) + Number(quote.bogoSavings || 0))}
               {row("Delivery", quote.deliveryFee)}
               {row("Delivery GST", quote.deliveryFeeGst)}
               {/* Only present while the admin has a surge on for this zone. */}
@@ -387,9 +388,34 @@ export default function CartPage() {
                   <span>−₹{formatMoney(quote.discount)}</span>
                 </div>
               ) : null}
+              {/* The store's own offers: free units come off "Items" above, and a
+                  free item costs nothing. */}
+              {quote.bogo?.totalFreeUnits ? (
+                <div className="flex justify-between text-[14px] text-wh-success">
+                  <span>Buy 1 get 1 ({quote.bogo.totalFreeUnits} free)</span>
+                  <span>−₹{formatMoney(quote.bogo.savings)}</span>
+                </div>
+              ) : null}
+              {quote.freebie?.earned ? (
+                <p className="text-[13px] font-semibold text-wh-success">Free {quote.freebie.earned.name} added to your order</p>
+              ) : null}
               <div className="my-1 border-t border-wh-border" />
               {row("To pay", quote.total, true)}
-              {quote.discount ? <p className="text-[12px] font-semibold text-wh-success">You save ₹{formatMoney(quote.discount)} on this order</p> : null}
+              {Number(quote.discount || 0) + Number(quote.bogoSavings || 0) > 0 ? (
+                <p className="text-[12px] font-semibold text-wh-success">
+                  You save ₹{formatMoney(Number(quote.discount || 0) + Number(quote.bogoSavings || 0))} on this order
+                </p>
+              ) : null}
+              {(quote.bogo?.next || []).map((n) => (
+                <p key={`bogo-${n.itemId}`} className="text-[12px] font-semibold text-wh-text">
+                  Add {n.unitsAway} more {n.name} and get {n.freeQuantity > 1 ? `${n.freeQuantity} free` : "one free"}
+                </p>
+              ))}
+              {quote.freebie?.next && quote.freebie.next.name ? (
+                <p className="text-[12px] font-semibold text-wh-text">
+                  Add ₹{formatMoney(quote.freebie.next.amountAway)} more for a free {quote.freebie.next.name}
+                </p>
+              ) : null}
               {quote.deliveryPromiseMinutes ? <p className="text-[12px] font-semibold text-wh-success">Arrives in about {quote.deliveryPromiseMinutes} minutes</p> : null}
             </div>
           ) : (

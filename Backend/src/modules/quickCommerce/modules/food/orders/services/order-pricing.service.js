@@ -23,6 +23,8 @@ import { withMasterFees } from '../../../../../../core/finance/platformFees.serv
 import { isMedicalStore } from '../../shared/storeType.js';
 import { findZoneForPoint, readAddressPoint, ZONE_VERTICALS } from '../../shared/zoneServiceability.js';
 import { zoneSurgeAmount } from '../../admin/models/deliverySurgeZone.model.js';
+import { FoodItem } from '../../admin/models/food.model.js';
+import { qcBogo, qcFreebie } from '../../shared/offers.js';
 
 const round2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
 
@@ -451,6 +453,13 @@ async function resolveDeliveryAddress(userId, dto) {
   return chosen || dto.deliveryAddress;
 }
 
+/** Whether a free item can be handed over: untracked stock, or at least one left. */
+async function rewardInStock(itemId) {
+  const doc = await FoodItem.findById(itemId).select('stockQty isAvailable').lean();
+  if (!doc || doc.isAvailable === false) return false;
+  return doc.stockQty === null || doc.stockQty === undefined || Number(doc.stockQty) >= 1;
+}
+
 export async function calculateOrderPricing(userId, dto, options = {}) {
   const at = options.at instanceof Date ? options.at : new Date();
   const restaurant =
@@ -465,17 +474,39 @@ export async function calculateOrderPricing(userId, dto, options = {}) {
   );
 
   const resolvedItems = await resolveOrderCartItems(dto.restaurantId, dto.items);
-  const items = resolvedItems.map((item) => ({
+  const cartLines = resolvedItems.map((item) => ({
     ...item,
     price: Number(item.price) || 0,
     quantity: Number(item.quantity) || 1,
   }));
+
+  // The seller's buy-one-get-one products (food's rules, this store's offers).
+  // A line's price here has its add-ons folded in, while the offer gives away
+  // only the product, so each line is handed over as product price plus
+  // add-ons -- food's layout -- and folded back afterwards. Free units become
+  // their own lines, which is also what the stock reservation and the invoice
+  // read: the customer receives them.
+  const addonsOf = (it) =>
+    (Array.isArray(it.addons) ? it.addons : []).reduce((sum, a) => sum + (Number(a?.price) || 0), 0);
+  const { items: offerLines, bogo } = await qcBogo.applyBogoToItems(
+    dto.restaurantId,
+    cartLines.map((it) => ({ ...it, addonsTotal: addonsOf(it), price: round2(it.price - addonsOf(it)) })),
+  );
+  const items = offerLines.map(({ addonsTotal = 0, ...it }) => ({ ...it, price: round2((Number(it.price) || 0) + addonsTotal) }));
   const subtotal = round2(
     items.reduce(
       (sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
       0,
     ),
   );
+
+  // A free item once the order reaches the seller's spend, measured on what the
+  // customer pays for (after buy-one-get-one) and appended without changing
+  // the subtotal, as in food. A reward the store cannot hand over -- tracked
+  // stock at nothing -- is left out rather than failing the whole order.
+  const { line: freebieLine, tier: freebieTier, nextTier: freebieNextTier } =
+    await qcFreebie.resolveFreebieForOrder(dto.restaurantId, subtotal);
+  if (freebieLine && (await rewardInStock(freebieLine.itemId))) items.push(freebieLine);
 
   // A pharmacy is priced by the Medical formula when one is set there, and
   // any zone-level setting for the zone this address is in.
@@ -643,6 +674,22 @@ export async function calculateOrderPricing(userId, dto, options = {}) {
       ? Number(straightLineKm.toFixed(2))
       : null,
     deliveryFeeBreakdown: deliveryFeeResult.breakdown || null,
+    // Display only: the free units are already out of `subtotal`.
+    bogoSavings: bogo.savings,
+    bogo: { totalFreeUnits: bogo.totalFreeUnits, savings: bogo.savings, lines: bogo.lines, next: bogo.next },
+    freebie: {
+      earned: freebieTier && items.some((it) => it.isFreebie)
+        ? { minOrderValue: freebieTier.minOrderValue, rewardType: freebieTier.rewardType, name: freebieLine?.name || '' }
+        : null,
+      next: freebieNextTier
+        ? {
+            minOrderValue: freebieNextTier.minOrderValue,
+            amountAway: freebieNextTier.amountAway,
+            rewardType: freebieNextTier.rewardType,
+            name: freebieNextTier.rewardName || '',
+          }
+        : null,
+    },
     // Shown before the customer commits, which is the whole point of a
     // quick-commerce promise: it is a reason to order, not a status to check
     // afterwards. Packing plus the ride, from the same numbers the live

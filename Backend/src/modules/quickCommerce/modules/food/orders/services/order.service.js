@@ -678,6 +678,7 @@ export async function createOrder(userId, dto) {
     const normalizedPricing = {
       subtotal: Number(pricingResult.pricing?.subtotal) || 0,
       tax: Number(pricingResult.pricing?.tax) || 0,
+      bogoSavings: Number(pricingResult.pricing?.bogoSavings) || 0,
       // Kept so a return can refund an untagged line at the rate it was charged,
       // even after the fee settings have moved on.
       gstFallbackRate: Number.isFinite(Number(pricingResult.pricing?.gstFallbackRate))

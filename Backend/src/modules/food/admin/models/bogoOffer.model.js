@@ -14,49 +14,56 @@ import mongoose from 'mongoose';
  * menu forms, the bulk uploader and the approval workflow all had to learn about
  * a field none of them own.
  */
-const bogoOfferItemSchema = new mongoose.Schema(
-    {
-        itemId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodItem', required: true },
-        /** Buy N, get M. Defaults are the classic offer, which is what nearly everyone configures. */
-        buyQty: { type: Number, default: 1, min: 1 },
-        getQty: { type: Number, default: 1, min: 1 },
-        /**
-         * Free units this dish may give away on a single order, across every
-         * variant of it. Null means uncapped; the cap exists so one 40-unit order
-         * cannot empty a kitchen the restaurant expected to serve all evening.
-         */
-        maxFreeUnitsPerOrder: { type: Number, default: null, min: 1 },
-        /** Optional run window. Absent means always on; the end is exclusive. */
-        startDate: { type: Date, default: null },
-        endDate: { type: Date, default: null },
-    },
-    { _id: true }
-);
-
-const bogoOfferSchema = new mongoose.Schema(
-    {
-        restaurantId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'FoodRestaurant',
-            required: true,
-            unique: true,
-            index: true,
+/**
+ * The schema, with the models its references point at. Food's defaults below;
+ * quick commerce builds its own copy pointed at its own models.
+ */
+export function buildBogoOfferSchema(refs = { item: 'FoodItem', restaurant: 'FoodRestaurant' }) {
+    const bogoOfferItemSchema = new mongoose.Schema(
+        {
+            itemId: { type: mongoose.Schema.Types.ObjectId, ref: refs.item, required: true },
+            /** Buy N, get M. Defaults are the classic offer, which is what nearly everyone configures. */
+            buyQty: { type: Number, default: 1, min: 1 },
+            getQty: { type: Number, default: 1, min: 1 },
+            /**
+             * Free units this dish may give away on a single order, across every
+             * variant of it. Null means uncapped; the cap exists so one 40-unit order
+             * cannot empty a kitchen the restaurant expected to serve all evening.
+             */
+            maxFreeUnitsPerOrder: { type: Number, default: null, min: 1 },
+            /** Optional run window. Absent means always on; the end is exclusive. */
+            startDate: { type: Date, default: null },
+            endDate: { type: Date, default: null },
         },
-        /**
-         * A restaurant that has configured rows but switched the promotion off
-         * should keep them, so turning it back on does not mean rebuilding the
-         * list.
-         */
-        isActive: { type: Boolean, default: true, index: true },
-        offers: { type: [bogoOfferItemSchema], default: [] },
-        /** Which panel last saved it -- both admin and the restaurant can edit. */
-        updatedByRole: { type: String, enum: ['ADMIN', 'RESTAURANT'], default: 'RESTAURANT' },
-    },
-    {
-        collection: 'food_bogo_offers',
-        timestamps: true,
-    }
-);
+        { _id: true }
+    );
+
+    const bogoOfferSchema = new mongoose.Schema(
+        {
+            restaurantId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: refs.restaurant,
+                required: true,
+                unique: true,
+                index: true,
+            },
+            /**
+             * A restaurant that has configured rows but switched the promotion off
+             * should keep them, so turning it back on does not mean rebuilding the
+             * list.
+             */
+            isActive: { type: Boolean, default: true, index: true },
+            offers: { type: [bogoOfferItemSchema], default: [] },
+            /** Which panel last saved it -- both admin and the restaurant can edit. */
+            updatedByRole: { type: String, enum: ['ADMIN', 'RESTAURANT'], default: 'RESTAURANT' },
+        },
+        {
+                    timestamps: true,
+        }
+    );
+    return bogoOfferSchema;
+}
 
 export const FoodBogoOffer =
-    mongoose.models.FoodBogoOffer || mongoose.model('FoodBogoOffer', bogoOfferSchema);
+    mongoose.models.FoodBogoOffer || mongoose.model('FoodBogoOffer', buildBogoOfferSchema(), 'food_bogo_offers');
+
