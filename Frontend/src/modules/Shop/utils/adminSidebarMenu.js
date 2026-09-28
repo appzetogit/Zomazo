@@ -228,6 +228,7 @@ const adminSidebarMenuTemplate = [
     label: "REPORT MANAGEMENT",
     items: [
       { type: "link", label: "Transaction Report", path: "/transaction-report", icon: "FileText" },
+      { type: "link", label: "Seller Disbursements", path: "/disbursement-report/sellers", icon: "Banknote" },
       { type: "link", label: "Delivery SLA", path: "/reports/delivery-sla", icon: "Timer" },
       { type: "link", label: "Commission Report", path: "/reports/commission", icon: "Percent" },
       { type: "link", label: "Coin Liability", path: "/reports/coin-liability", icon: "Coins" },
