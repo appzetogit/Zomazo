@@ -3,6 +3,7 @@ import {
   ArrowRight,
   BarChart3,
   Check,
+  HardHat,
   MapPin,
   Pill,
   ShieldCheck,
@@ -11,8 +12,10 @@ import {
   Truck,
   Users,
   UtensilsCrossed,
+  Wrench,
   Zap,
 } from "lucide-react"
+import { SERVICE_PROVIDER_ENABLED } from "@/config/features"
 import { PARTNER_TYPES } from "../partnerApi"
 
 /*
@@ -167,6 +170,39 @@ export default function ChoosePartner() {
           ))}
         </section>
       </div>
+
+      {/* ---- service partners, only on builds that run the Services module ---- */}
+      {SERVICE_PROVIDER_ENABLED && (
+        <section className="mt-12 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_10px_30px_-12px_rgba(15,23,42,0.18)] md:flex md:items-center md:gap-8">
+          <div className="flex items-center gap-4 md:flex-1">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
+              <Wrench className="h-7 w-7" strokeWidth={2.2} />
+            </span>
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">Home services partner</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Repairs, cleaning, installation and more. Vendors take bookings and run a team; workers do the jobs.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 md:mt-0 md:w-[26rem]">
+            <button
+              type="button"
+              onClick={() => navigate("/services/vendor/login")}
+              className="flex min-h-[3.25rem] items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 font-semibold text-white shadow-sm hover:bg-violet-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-violet-300"
+            >
+              <Wrench className="h-5 w-5" /> Service vendor
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/services/worker/login")}
+              className="flex min-h-[3.25rem] items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 font-semibold text-violet-700 hover:bg-violet-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-violet-200"
+            >
+              <HardHat className="h-5 w-5" /> Service worker
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* ---- trust strip ---- */}
       <section className="mt-14 border-t border-slate-200/70 pt-10 text-center">

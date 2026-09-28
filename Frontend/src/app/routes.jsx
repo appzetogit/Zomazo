@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import { Suspense, lazy, useEffect, useLayoutEffect, useState, useRef } from 'react'
 import { AppShellSkeleton } from '@food/components/ui/loading-skeletons'
 import { applyFoodUserTheme, applySavedTheme, applyTheme } from '../shared/utils/theme.js'
+import { SERVICE_PROVIDER_ENABLED, ECOMMERCE_ENABLED } from '../config/features'
 
 const NATIVE_LAST_ROUTE_KEY = 'native_last_route'
 
@@ -19,8 +20,11 @@ const ShopApp = lazy(() => import('../modules/Shop/ShopApp'))
 const ShopAdminApp = lazy(() => import('../modules/Shop/ShopAdminApp'))
 // Quick commerce for customers (groceries in minutes) on the /qc backend.
 const QuickApp = lazy(() => import('../modules/Quick/QuickApp'))
+// Service-provider partner apps. Declared lazily and only routed when the Services
+// module is switched on for this build, so other sites never download them.
+const ServiceVendorApp = lazy(() => import('../modules/ServiceProvider/vendor/VendorApp'))
+const ServiceWorkerApp = lazy(() => import('../modules/ServiceProvider/worker/WorkerApp'))
 import ProtectedRoute from '@food/components/ProtectedRoute'
-import { ECOMMERCE_ENABLED } from '../config/features'
 
 const PageLoader = () => <AppShellSkeleton />
 
@@ -146,6 +150,15 @@ const AppRoutes = () => {
 
         {/* Partner sign-in and registration: restaurant, store, medical store */}
         <Route path="/partner/*" element={<Suspense fallback={<PageLoader />}><PartnerApp /></Suspense>} />
+
+        {/* Service-provider partners: vendor and worker apps. These are more specific
+            than the customer app's /services/*, so react-router ranks them first. */}
+        {SERVICE_PROVIDER_ENABLED && (
+          <Route path="/services/vendor/*" element={<Suspense fallback={<PageLoader />}><ServiceVendorApp /></Suspense>} />
+        )}
+        {SERVICE_PROVIDER_ENABLED && (
+          <Route path="/services/worker/*" element={<Suspense fallback={<PageLoader />}><ServiceWorkerApp /></Suspense>} />
+        )}
 
         {/* Support Module */}
         <Route path="/support" element={<Suspense fallback={<PageLoader />}><HelpSupportPage /></Suspense>} />
