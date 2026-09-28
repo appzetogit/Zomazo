@@ -1367,6 +1367,22 @@ export const restaurantAPI = {
       contextModule: "restaurant",
       params: params || {},
     }),
+  /**
+   * Orders and earnings for a date range (GET /reports/orders). `from`/`to` are
+   * YYYY-MM-DD, read as whole days in IST. The JSON form feeds the analytics
+   * page; the CSV form is the Reports download.
+   */
+  getOrdersReport: ({ from, to } = {}) =>
+    apiClient.get("/food/restaurant/reports/orders", {
+      contextModule: "restaurant",
+      params: { from, to },
+    }),
+  downloadOrdersReport: ({ from, to } = {}) =>
+    apiClient.get("/food/restaurant/reports/orders", {
+      contextModule: "restaurant",
+      params: { from, to, format: "csv" },
+      responseType: "blob",
+    }),
   /** Fetch restaurant by owner (stub for missing backend endpoint). */
   getRestaurantByOwner: () =>
     Promise.resolve({

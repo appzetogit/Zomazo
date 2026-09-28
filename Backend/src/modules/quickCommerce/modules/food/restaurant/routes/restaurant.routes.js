@@ -101,6 +101,9 @@ import {
 import { listBannersForRestaurantAppController } from '../../admin/controllers/restaurantAppBanner.controller.js';
 
 import { cacheResponse, invalidateCache } from '../../../../middleware/cache.js';
+import { makeSellerOrderReportController } from '../../../../../../core/finance/sellerOrderReport.js';
+import { FoodOrder } from '../../orders/models/order.model.js';
+import { FoodTransaction } from '../../orders/models/foodTransaction.model.js';
 
 const router = express.Router();
 
@@ -183,6 +186,10 @@ router.patch('/dining-settings', authMiddleware, requireRestaurant, async (req, 
 router.get('/outlet-timings', authMiddleware, requireRestaurant, getCurrentRestaurantOutletTimingsController);
 router.put('/outlet-timings', authMiddleware, requireRestaurant, upsertCurrentRestaurantOutletTimingsController);
 router.get('/finance', authMiddleware, requireRestaurant, getRestaurantFinanceController);
+// Orders and earnings for a date range: ?from=YYYY-MM-DD&to=YYYY-MM-DD, with
+// &format=csv for the download. Same builder as the food router, on qc_*.
+router.get('/reports/orders', authMiddleware, requireRestaurant,
+    makeSellerOrderReportController({ Order: FoodOrder, Transaction: FoodTransaction, label: 'store-orders' }));
 router.post('/withdraw', authMiddleware, requireRestaurant, createWithdrawalRequestController);
 router.get('/withdrawals', authMiddleware, requireRestaurant, listMyWithdrawalsController);
 router.get('/subscription-history', authMiddleware, requireRestaurant, getRestaurantSubscriptionHistoryController);
