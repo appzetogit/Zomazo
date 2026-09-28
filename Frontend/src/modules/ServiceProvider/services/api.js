@@ -40,10 +40,13 @@ const getTokenKeys = (url) => {
     const keys = readToken(MASTER_ADMIN_KEYS.access) ? MASTER_ADMIN_KEYS : LEGACY_ADMIN_KEYS;
     return { access: keys.access, refresh: keys.refresh, role: 'admin' };
   }
-  if (window.location.pathname.startsWith('/vendor')) {
+  // Inside master the partner apps live under /services/vendor and /services/worker
+  // (the bare /vendor and /worker paths were the standalone app's). Checked here so a
+  // vendor page never sends the customer's token, which the vendor routes would 403.
+  if (window.location.pathname.startsWith('/vendor') || window.location.pathname.startsWith('/services/vendor')) {
     return { access: 'vendorAccessToken', refresh: 'vendorRefreshToken', role: 'vendor' };
   }
-  if (window.location.pathname.startsWith('/worker')) {
+  if (window.location.pathname.startsWith('/worker') || window.location.pathname.startsWith('/services/worker')) {
     return { access: 'workerAccessToken', refresh: 'workerRefreshToken', role: 'worker' };
   }
 
@@ -195,10 +198,15 @@ export const handleLogout = (role = null) => {
     // Determine role from path if not provided
     const path = window.location.pathname;
     if (path.startsWith('/admin')) role = 'admin';
-    else if (path.startsWith('/vendor')) role = 'vendor';
-    else if (path.startsWith('/worker')) role = 'worker';
+    else if (path.startsWith('/vendor') || path.startsWith('/services/vendor')) role = 'vendor';
+    else if (path.startsWith('/worker') || path.startsWith('/services/worker')) role = 'worker';
     else role = 'user';
   }
+
+  // Where each partner signs back in. The standalone /vendor and /worker apps are not
+  // mounted inside master, so a refresh failure there would land on the site's 404.
+  const vendorLogin = '/services/vendor/login';
+  const workerLogin = '/services/worker/login';
 
   // Clear role-specific tokens selectively
   const clearTokens = (prefix) => {
@@ -214,14 +222,14 @@ export const handleLogout = (role = null) => {
 
   if (role === 'vendor') {
     clearTokens('vendor');
-    if (window.location.pathname !== '/vendor/login') {
-      window.location.href = '/vendor/login';
+    if (window.location.pathname !== vendorLogin) {
+      window.location.href = vendorLogin;
     }
   } else if (role === 'worker') {
     clearTokens('worker');
     sessionStorage.removeItem('workerDashboardCache');
-    if (window.location.pathname !== '/worker/login') {
-      window.location.href = '/worker/login';
+    if (window.location.pathname !== workerLogin) {
+      window.location.href = workerLogin;
     }
   } else if (role === 'admin') {
     clearTokens('admin'); // legacy adminAccessToken / adminRefreshToken / adminData
