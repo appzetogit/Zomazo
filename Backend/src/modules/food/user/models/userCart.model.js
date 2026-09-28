@@ -15,6 +15,12 @@ const userCartItemSchema = new mongoose.Schema(
         image: { type: String, default: '' },
         foodType: { type: String, default: '' },
         isVeg: { type: Boolean, default: false },
+        // Chosen add-ons are part of the line (a burger with cheese is its own
+        // line), so a cart restored on another device keeps them.
+        addons: {
+            type: [{ addonId: String, name: String, price: { type: Number, min: 0, default: 0 }, _id: false }],
+            default: [],
+        },
     },
     { _id: false },
 );

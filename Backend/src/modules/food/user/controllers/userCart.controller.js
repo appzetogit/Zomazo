@@ -1,5 +1,13 @@
 import { sendResponse } from '../../../../utils/response.js';
-import { syncUserCart } from '../services/userCart.service.js';
+import { getUserCart, syncUserCart } from '../services/userCart.service.js';
+
+export const getUserCartController = async (req, res, next) => {
+    try {
+        return sendResponse(res, 200, 'Cart', { cart: await getUserCart(req.user?.userId) });
+    } catch (error) {
+        next(error);
+    }
+};
 
 export const syncUserCartController = async (req, res, next) => {
     try {

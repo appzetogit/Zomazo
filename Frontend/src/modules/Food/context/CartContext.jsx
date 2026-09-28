@@ -1,5 +1,6 @@
 // src/context/cart-context.jsx
-import { createContext, useContext, useEffect, useMemo, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
+import { userAPI } from "@food/api"
 import { buildCartLineId } from "@food/utils/foodVariants"
 import {
   clampOrderQuantity,
@@ -193,6 +194,69 @@ export function CartProvider({ children }) {
       // ignore storage errors (private mode, quota, etc.)
     }
   }, [cart])
+
+  /*
+   * The cart follows a signed-in customer across devices. On load, an empty
+   * cart picks up the one saved on the account (a cart already on this device
+   * is newer and wins); after that, changes are saved to the account, a second
+   * after the customer stops tapping. Only changes are sent -- a failed load
+   * must never push an empty cart over the saved one. Checkout prices the cart
+   * it is sent, never this copy.
+   */
+  const lastSavedRef = useRef(null)
+  const [accountCartChecked, setAccountCartChecked] = useState(false)
+  const hasUserSession = () => typeof window !== "undefined" && Boolean(localStorage.getItem("user_accessToken"))
+  const cartSignature = (list) => JSON.stringify(normalizeCartData(list).map((i) => [i.lineItemId, i.quantity]))
+
+  useEffect(() => {
+    if (!hasUserSession()) {
+      setAccountCartChecked(true)
+      return undefined
+    }
+    let alive = true
+    // What the account holds; null when it could not be read.
+    let accountSignature = null
+    userAPI
+      .getCart()
+      .then((res) => {
+        const saved = res?.data?.data?.cart
+        accountSignature = cartSignature(saved?.items || [])
+        if (!alive || !saved?.items?.length) return
+        const restored = normalizeCartData(
+          saved.items.map((i) => ({ ...i, restaurantId: saved.restaurantId, restaurant: saved.restaurantName })),
+        )
+        setCart((prev) => (prev.length ? prev : restored))
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!alive) return
+        setCart((prev) => {
+          // A cart already here that the account lacks is saved next; after a
+          // failed read nothing is sent until the customer changes something.
+          if (lastSavedRef.current === null) lastSavedRef.current = accountSignature ?? cartSignature(prev)
+          return prev
+        })
+        setAccountCartChecked(true)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!accountCartChecked || !hasUserSession()) return undefined
+    const signature = cartSignature(cart)
+    if (signature === lastSavedRef.current) return undefined
+    const timer = setTimeout(() => {
+      userAPI
+        .syncCart(normalizeCartData(cart))
+        .then(() => {
+          lastSavedRef.current = signature
+        })
+        .catch(() => {})
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [cart, accountCartChecked])
 
   const addToCart = (item, sourcePosition = null) => {
     const safeCart = normalizeCartData(cart)

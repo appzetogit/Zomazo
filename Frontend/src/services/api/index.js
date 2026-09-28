@@ -2645,6 +2645,9 @@ export const qcDeliveryAPI = {
 
 export const userAPI = {
   getPublicFeeSettings: () => apiClient.get("/food/user/fee-settings", { contextModule: "user" }),
+  /** The account's saved cart (a snapshot for other devices; checkout reprices). */
+  getCart: () => apiClient.get("/food/user/cart", { contextModule: "user" }),
+  syncCart: (items) => apiClient.put("/food/user/cart", { items }, { contextModule: "user" }),
   deleteCurrentUserAccount: () => apiClient.delete('/food/user/profile', { contextModule: 'user' }),
   /** Get current user profile (Bearer USER). */
   getProfile: () =>

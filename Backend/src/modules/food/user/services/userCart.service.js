@@ -61,6 +61,12 @@ const normalizeCartItems = (items = []) => {
                 image: String(item.image || item.imageUrl || ''),
                 foodType: String(item.foodType || ''),
                 isVeg: item.isVeg === true || String(item.foodType || '').toLowerCase() === 'veg',
+                addons: Array.isArray(item.addons)
+                    ? item.addons
+                        .filter((a) => a && (a.addonId || a._id || a.id))
+                        .slice(0, 50)
+                        .map((a) => ({ addonId: String(a.addonId || a._id || a.id), name: String(a.name || ''), price: toNonNegativeNumber(a.price, 0) }))
+                    : [],
             };
         })
         .filter((item) => item.name && item.quantity > 0);
@@ -231,6 +237,20 @@ const applyCartQuantityLimits = async (items = []) => {
 
     return { items: next, adjustments };
 };
+
+/**
+ * The customer's saved cart, for another device to pick up where they left
+ * off. A snapshot only: checkout prices what it is sent.
+ */
+export async function getUserCart(userId) {
+    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+        throw new ValidationError('Invalid user');
+    }
+    const cart = await FoodUserCart.findOne({ userId: new mongoose.Types.ObjectId(String(userId)) })
+        .select('restaurantId restaurantName items itemCount updatedAt')
+        .lean();
+    return cart || null;
+}
 
 export async function syncUserCart(userId, rawItems = [], rawPricing = null) {
     if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {

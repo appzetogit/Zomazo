@@ -31,7 +31,7 @@ import {
     listMySupportTicketsController
 } from '../controllers/supportTicket.controller.js';
 import { getPublicFeeSettingsController } from '../controllers/userSettings.controller.js';
-import { syncUserCartController } from '../controllers/userCart.controller.js';
+import { getUserCartController, syncUserCartController } from '../controllers/userCart.controller.js';
 import {
     getFavoritesController,
     addFavoriteRestaurantController,
@@ -93,6 +93,7 @@ router.delete('/favorites/foods/:foodId', removeFavoriteFoodController);
 
 // Cross-device cart continuity only. Checkout prices the cart it is sent, never
 // this snapshot, so a stale or failed sync cannot affect what a customer pays.
+router.get('/cart', getUserCartController);
 router.put('/cart', syncUserCartController);
 
 export default router;

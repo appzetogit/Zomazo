@@ -2569,6 +2569,12 @@ export const deliveryAPI = {
 };
 
 export const userAPI = {
+  /** The account's saved stores and products (`{ sellers, products, sellerIds, productIds }`). */
+  getFavorites: () => apiClient.get("/user/favorites", { contextModule: "user" }),
+  addFavoriteSeller: (id) => apiClient.post(`/user/favorites/sellers/${String(id)}`, {}, { contextModule: "user" }),
+  removeFavoriteSeller: (id) => apiClient.delete(`/user/favorites/sellers/${String(id)}`, { contextModule: "user" }),
+  addFavoriteProduct: (id) => apiClient.post(`/user/favorites/products/${String(id)}`, {}, { contextModule: "user" }),
+  removeFavoriteProduct: (id) => apiClient.delete(`/user/favorites/products/${String(id)}`, { contextModule: "user" }),
   /** `{ marketingPush }` — offers & promotions pushes (default on). */
   getNotificationPreferences: () =>
     apiClient.get("/user/notification-preferences", { contextModule: "user" }),

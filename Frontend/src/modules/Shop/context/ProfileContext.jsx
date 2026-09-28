@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react"
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { authAPI, userAPI } from "@shop/api"
+import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -83,6 +84,47 @@ export function ProfileProvider({ children }) {
     return saved !== null ? saved === "true" : false
   })
 
+  /*
+   * A signed-in customer's wishlist and saved stores live on their account
+   * (/ecom/user/favorites), so they follow them to any device. The device copy
+   * above is what shows first; the server's list replaces it once loaded, after
+   * anything saved here before the account knew about it has been sent up.
+   */
+  const favoritesRef = useRef(favorites)
+  favoritesRef.current = favorites
+  const dishFavoritesRef = useRef(dishFavorites)
+  dishFavoritesRef.current = dishFavorites
+  const isObjectId = (v) => /^[a-f0-9]{24}$/i.test(String(v || ""))
+  const hasSession = () => Boolean(localStorage.getItem("user_accessToken"))
+
+  const syncFavoritesFromServer = useCallback(async () => {
+    const localSellers = favoritesRef.current.filter((f) => isObjectId(f?.id))
+    const localProducts = dishFavoritesRef.current.filter((f) => isObjectId(f?.id))
+    await Promise.allSettled([
+      ...localSellers.map((f) => userAPI.addFavoriteSeller(f.id)),
+      ...localProducts.map((f) => userAPI.addFavoriteProduct(f.id)),
+    ])
+    const res = await userAPI.getFavorites()
+    const data = res?.data?.data || {}
+    const sellerCard = new Map(favoritesRef.current.map((f) => [String(f.id), f]))
+    const productCard = new Map(dishFavoritesRef.current.map((f) => [String(f.id), f]))
+    const image = (d) => d?.profileImage?.url || d?.profileImage || d?.image?.url || d?.image || d?.images?.[0]?.url || d?.images?.[0] || ""
+    setFavorites((data.sellers || []).map((s) => sellerCard.get(String(s._id)) || {
+      id: String(s._id),
+      slug: String(s._id),
+      name: s.sellerName || "",
+      image: image(s),
+    }))
+    setDishFavorites((data.products || []).map((p) => productCard.get(String(p._id)) || {
+      id: String(p._id),
+      sellerId: String(p.sellerId || ""),
+      name: p.name || "",
+      image: image(p),
+      price: Number(p.price) || 0,
+      mrp: Number(p.otherPrice) || undefined,
+    }))
+  }, [])
+
   // Helper to check if authenticated
   const isAuthenticated = useMemo(() => {
     return localStorage.getItem("user_authenticated") === "true" || !!localStorage.getItem("user_accessToken")
@@ -159,6 +201,9 @@ export function ProfileProvider({ children }) {
           localStorage.setItem("user_user", JSON.stringify(userData))
           localStorage.setItem("userProfile", JSON.stringify(userData))
         }
+
+        // The account's wishlist and saved stores; the device copy stays on failure.
+        syncFavoritesFromServer().catch(() => {})
 
         // Fetch addresses
         try {
@@ -345,6 +390,8 @@ export function ProfileProvider({ children }) {
   }, [paymentMethods])
 
   // Favorites functions - memoized with useCallback
+  // Hearts flip at once; the account is told afterwards, and a refusal flips
+  // the heart back rather than show a favourite that will not be there later.
   const addFavorite = useCallback((seller) => {
     setFavorites((prev) => {
       if (!prev.find(fav => fav.slug === seller.slug)) {
@@ -352,10 +399,21 @@ export function ProfileProvider({ children }) {
       }
       return prev
     })
+    if (!hasSession() || !isObjectId(seller?.id)) return
+    userAPI.addFavoriteSeller(seller.id).catch(() => {
+      setFavorites((prev) => prev.filter(fav => fav.slug !== seller.slug))
+      toast.error("Could not save this store. Please try again.")
+    })
   }, [])
 
   const removeFavorite = useCallback((slug) => {
+    const removed = favoritesRef.current.find(fav => fav.slug === slug) || null
     setFavorites((prev) => prev.filter(fav => fav.slug !== slug))
+    if (!hasSession() || !isObjectId(removed?.id)) return
+    userAPI.removeFavoriteSeller(removed.id).catch(() => {
+      setFavorites((prev) => (prev.some(fav => fav.slug === slug) ? prev : [...prev, removed]))
+      toast.error("Could not remove this store. Please try again.")
+    })
   }, [])
 
   const isFavorite = useCallback((slug) => {
@@ -374,12 +432,23 @@ export function ProfileProvider({ children }) {
       }
       return prev
     })
+    if (!hasSession() || !isObjectId(dish?.id)) return
+    userAPI.addFavoriteProduct(dish.id).catch(() => {
+      setDishFavorites((prev) => prev.filter(fav => !(fav.id === dish.id && fav.sellerId === dish.sellerId)))
+      toast.error("Could not save this to your wishlist. Please try again.")
+    })
   }, [])
 
   const removeDishFavorite = useCallback((dishId, sellerId) => {
-    setDishFavorites((prev) => 
+    const removed = dishFavoritesRef.current.find(fav => fav.id === dishId && fav.sellerId === sellerId) || null
+    setDishFavorites((prev) =>
       prev.filter(fav => !(fav.id === dishId && fav.sellerId === sellerId))
     )
+    if (!hasSession() || !isObjectId(dishId)) return
+    userAPI.removeFavoriteProduct(dishId).catch(() => {
+      if (removed) setDishFavorites((prev) => (prev.some(fav => fav.id === dishId && fav.sellerId === sellerId) ? prev : [...prev, removed]))
+      toast.error("Could not remove this from your wishlist. Please try again.")
+    })
   }, [])
 
   const isDishFavorite = useCallback((dishId, sellerId) => {
