@@ -16,6 +16,8 @@ import {
     getRefundsByOrderController
 } from './payment.controller.js';
 import { requireRoles } from '../roles/role.middleware.js';
+import { requireServiceAccess } from '../../../../core/roles/serviceAccess.middleware.js';
+import { requireFinancePermission } from '../../../../core/admin/requireFinancePermission.middleware.js';
 import { sendError } from '../../utils/response.js';
 import { Order } from '../../modules/commerce/orders/models/order.model.js';
 
@@ -74,12 +76,15 @@ router.get('/seller/:sellerId/wallet', requireSelfOrAdmin('SELLER', 'sellerId'),
 router.get('/delivery/:deliveryPartnerId/wallet', requireSelfOrAdmin('DELIVERY_PARTNER', 'deliveryPartnerId'), getDeliveryWalletController);
 
 // ─── Admin / Finance ───
-router.use('/admin', requireRoles('ADMIN'));
+// The Shop's own admins only -- any admin token from any service used to read
+// and settle here, as quick commerce's did before its copy was tightened -- and
+// payouts carry the finance permission and audit trail Food's and Quick's do.
+router.use('/admin', requireRoles('ADMIN'), requireServiceAccess('ecommerce'));
 router.get('/admin/wallet', getAdminWalletController);
 router.get('/admin/finance/summary', getAdminFinanceSummaryController);
 router.get('/admin/settlements', listSettlementsController);
-router.post('/admin/settlements', createSettlementController);
-router.post('/admin/settlements/:id/process', processSettlementController);
+router.post('/admin/settlements', requireFinancePermission('WITHDRAWAL_DECIDE'), createSettlementController);
+router.post('/admin/settlements/:id/process', requireFinancePermission('WITHDRAWAL_DECIDE'), processSettlementController);
 router.get('/admin/refunds', listRefundsController);
 
 export default router;
