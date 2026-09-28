@@ -84,7 +84,10 @@ export const deleteCurrentUserAccount = async (userId) => {
     const user = await User.findById(userId);
     if (!user) throw new AuthError('Profile not found');
 
-    // Remove Wallet
+    // Remove a wallet keyed by this Shop id only. A linked customer's wallet is
+    // the one they share with every other app, and deletes on the linked model
+    // are never translated to it (core/wallet/linkedWallet.js), so closing the
+    // Shop account leaves that balance where it is.
     await UserWallet.findOneAndDelete({ userId });
 
     // Remove User

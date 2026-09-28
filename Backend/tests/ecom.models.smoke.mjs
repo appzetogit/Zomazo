@@ -50,9 +50,16 @@ for (const f of walk(ecomRoot)) {
 const ecomModels = Object.values(mongoose.models).filter((m) => !platformModels.has(m.modelName));
 if (ecomModels.length < 80) fail(`expected ~90 e-commerce models, found ${ecomModels.length}`);
 
+// Shared on purpose, and only these: the customer's ONE wallet, which the Shop
+// reads through Shop ids translated to the platform account
+// (core/wallet/linkedWallet.js). Any other Shop model on a platform collection
+// is still a bug this check exists to catch.
+const SHARED_WITH_PLATFORM = new Map([['EcomUserWallet', 'food_user_wallets']]);
+
 for (const m of ecomModels) {
     if (!m.modelName.startsWith('Ecom')) fail(`${m.modelName}: not Ecom-prefixed`);
     const coll = m.collection.collectionName;
+    if (SHARED_WITH_PLATFORM.get(m.modelName) === coll) continue;
     if (!coll.startsWith('ecom_')) fail(`${m.modelName}: collection ${coll} is not ecom_-prefixed`);
     if (platformCollections.has(coll)) fail(`${m.modelName}: collection ${coll} is also used by the platform`);
 }

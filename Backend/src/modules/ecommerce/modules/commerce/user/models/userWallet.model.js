@@ -1,33 +1,13 @@
-import mongoose from 'mongoose';
+import { linkedCustomerWallet } from '../../../../../../core/wallet/linkedWallet.js';
 
-import { ecomModel } from '../../../../config/ecomModel.js';
-const walletTransactionSchema = new mongoose.Schema(
-    {
-        type: {
-            type: String,
-            enum: ['addition', 'deduction', 'refund'],
-            required: true
-        },
-        amount: { type: Number, required: true },
-        status: { type: String, default: 'Completed' }, // UI expects "Completed"
-        description: { type: String, default: '' },
-        metadata: { type: Object, default: {} },
-        razorpayOrderId: { type: String, default: null },
-        razorpayPaymentId: { type: String, default: null },
-        razorpaySignature: { type: String, default: null }
-    },
-    { timestamps: true }
-);
-
-const userWalletSchema = new mongoose.Schema(
-    {
-        userId: { type: mongoose.Schema.Types.ObjectId, required: true, unique: true, index: true },
-        balance: { type: Number, default: 0 },
-        referralEarnings: { type: Number, default: 0 },
-        transactions: { type: [walletTransactionSchema], default: [] }
-    },
-    { collection: 'user_wallets', timestamps: true }
-);
-
-export const UserWallet = ecomModel('UserWallet', userWalletSchema);
-
+/**
+ * The Shop's customer wallet -- now the customer's ONE wallet, shared with Food,
+ * Rides, Quick and Services (core/wallet/linkedWallet.js).
+ *
+ * It was its own collection (ecom_user_wallets), keyed by the Shop customer id,
+ * so money added anywhere else could not be spent in the Shop, and the reverse.
+ * Shop ids are translated to the platform account on the way in; a customer
+ * with no platform account keeps a wallet keyed by their Shop id. Balances left
+ * in the old collection are moved over by scripts/moveShopWallets.mjs.
+ */
+export const UserWallet = linkedCustomerWallet('EcomUserWallet');

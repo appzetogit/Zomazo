@@ -84,7 +84,10 @@ export const deleteCurrentUserAccount = async (userId) => {
     const user = await FoodUser.findById(userId);
     if (!user) throw new AuthError('Profile not found');
 
-    // Remove Wallet
+    // Remove a wallet keyed by this Quick id only. A linked customer's wallet is
+    // the one they share with every other app, and deletes on the linked model
+    // are never translated to it (core/wallet/linkedWallet.js), so closing the
+    // Quick account leaves that balance where it is.
     await FoodUserWallet.findOneAndDelete({ userId });
 
     // Remove User
