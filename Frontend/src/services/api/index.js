@@ -212,6 +212,9 @@ export const platformSettingsAPI = {
   /** Master > Referral: what each service pays now, and who set it. */
   referralOverview: () =>
     apiClient.get("/platform/settings/referral/overview", { contextModule: "admin" }),
+  /** Master > Referral activity: who referred whom and what it paid, every service. */
+  referralActivity: (params = {}) =>
+    apiClient.get("/platform/settings/referral/activity", { params, contextModule: "admin" }),
   /** Master > Platform Fee & GST: what each service charges now, and who set it. */
   feesOverview: () =>
     apiClient.get("/platform/settings/fees/overview", { contextModule: "admin" }),

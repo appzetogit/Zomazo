@@ -4,6 +4,7 @@ import { platformSettingsAPI } from "@food/api"
 import { toast } from "sonner"
 import { Loader2, Gift, Info, ExternalLink } from "lucide-react"
 import { ECOMMERCE_ENABLED, SERVICE_PROVIDER_ENABLED } from "@/config/features"
+import ReferralActivity from "./ReferralActivity"
 
 /**
  * Master > Referral: what a referral pays, set once for every service.
@@ -328,6 +329,8 @@ export default function MasterReferral() {
             ))}
           </ul>
         </section>
+
+        <ReferralActivity />
       </div>
     </div>
   )

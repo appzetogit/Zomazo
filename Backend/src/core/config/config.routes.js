@@ -18,6 +18,7 @@ import { listAppLegal, saveAppLegal } from '../settings/appLegal.js';
 import { getEarningsController } from '../finance/earnings.controller.js';
 import { listGlobalUsersController, exportGlobalUsersController } from '../users/globalUsers.controller.js';
 import { referralOverview } from '../referral/referralSettings.service.js';
+import { listReferralActivity } from '../referral/referralActivity.service.js';
 import { platformFeesOverview } from '../finance/platformFees.service.js';
 
 /**
@@ -66,6 +67,14 @@ router.get('/users/export', requireFinancePermission('PLATFORM_SETTING_SET'), ex
 router.get('/referral/overview', async (req, res, next) => {
     try {
         res.json({ success: true, data: await referralOverview() });
+    } catch (err) {
+        next(err);
+    }
+});
+// Master > Referral activity: who referred whom and what it paid, every service.
+router.get('/referral/activity', async (req, res, next) => {
+    try {
+        res.json({ success: true, data: await listReferralActivity(req.query || {}) });
     } catch (err) {
         next(err);
     }
