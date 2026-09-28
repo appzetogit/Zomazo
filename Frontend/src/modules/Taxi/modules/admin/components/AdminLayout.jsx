@@ -963,6 +963,7 @@ const AdminLayout = () => {
             icon: FileText,
             label: 'Report',
             subItems: [
+              { label: 'Ride Report', path: '/taxi/admin/reports/ride', permission: 'reports.view' },
               { label: 'User Report', path: '/taxi/admin/reports/user', permission: 'reports.view' },
               { label: 'Driver Report', path: '/taxi/admin/reports/driver', permission: 'reports.view' },
               { label: 'Driver Duty Report', path: '/taxi/admin/reports/driver-duty', permission: 'reports.view' },

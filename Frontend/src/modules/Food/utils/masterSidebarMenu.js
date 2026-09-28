@@ -84,6 +84,7 @@ export const masterSidebarMenu = [
           { label: "Quick · Transactions", path: "/admin/quick-commerce/transaction-report" },
           { label: "Quick · Orders", path: "/admin/quick-commerce/order-report/regular" },
           { label: "Quick · Tax", path: "/admin/quick-commerce/tax-report" },
+          { label: "Taxi · Rides", path: "/taxi/admin/reports/ride" },
           { label: "Taxi · Finance", path: "/taxi/admin/reports/finance" },
           { label: "Taxi · Drivers", path: "/taxi/admin/reports/driver" },
           ...sp([{ label: "Services · Reports", path: "/admin/sp/reports" }]),

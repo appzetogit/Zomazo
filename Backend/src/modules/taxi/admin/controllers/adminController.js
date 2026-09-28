@@ -1659,6 +1659,16 @@ export const downloadFinanceReport = asyncHandler(async (req, res) => {
   await sendFile(res, "finance-report", data, format);
 });
 
+export const getRideReport = asyncHandler(async (req, res) =>
+  ok(res, await adminService.listRideReport(req.query)),
+);
+
+export const downloadRideReport = asyncHandler(async (req, res) => {
+  const format = req.query.file_format || 'csv';
+  const data = await adminService.buildRideReport(req.query);
+  await sendFile(res, "ride-report", data, format);
+});
+
 export const downloadFleetFinanceReport = asyncHandler(async (req, res) => {
   const format = req.query.file_format || 'csv';
   const data = await adminService.buildFleetFinanceReport(req.query);

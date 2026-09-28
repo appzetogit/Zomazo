@@ -69,6 +69,8 @@ import {
   downloadDriverReport,
   downloadFinanceReport,
   downloadFleetFinanceReport,
+  getRideReport,
+  downloadRideReport,
   downloadOwnerReport,
   downloadUserReport,
   forgotPassword,
@@ -523,5 +525,7 @@ adminRouter.get('/admin/reports/driver-duty/download', downloadDriverDutyReport)
 adminRouter.get('/admin/reports/owner/download', downloadOwnerReport);
 adminRouter.get('/admin/reports/finance/download', downloadFinanceReport);
 adminRouter.get('/admin/reports/fleet-finance/download', downloadFleetFinanceReport);
+adminRouter.get('/admin/reports/ride', getRideReport);
+adminRouter.get('/admin/reports/ride/download', downloadRideReport);
 
 adminRouter.use('/', promotionsRouter);

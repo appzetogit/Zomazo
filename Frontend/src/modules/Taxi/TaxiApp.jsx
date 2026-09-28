@@ -317,6 +317,7 @@ const AdminDriverDutyReport = lazy(() => import('./modules/admin/pages/reports/D
 const AdminOwnerReport = lazy(() => import('./modules/admin/pages/reports/OwnerReport'));
 const AdminFinanceReport = lazy(() => import('./modules/admin/pages/reports/FinanceReport'));
 const AdminFleetFinanceReport = lazy(() => import('./modules/admin/pages/reports/FleetFinanceReport'));
+const AdminRideReport = lazy(() => import('./modules/admin/pages/reports/RideReport'));
 
 // Masters Management
 const AdminLanguages = lazy(() => import('./modules/admin/pages/masters/Languages'));
@@ -1569,6 +1570,7 @@ function TaxiApp() {
                 path="reports/fleet-finance"
                 element={<AdminFleetFinanceReport />}
               />
+              <Route path="reports/ride" element={<AdminRideReport />} />
 
               {/* Masters Management */}
               <Route path="masters/languages" element={<AdminLanguages />} />

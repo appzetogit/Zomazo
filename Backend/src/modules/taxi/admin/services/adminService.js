@@ -10028,6 +10028,140 @@ export const buildDriverDutyReport = async (query = {}) => {
     };
   };
 
+  const RIDE_REPORT_HEADERS = [
+    'ride_id', 'date', 'user', 'user_phone', 'driver', 'driver_phone', 'vehicle', 'city',
+    'pickup', 'drop', 'distance_km', 'fare', 'commission', 'payment_method', 'status',
+  ];
+  const RIDE_REPORT_MAX_ROWS = 20000;
+
+  /**
+   * The Mongo filter a ride report runs on. Every filter is optional; the date
+   * uses the same options as the other reports.
+   *
+   * Rides record no zone of their own (only a surged ride carries its surge
+   * zone), so a zone filter is answered by where the ride was picked up: inside
+   * the zone's polygon. That is also how the ride was priced and dispatched.
+   */
+  const rideReportFilter = async (query = {}) => {
+    const { status, vehicle_type_id, service_location_id, zone_id, payment_type, transport_type, date_option, from_date, to_date } = query;
+    const filter = {};
+    const clean = (value) => String(value ?? '').trim();
+
+    if (clean(status) && clean(status) !== 'all') filter.status = clean(status).toLowerCase();
+    if (clean(payment_type)) filter.paymentMethod = clean(payment_type).toLowerCase();
+    if (clean(transport_type) && !['all', 'both'].includes(clean(transport_type).toLowerCase())) {
+      filter.transport_type = clean(transport_type).toLowerCase();
+    }
+    if (mongoose.Types.ObjectId.isValid(clean(vehicle_type_id))) {
+      filter.vehicleTypeId = new mongoose.Types.ObjectId(clean(vehicle_type_id));
+    }
+    if (mongoose.Types.ObjectId.isValid(clean(service_location_id))) {
+      filter.service_location_id = new mongoose.Types.ObjectId(clean(service_location_id));
+    }
+    if (mongoose.Types.ObjectId.isValid(clean(zone_id))) {
+      const zone = await Zone.findById(clean(zone_id)).select('geometry').lean();
+      if (!zone?.geometry?.coordinates?.length) {
+        throw new ApiError(404, 'Zone not found');
+      }
+      filter.pickupLocation = { $geoWithin: { $geometry: zone.geometry } };
+    }
+    const dateFilter = buildDateFilter(date_option, from_date, to_date);
+    if (dateFilter) filter.createdAt = dateFilter;
+    return filter;
+  };
+
+  const rideReportRow = (ride) => {
+    const fare = Number(ride.fare || 0);
+    const commission =
+      ride.commissionAmount !== undefined && ride.commissionAmount !== null
+        ? Number(ride.commissionAmount || 0)
+        : Math.max(fare - Number(ride.driverEarnings || 0), 0);
+    // Intercity rides carry their own trip distance; others only the estimate
+    // made when the ride was booked, which is what the fare was quoted on.
+    const meters = Number(ride.intercity?.distance) > 0
+      ? Number(ride.intercity.distance) * 1000
+      : Number(ride.estimatedDistanceMeters || 0);
+    return {
+      ride_id: String(ride._id),
+      date: ride.createdAt ? new Date(ride.createdAt).toISOString() : '',
+      user: ride.userId?.name || '',
+      user_phone: ride.userId?.phone || '',
+      driver: ride.driverId?.name || 'Unassigned',
+      driver_phone: ride.driverId?.phone || '',
+      vehicle: ride.vehicleTypeId?.name || ride.driverId?.vehicleType || '',
+      city: ride.service_location_id?.name || '',
+      pickup: ride.pickupAddress || '',
+      drop: ride.dropAddress || '',
+      distance_km: Number((meters / 1000).toFixed(2)),
+      fare: Number(fare.toFixed(2)),
+      commission: Number(commission.toFixed(2)),
+      payment_method: String(ride.paymentMethod || '').toLowerCase(),
+      status: ride.status || '',
+    };
+  };
+
+  const findReportRides = (filter) =>
+    Ride.find(filter)
+      .sort({ createdAt: -1 })
+      .select('userId driverId vehicleTypeId service_location_id pickupAddress dropAddress estimatedDistanceMeters intercity.distance fare commissionAmount driverEarnings paymentMethod status createdAt')
+      .populate('userId', 'name phone')
+      .populate('driverId', 'name phone vehicleType')
+      .populate('vehicleTypeId', 'name')
+      .populate('service_location_id', 'name');
+
+  /**
+   * Ride report for the admin screen: one page of rows plus totals over every
+   * matching ride, so the figures on screen do not depend on the page shown.
+   */
+  export const listRideReport = async (query = {}) => {
+    const filter = await rideReportFilter(query);
+    const page = Math.max(1, parseInt(query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(query.limit, 10) || 20));
+    const [items, totals] = await Promise.all([
+      findReportRides(filter).skip((page - 1) * limit).limit(limit).lean(),
+      Ride.aggregate([
+        { $match: filter },
+        {
+          $group: {
+            _id: null,
+            rides: { $sum: 1 },
+            fare: { $sum: { $ifNull: ['$fare', 0] } },
+            // As each row works it out: the recorded commission, else what the
+            // driver was not paid, so the total agrees with the rows.
+            commission: {
+              $sum: {
+                $ifNull: [
+                  '$commissionAmount',
+                  { $max: [{ $subtract: [{ $ifNull: ['$fare', 0] }, { $ifNull: ['$driverEarnings', 0] }] }, 0] },
+                ],
+              },
+            },
+            distanceMeters: { $sum: { $ifNull: ['$estimatedDistanceMeters', 0] } },
+          },
+        },
+      ]),
+    ]);
+    const t = totals[0] || { rides: 0, fare: 0, commission: 0, distanceMeters: 0 };
+    return {
+      headers: RIDE_REPORT_HEADERS,
+      results: items.map(rideReportRow),
+      paginator: { current_page: page, per_page: limit, total: t.rides, last_page: Math.max(1, Math.ceil(t.rides / limit)) },
+      summary: {
+        rides: t.rides,
+        fare: Number(Number(t.fare).toFixed(2)),
+        commission: Number(Number(t.commission).toFixed(2)),
+        distance_km: Number((Number(t.distanceMeters) / 1000).toFixed(2)),
+      },
+    };
+  };
+
+  /** The same report as a file. Capped, so one click cannot pull the whole collection into memory. */
+  export const buildRideReport = async (query = {}) => {
+    const filter = await rideReportFilter(query);
+    const items = await findReportRides(filter).limit(RIDE_REPORT_MAX_ROWS).lean();
+    return { headers: RIDE_REPORT_HEADERS, rows: items.map(rideReportRow) };
+  };
+
   export const buildFleetFinanceReport = async () => {
     const owners = await listOwners();
     return {

@@ -171,6 +171,11 @@ export const adminService = {
     const query = new URLSearchParams(params).toString();
     return api.get(`/admin/reports/fleet-finance/download?${query}`, { responseType: 'blob' });
   },
+  getRideReport: (params) => api.get('/admin/reports/ride', { params }),
+  downloadRideReport: (params) => {
+    const query = new URLSearchParams(params).toString();
+    return api.get(`/admin/reports/ride/download?${query}`, { responseType: 'blob' });
+  },
   getReportOptions: () => api.get('/admin/reports/options'),
 
   /**
