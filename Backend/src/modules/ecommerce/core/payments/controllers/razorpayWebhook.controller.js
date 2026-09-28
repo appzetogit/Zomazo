@@ -2,6 +2,41 @@ import { Order } from '../../../modules/commerce/orders/models/order.model.js';
 import * as orderTransactionService from '../../../modules/commerce/orders/services/orderTransaction.service.js';
 import { logger } from '../../../utils/logger.js';
 
+/*
+ * A capture must never bring a dead order back, nor be kept for one. Razorpay
+ * re-sends webhooks, and a late payment can land on an order cancelled (or
+ * cancelled and refunded) while the customer sat on the payment sheet. The
+ * Shop marked it paid and kept the money with the order still cancelled --
+ * nothing delivered, nothing refunded. Food and Quick refund it since 22 Sep.
+ * Returns true when the capture was handled here (repeat or refunded).
+ */
+export async function settleCaptureOnDeadOrder(Model, doc, { rzPaymentId, amountPaise, cancelled }) {
+    const payStatus = String(doc.payment?.status || '').toLowerCase();
+    const recorded = String(doc.payment?.razorpay?.paymentId || doc.payment?.gatewayPaymentId || '');
+    if (recorded === String(rzPaymentId) && (payStatus === 'paid' || payStatus === 'refunded')) return true;
+    if (!cancelled && payStatus !== 'refunded') return false;
+
+    const amount = Number(amountPaise || 0) / 100;
+    try {
+        const { initiateRazorpayRefund } = await import('../../../modules/commerce/orders/helpers/razorpay.helper.js');
+        const refund = await initiateRazorpayRefund(rzPaymentId, amount);
+        logger.warn(`Ecom webhook [payment.captured]: late capture ${rzPaymentId} on dead ${Model.modelName} ${doc._id} -- refunded (${refund?.refundId || 'no id'})`);
+        if (payStatus !== 'refunded') {
+            await Model.updateOne(
+                { _id: doc._id, 'payment.status': { $ne: 'paid' } },
+                { $set: {
+                    'payment.status': 'refunded',
+                    'payment.lateCapture': { paymentId: String(rzPaymentId), amount, refundId: refund?.refundId || '', status: refund?.success ? 'processed' : 'failed', at: new Date() },
+                } },
+                { strict: false },
+            );
+        }
+    } catch (refundErr) {
+        logger.error(`Ecom webhook [payment.captured]: LATE CAPTURE NOT REFUNDED ${rzPaymentId} on ${Model.modelName} ${doc._id}: ${refundErr.message}. Refund manually.`);
+    }
+    return true;
+}
+
 /**
  * E-commerce's share of the platform's ONE Razorpay webhook.
  *
@@ -33,6 +68,13 @@ export const handleEcomRazorpayEvent = async (event, payload) => {
             .select('pricing payment orderStatus')
             .lean();
         if (!existingOrder) return false;
+        if (await settleCaptureOnDeadOrder(Order, existingOrder, {
+            rzPaymentId,
+            amountPaise: paymentObj.amount,
+            cancelled: String(existingOrder.orderStatus || '').startsWith('cancelled'),
+        })) {
+            return true;
+        }
 
         const expectedPaise = Math.round((Number(existingOrder.pricing?.total) || 0) * 100);
         const paidPaise = Number(paymentObj.amount);
@@ -51,7 +93,8 @@ export const handleEcomRazorpayEvent = async (event, payload) => {
 
         // Atomic update to mark as paid if not already
         const order = await Order.findOneAndUpdate(
-            { 'payment.razorpay.orderId': rzOrderId, 'payment.status': { $ne: 'paid' } },
+            // Only an order still waiting for its money is advanced.
+            { 'payment.razorpay.orderId': rzOrderId, 'payment.status': { $nin: ['paid', 'refunded'] }, orderStatus: 'pending_payment' },
             { $set: { 'payment.status': 'paid', 'payment.razorpay.paymentId': rzPaymentId } },
             { new: true },
         );

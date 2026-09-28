@@ -479,6 +479,11 @@ export async function verifyCheckoutPayment(userId, dto = {}) {
 export async function handleCheckoutPaymentCaptured({ rzOrderId, rzPaymentId, amountPaise, payment }) {
     const checkout = await Checkout.findOne({ 'payment.gatewayOrderId': String(rzOrderId) });
     if (!checkout) return false;
+    // A capture after the checkout was abandoned or swept is refunded, not kept.
+    const { settleCaptureOnDeadOrder } = await import('../../../../core/payments/controllers/razorpayWebhook.controller.js');
+    if (await settleCaptureOnDeadOrder(Checkout, checkout, { rzPaymentId, amountPaise, cancelled: checkout.status === 'cancelled' })) {
+        return true;
+    }
     const expectedPaise = Math.round((Number(checkout.pricing.grandTotal) || 0) * 100);
     if (Number(amountPaise) !== expectedPaise) {
         logger.error(`Webhook: checkout ${checkout.checkoutId} captured ${amountPaise} paise, expected ${expectedPaise}; not released`);
