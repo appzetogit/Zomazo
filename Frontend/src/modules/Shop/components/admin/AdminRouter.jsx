@@ -40,8 +40,6 @@ const SellerSettings = lazy(() => import("@shop/pages/admin/seller/SellerSetting
 // Food Management
 const ProductsList = lazy(() => import("@shop/pages/admin/products/ProductsList"));
 // Promotions Management
-const BasicCampaign = lazy(() => import("@shop/pages/admin/campaigns/BasicCampaign"));
-const ProductCampaign = lazy(() => import("@shop/pages/admin/campaigns/ProductCampaign"));
 const Coupons = lazy(() => import("@shop/pages/admin/Coupons"));
 const Cashback = lazy(() => import("@shop/pages/admin/Cashback"));
 const Banners = lazy(() => import("@shop/pages/admin/Banners"));
@@ -102,18 +100,14 @@ const DeliveryEarnings = lazy(() => import("@shop/pages/admin/delivery-partners/
 // Disbursement Management
 // Report Management
 const TransactionReport = lazy(() => import("@shop/pages/admin/reports/TransactionReport"));
-const ExpenseReport = lazy(() => import("@shop/pages/admin/reports/ExpenseReport"));
 const DisbursementReportSellers = lazy(() => import("@shop/pages/admin/reports/DisbursementReportSellers"));
 const DisbursementReportDeliverymen = lazy(() => import("@shop/pages/admin/reports/DisbursementReportDeliverymen"));
 const RegularOrderReport = lazy(() => import("@shop/pages/admin/reports/RegularOrderReport"));
-const CampaignOrderReport = lazy(() => import("@shop/pages/admin/reports/CampaignOrderReport"));
 const SellerReport = lazy(() => import("@shop/pages/admin/reports/SellerReport"));
 const FeedbackExperienceReport = lazy(() => import("@shop/pages/admin/reports/FeedbackExperienceReport"));
 const TaxReport = lazy(() => import("@shop/pages/admin/reports/TaxReport"));
-const SellerVATReport = lazy(() => import("@shop/pages/admin/reports/SellerVATReport"));
 // Transaction Management
 const SellerWithdraws = lazy(() => import("@shop/pages/admin/transactions/SellerWithdraws"));
-const WithdrawMethod = lazy(() => import("@shop/pages/admin/transactions/WithdrawMethod"));
 // Employee Management
 const EmployeeRole = lazy(() => import("@shop/pages/admin/employees/EmployeeRole"));
 const EmployeeList = lazy(() => import("@shop/pages/admin/employees/EmployeeList"));
@@ -337,8 +331,11 @@ export default function AdminRouter() {
             <Route path="food/list" element={<ProductsList />} />
 
             {/* PROMOTIONS, CUSTOMERS, DELIVERYMEN, etc. */}
-            <Route path="campaigns/basic" element={<BasicCampaign />} />
-            <Route path="campaigns/food" element={<ProductCampaign />} />
+            {/* Retired placeholder pages (sample tables, no data behind them): each old
+                address goes to the real screen -- GST is the tax report, platform costs are
+                in the transaction report, payout methods live on each partner. */}
+            <Route path="campaigns/basic" element={<Navigate to="/coupons" replace />} />
+            <Route path="campaigns/food" element={<Navigate to="/coupons" replace />} />
             <Route path="coupons" element={<Coupons />} />
             <Route path="cashback" element={<Cashback />} />
             <Route path="banners" element={<Banners />} />
@@ -376,18 +373,18 @@ export default function AdminRouter() {
 
             {/* REPORTS & SETTINGS */}
             <Route path="transaction-report" element={<TransactionReport />} />
-            <Route path="expense-report" element={<ExpenseReport />} />
+            <Route path="expense-report" element={<Navigate to="/transaction-report" replace />} />
             <Route path="disbursement-report/sellers" element={<DisbursementReportSellers />} />
             <Route path="disbursement-report/deliverymen" element={<DisbursementReportDeliverymen />} />
             <Route path="order-report/regular" element={<RegularOrderReport />} />
-            <Route path="order-report/campaign" element={<CampaignOrderReport />} />
+            <Route path="order-report/campaign" element={<Navigate to="/order-report/regular" replace />} />
             <Route path="seller-report" element={<SellerReport />} />
             <Route path="customer-report/feedback-experience" element={<FeedbackExperienceReport />} />
             <Route path="tax-report" element={<TaxReport />} />
-            <Route path="seller-vat-report" element={<SellerVATReport />} />
+            <Route path="seller-vat-report" element={<Navigate to="/tax-report" replace />} />
             
             <Route path="seller-withdraws" element={<SellerWithdraws />} />
-            <Route path="withdraw-method" element={<WithdrawMethod />} />
+            <Route path="withdraw-method" element={<Navigate to="/seller-withdraws" replace />} />
             
             <Route path="employee-role" element={<EmployeeRole />} />
             <Route path="employees" element={<EmployeeList />} />
