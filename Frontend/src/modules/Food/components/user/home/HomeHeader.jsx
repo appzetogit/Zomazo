@@ -172,7 +172,7 @@ export default function HomeHeader({
           </div>
 
           {/* Center: the super app's services, the same switcher every app uses */}
-          <SuperAppSwitcher className="mx-2 min-w-0 flex-1 justify-center bg-white/15 p-1 rounded-2xl" accent="#d82c23" />
+          <SuperAppSwitcher className="mx-2 min-w-0 flex-1 bg-white/15 p-1 rounded-2xl" accent="#d82c23" />
 
           {/* Right: Notifications & Profile/Veg */}
           <div className="flex items-center gap-3">

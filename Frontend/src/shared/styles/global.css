@@ -126,12 +126,15 @@
 }
 
 @layer utilities {
-  .scrollbar-hide {
+  /* no-scrollbar is the name much of the app uses; both hide the bar. */
+  .scrollbar-hide,
+  .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
 
-  .scrollbar-hide::-webkit-scrollbar {
+  .scrollbar-hide::-webkit-scrollbar,
+  .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
 

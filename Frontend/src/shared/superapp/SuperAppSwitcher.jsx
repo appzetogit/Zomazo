@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Bike, Car, Receipt, ShoppingBag, Utensils, Wrench, Zap } from 'lucide-react'
 import { ALL_ORDERS_PATH, SUPERAPP_SERVICES, currentServiceKey } from './services'
@@ -15,9 +16,16 @@ const ICONS = { food: Utensils, rides: Car, quick: Zap, services: Wrench, shop: 
 export default function SuperAppSwitcher({ className = '', showOrders = false, accent = '#EB590E' }) {
   const { pathname } = useLocation()
   const current = currentServiceKey(pathname)
+  const navRef = useRef(null)
+
+  // On a narrow header the row scrolls; keep the current service in view.
+  useEffect(() => {
+    const active = navRef.current?.querySelector('[aria-current="page"]')
+    active?.scrollIntoView?.({ block: 'nearest', inline: 'center' })
+  }, [current])
 
   return (
-    <nav aria-label="Services" className={`flex items-center gap-1.5 overflow-x-auto no-scrollbar ${className}`}>
+    <nav ref={navRef} aria-label="Services" className={`flex items-center gap-1.5 overflow-x-auto no-scrollbar ${className}`}>
       {SUPERAPP_SERVICES.map((s) => {
         const Icon = ICONS[s.key]
         const active = s.key === current
