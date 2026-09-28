@@ -20,6 +20,7 @@ const AdminSettings = lazy(() => import("@food/pages/admin/AdminSettings"));
 const PlatformSettings = lazy(() => import("@food/pages/admin/master/PlatformSettings"))
 const SupportInbox = lazy(() => import("@food/pages/admin/master/SupportInbox"))
 const MasterReferral = lazy(() => import("@food/pages/admin/master/MasterReferral"))
+const MasterBroadcast = lazy(() => import("@food/pages/admin/master/MasterBroadcast"))
 const MasterCoupons = lazy(() => import("@food/pages/admin/master/MasterCoupons"))
 const PlatformEarnings = lazy(() => import("@food/pages/admin/master/PlatformEarnings"))
 const MasterFees = lazy(() => import("@food/pages/admin/master/MasterFees"))
@@ -406,6 +407,7 @@ export default function AdminRouter() {
           <Route path="master/settings/:tab" element={<PlatformSettings />} />
           <Route path="master/support" element={<SupportInbox />} />
           <Route path="master/referral" element={<MasterReferral />} />
+          <Route path="master/broadcast" element={<MasterBroadcast />} />
           <Route path="master/coupons" element={<MasterCoupons />} />
           <Route path="master/platform-earnings" element={<PlatformEarnings />} />
           <Route path="master/fees" element={<MasterFees />} />

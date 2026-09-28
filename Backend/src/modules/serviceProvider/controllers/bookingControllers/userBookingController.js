@@ -12,6 +12,7 @@ const { withTransaction, abort } = require('../../utils/withTransaction');
 const { BOOKING_STATUS, PAYMENT_STATUS, PREPAID_PAYMENT_METHODS, refundableAmountOf } = require('../../utils/constants');
 const { createNotification } = require('../notificationControllers/notificationController');
 const { sendNotificationToUser, sendNotificationToVendor, sendNotificationToWorker } = require('../../services/firebaseAdmin');
+const couponService = require('../../services/couponService');
 
 /**
  * Create a new booking
@@ -45,8 +46,7 @@ const createBooking = async (req, res) => {
       basePrice: reqBasePrice,
       discount: reqDiscount,
       tax: reqTax,
-      promoCode: reqPromoCode,
-      promoDiscount: reqPromoDiscount,
+      promoCode: reqPromoCode, // the app's promoDiscount is ignored; the server prices the code
       // Metadata from frontend
       serviceCategory: reqServiceCategory,
       categoryIcon: reqCategoryIcon,
@@ -237,10 +237,11 @@ const createBooking = async (req, res) => {
           // Use breakdown provided by frontend
           basePrice = reqBasePrice;
           discount = reqDiscount || 0;
-          const currentPromoDiscount = reqPromoDiscount || 0;
           tax = reqTax;
           visitingCharges = (reqVisitingCharges !== undefined) ? reqVisitingCharges : (visitingCharges ?? 49);
-          finalAmount = Math.max(0, (basePrice - discount - currentPromoDiscount + tax + visitingCharges) + pendingPenalty);
+          // The app's promoDiscount is not subtracted: a coupon is checked and
+          // priced on the server below, after the price floor.
+          finalAmount = Math.max(0, (basePrice - discount + tax + visitingCharges) + pendingPenalty);
         } else {
           // Backward compatibility: Reverse calculate
           if (!visitingCharges) visitingCharges = 0;
@@ -294,6 +295,40 @@ const createBooking = async (req, res) => {
       if (!(finalAmount >= minimum)) {
         console.warn(`[CreateBooking] Client total ${finalAmount} below catalogue minimum ${minimum} for user ${userId}; charging the minimum.`);
         finalAmount = minimum;
+      }
+    }
+
+    /*
+     * Coupon. Applied after the floor, so the floor cannot undo it, and priced
+     * here from the coupon itself -- the app only names the code. It applies to
+     * what the booking costs (service, tax, visiting charges), not to a pending
+     * cancellation fee being collected with it. One use is claimed now, atomically
+     * against the coupon's total limit; it is given back if the booking is not made.
+     */
+    let appliedCoupon = null;
+    let promoDiscount = 0;
+    const promoCodeRequested = !usePlanBenefits && typeof reqPromoCode === 'string' && reqPromoCode.trim()
+      ? reqPromoCode
+      : null;
+    if (promoCodeRequested) {
+      try {
+        const couponBase = Math.max(0, finalAmount - pendingPenalty);
+        const { coupon, discount: couponDiscount } = await couponService.validateCoupon({
+          code: promoCodeRequested,
+          userId,
+          amount: couponBase
+        });
+        if (!(await couponService.claimCoupon(coupon))) {
+          throw new couponService.CouponError('This coupon has been fully used');
+        }
+        appliedCoupon = coupon;
+        promoDiscount = couponDiscount;
+        finalAmount = Math.round((finalAmount - couponDiscount) * 100) / 100;
+      } catch (err) {
+        if (err instanceof couponService.CouponError) {
+          return res.status(400).json({ success: false, code: 'COUPON_INVALID', message: err.message });
+        }
+        throw err;
       }
     }
 
@@ -373,8 +408,8 @@ const createBooking = async (req, res) => {
       bookedItems: formattedBookedItems,
       basePrice,
       discount,
-      promoCode: reqPromoCode || null,
-      promoDiscount: reqPromoDiscount || 0,
+      promoCode: appliedCoupon ? appliedCoupon.couponCode : null,
+      promoDiscount,
       tax,
       visitingCharges,
       finalAmount,
@@ -405,31 +440,43 @@ const createBooking = async (req, res) => {
     };
 
     let booking;
-    if (pendingPenalty > 0) {
-      // The penalty is folded into finalAmount above, so clearing it and creating the
-      // booking are one unit. Decrement rather than zero, guarded on the amount being
-      // charged: a penalty added since the read survives, and two bookings racing on
-      // the same penalty cannot both charge it -- the second is asked to retry and
-      // then sees the penalty already paid.
-      const created = await withTransaction(async (session) => {
-        const cleared = await User.updateOne(
-          { _id: userId, 'wallet.penalty': { $gte: pendingPenalty } },
-          { $inc: { 'wallet.penalty': -pendingPenalty } },
-          { session }
-        );
-        if (cleared.modifiedCount === 0) abort({ penaltyChanged: true });
-        const [doc] = await Booking.create([bookingFields], { session });
-        return { booking: doc };
-      });
-      if (created.penaltyChanged) {
-        return res.status(409).json({
-          success: false,
-          message: 'Your pending cancellation fee changed while booking. Please try again.'
+    try {
+      if (pendingPenalty > 0) {
+        // The penalty is folded into finalAmount above, so clearing it and creating the
+        // booking are one unit. Decrement rather than zero, guarded on the amount being
+        // charged: a penalty added since the read survives, and two bookings racing on
+        // the same penalty cannot both charge it -- the second is asked to retry and
+        // then sees the penalty already paid.
+        const created = await withTransaction(async (session) => {
+          const cleared = await User.updateOne(
+            { _id: userId, 'wallet.penalty': { $gte: pendingPenalty } },
+            { $inc: { 'wallet.penalty': -pendingPenalty } },
+            { session }
+          );
+          if (cleared.modifiedCount === 0) abort({ penaltyChanged: true });
+          const [doc] = await Booking.create([bookingFields], { session });
+          return { booking: doc };
         });
+        if (created.penaltyChanged) {
+          if (appliedCoupon) await couponService.unclaimCoupon(appliedCoupon._id);
+          return res.status(409).json({
+            success: false,
+            message: 'Your pending cancellation fee changed while booking. Please try again.'
+          });
+        }
+        booking = created.booking;
+      } else {
+        booking = await Booking.create(bookingFields);
       }
-      booking = created.booking;
-    } else {
-      booking = await Booking.create(bookingFields);
+    } catch (createErr) {
+      if (appliedCoupon) await couponService.unclaimCoupon(appliedCoupon._id).catch(() => {});
+      throw createErr;
+    }
+    if (appliedCoupon) {
+      // The use is already counted; this row is what the per-customer limit and a
+      // later cancellation read. Logged rather than failing a booking that exists.
+      await couponService.recordUsage({ coupon: appliedCoupon, userId, bookingId: booking._id, discount: promoDiscount })
+        .catch((err) => console.error(`[CreateBooking] Coupon usage not recorded for ${booking._id}:`, err.message));
     }
 
     // --- IMMEDIATE RESPONSE ---
@@ -443,6 +490,8 @@ const createBooking = async (req, res) => {
         status: booking.status,
         paymentStatus: booking.paymentStatus,
         finalAmount: booking.finalAmount,
+        promoCode: booking.promoCode,
+        promoDiscount: booking.promoDiscount,
         scheduledDate: booking.scheduledDate,
         scheduledTime: booking.scheduledTime,
         address: booking.address,
@@ -1017,6 +1066,11 @@ const cancelBooking = async (req, res) => {
     }
     if (cancelOutcome.userMissing) {
       return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Cancelled before anyone set out: the customer gets their coupon back.
+    if (!hasStartedJourney && booking.promoCode) {
+      await couponService.releaseCouponForBooking(booking._id);
     }
 
     // Mirror the committed state onto the in-memory doc for the response/sockets below

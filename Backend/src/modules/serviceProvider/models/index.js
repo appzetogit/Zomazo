@@ -13,12 +13,16 @@
 require('./Admin');
 require('./Booking');
 require('./BookingRequest');
+require('./Broadcast');
 require('./Brand');
 require('./Cart');
 require('./Category');
 require('./City');
+require('./Coupon');
+require('./CouponUsage');
 require('./HomeContent');
 require('./Notification');
+require('./ReferralLog');
 require('./NotificationLog');
 require('./Plan');
 require('./PlatformEarning');

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiBell, FiRefreshCw, FiCheck, FiCheckCircle, FiTrash2, FiFilter, FiUser, FiDollarSign, FiUserCheck } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { Link } from 'react-router-dom';
 import api from '@sp/services/api';
 
 const Notifications = () => {
@@ -14,7 +15,8 @@ const Notifications = () => {
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/notifications', {
+      // The admin inbox is /notifications/admin; a bare /notifications has no route.
+      const res = await api.get('/notifications/admin', {
         params: { limit: 50 }
       });
       if (res.data.success) {
@@ -115,6 +117,12 @@ const Notifications = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              to="/admin/sp/broadcast"
+              className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+            >
+              Send broadcast
+            </Link>
             <button
               onClick={handleRefresh}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"

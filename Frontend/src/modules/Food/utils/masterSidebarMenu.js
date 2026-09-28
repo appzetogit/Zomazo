@@ -114,6 +114,7 @@ export const masterSidebarMenu = [
           { label: "Business Setup", path: "/admin/food/business-setup" },
           { label: "Google Maps Key", path: "/admin/food/map-settings" },
           { label: "Order Cancellation", path: "/admin/food/order-cancellation" },
+          { label: "Broadcast to all services", path: "/admin/master/broadcast" },
           { label: "Food · Push Notifications", path: "/admin/food/broadcast-notification" },
           { label: "Quick · Push Notifications", path: "/admin/quick-commerce/broadcast-notification" },
           { label: "Taxi · Push Notifications", path: "/taxi/admin/promotions/send-notification" },

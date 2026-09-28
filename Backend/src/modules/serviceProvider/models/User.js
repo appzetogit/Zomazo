@@ -136,6 +136,27 @@ const userSchema = new mongoose.Schema({
   loginSessionId: {
     type: String,
     default: null
+  },
+
+  // Referral (services/referralService.js). The code is made on first ask, so
+  // accounts that never share one never get one.
+  referralCode: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    unique: true,
+    sparse: true
+  },
+  referredBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SPUser',
+    default: null
+  },
+  // Rewarded referrals, counted against the Master per-customer limit.
+  referralCount: {
+    type: Number,
+    default: 0,
+    min: 0
   }
 
 }, {

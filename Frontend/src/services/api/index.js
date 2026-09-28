@@ -358,6 +358,17 @@ export const couponListAPI = {
     apiClient.patch(`/platform/coupons/${encodeURIComponent(source)}/${encodeURIComponent(id)}/live`, { live }, { contextModule: "admin" }),
 };
 
+// Master > Broadcast: one message sent through each service's own broadcast
+// endpoint. There is no platform-wide sender; each service keeps its own
+// audiences, device tokens and history, so this only fans the request out.
+export const masterBroadcastAPI = {
+  food: (body) => apiClient.post("/food/admin/notifications/broadcast", body, { contextModule: "admin" }),
+  quick: (body) => apiClient.post("/qc/admin/notifications/broadcast", body, { contextModule: "admin" }),
+  services: (body) => apiClient.post("/sp/admin/notifications/broadcast", body, { contextModule: "admin" }),
+  taxi: (body) => apiClient.post("/taxi/admin/notifications/send", body, { contextModule: "admin" }),
+  taxiLocations: () => apiClient.get("/taxi/admin/service-locations", { contextModule: "admin" }),
+};
+
 // Master > Help & Support: every service's tickets in one inbox (core/support).
 export const supportInboxAPI = {
   list: (params) => apiClient.get("/platform/support/tickets", { params, contextModule: "admin" }),

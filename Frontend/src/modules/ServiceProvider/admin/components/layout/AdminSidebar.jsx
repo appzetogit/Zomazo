@@ -18,6 +18,7 @@ import {
   FiTrash2,
   FiStar,
   FiShield,
+  FiTag,
 } from "react-icons/fi";
 import { UtensilsCrossed, Truck, Wrench, ShoppingBasket, Pill, ChevronDown } from "lucide-react";
 import adminMenu from "../../config/adminMenu.json";
@@ -47,6 +48,8 @@ const iconMap = {
   Plans: FiPackage,
   "Worker Plans": FiBriefcase,
   Legal: FiShield,
+  Coupons: FiTag,
+  Broadcast: FiBell,
 };
 
 // Helper function to convert child name to route path

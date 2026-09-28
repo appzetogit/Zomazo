@@ -104,6 +104,9 @@ const vendorBillSchema = new mongoose.Schema({
   // 3. FINAL BILL (What user pays)
   // ==========================================
 
+  // The booking's coupon, taken off the bill; the platform funds it.
+  couponDiscount: { type: Number, default: 0, min: 0 },
+
   grandTotal: {
     type: Number,
     required: true

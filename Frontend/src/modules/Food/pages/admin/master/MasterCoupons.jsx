@@ -3,7 +3,7 @@ import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { Loader2, Search, Ticket, Plus, RefreshCw } from "lucide-react"
 import { couponListAPI } from "@food/api"
-import { ECOMMERCE_ENABLED } from "@/config/features"
+import { ECOMMERCE_ENABLED, SERVICE_PROVIDER_ENABLED } from "@/config/features"
 
 /**
  * Master > Coupons: every coupon on the platform in one list.
@@ -27,12 +27,14 @@ const CREATE_LINKS = [
   { label: "Quick & Medical coupon", path: "/admin/quick-commerce/coupons" },
   { label: "Taxi promo code", path: "/taxi/admin/promotions/promo-codes" },
   ...(ECOMMERCE_ENABLED ? [{ label: "Shop coupon", path: "/admin/shop/coupons" }] : []),
+  ...(SERVICE_PROVIDER_ENABLED ? [{ label: "Services coupon", path: "/admin/sp/coupons" }] : []),
 ]
 const EDIT_PATH = {
   food: "/admin/food/coupons",
   quick: "/admin/quick-commerce/coupons",
   taxi: "/taxi/admin/promotions/promo-codes",
   shop: "/admin/shop/coupons",
+  services: "/admin/sp/coupons",
 }
 
 const errorText = (err, fallback) => err?.response?.data?.message || fallback

@@ -123,6 +123,24 @@
     ]
   },
   {
+    "title": "Broadcast",
+    "route": "/admin/sp/broadcast",
+    "allowedRoles": [
+      "super_admin",
+      "admin"
+    ],
+    "children": []
+  },
+  {
+    "title": "Coupons",
+    "route": "/admin/sp/coupons",
+    "allowedRoles": [
+      "super_admin",
+      "admin"
+    ],
+    "children": []
+  },
+  {
     "title": "Reviews",
     "route": "/admin/sp/reviews",
     "allowedRoles": [

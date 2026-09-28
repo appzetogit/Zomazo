@@ -1121,7 +1121,12 @@ const completeSelfJob = async (req, res) => {
     // ═══════════════════════════════════════════
 
     const visitingCharges = Number(booking.visitingCharges) || 0;
-    const grandTotal = parseFloat((totalServiceBase + totalPartsBase + totalGST + visitingCharges).toFixed(2));
+    // The coupon checked at booking comes off the bill, or the customer would lose
+    // it the moment the bill replaces the booking price. Platform-funded: the
+    // vendor's share below is on the base, so companyRevenue absorbs it.
+    const billBeforeCoupon = parseFloat((totalServiceBase + totalPartsBase + totalGST + visitingCharges).toFixed(2));
+    const couponDiscount = Math.min(Math.max(0, Number(booking.promoDiscount) || 0), billBeforeCoupon);
+    const grandTotal = parseFloat((billBeforeCoupon - couponDiscount).toFixed(2));
 
     // ═══════════════════════════════════════════
     // STEP 5: REVENUE SPLIT (internal only)
@@ -1173,6 +1178,7 @@ const completeSelfJob = async (req, res) => {
       totalGST,
 
       // Bill total
+      couponDiscount,
       grandTotal,
 
       // Payout config snapshot

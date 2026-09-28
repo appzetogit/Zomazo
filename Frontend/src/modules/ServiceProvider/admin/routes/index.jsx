@@ -29,6 +29,8 @@ const Scrap = lazy(() => import('../pages/Scrap'));
 const Settlements = lazy(() => import('../pages/Settlements'));
 const Reviews = lazy(() => import('../pages/Reviews'));
 const Cities = lazy(() => import('../pages/Cities'));
+const Coupons = lazy(() => import('../pages/Coupons'));
+const Broadcast = lazy(() => import('../pages/Notifications/Broadcast'));
 
 import LogoLoader from '@sp/components/common/LogoLoader';
 
@@ -58,6 +60,8 @@ const ServiceProviderAdminRoutes = () => (
         <Route path="legal/privacy" element={<LegalSettings type="privacy" />} />
         <Route path="legal/support" element={<LegalSettings type="support" />} />
         <Route path="reviews" element={<Reviews />} />
+        <Route path="coupons" element={<Coupons />} />
+        <Route path="broadcast" element={<Broadcast />} />
         <Route path="settlements/*" element={<Settlements />} />
         <Route path="settings/*" element={<Settings />} />
       </Route>

@@ -6,8 +6,8 @@ import { resolvePromoCeiling, tighten } from '../finance/promoLimits.service.js'
 /**
  * One list of every coupon on the platform (Master > Coupons).
  *
- * Four systems hold them: Food's food_offers, Quick & Medical's qc_offers,
- * Taxi's promo codes and the Shop's ecom_offers. Their forms differ -- restaurant scope and cost sharing
+ * Five systems hold them: Food's food_offers, Quick & Medical's qc_offers,
+ * Taxi's promo codes, the Shop's ecom_offers and Services' sp_coupons. Their forms differ -- restaurant scope and cost sharing
  * in one, service locations and ride types in another -- so creating and
  * editing stay on each service's own screen. What an operator needs in one
  * place is the other half: which codes exist, which are live right now, how
@@ -60,6 +60,17 @@ const SOURCES = {
     // ceiling, so its limits are shown as the coupon states them.
     noCeiling: true,
   },
+  services: {
+    label: 'Services',
+    service: 'serviceProvider',
+    vertical: 'serviceProvider',
+    // A CommonJS model; import() hands it over as the default export.
+    load: async () => (await import('../../modules/serviceProvider/models/Coupon.js')).default,
+    sellers: null,
+    // Services coupons are platform-wide and checked by the Services booking
+    // flow (couponService.js), not against the Master ceiling.
+    noCeiling: true,
+  },
 };
 
 /*
@@ -108,7 +119,7 @@ function storeRow(source, doc, names, ceiling, now) {
     ...(doc.restaurantId ? [doc.restaurantId] : []),
   ].map(String);
   const uniqueIds = [...new Set(ids)];
-  const sellerWord = source === 'food' ? 'restaurant' : 'store';
+  const sellerWord = source === 'food' ? 'restaurant' : source === 'services' ? 'service' : 'store';
   let where = `All ${sellerWord}s`;
   if (doc.restaurantScope === 'selected' || uniqueIds.length) {
     const shown = uniqueIds.map((id) => names.get(id)).filter(Boolean);

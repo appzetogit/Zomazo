@@ -89,6 +89,7 @@ const notificationSchema = new mongoose.Schema({
       'vendor_approval_request',
       'vendor_settlement_request',
       'vendor_cash_limit_exceeded',
+      'referral_reward',
 
       'general'
     ],

@@ -25,6 +25,8 @@ router.use('/user/wallet', require('./user-routes/userWallet.routes'));
 router.use('/users/bookings', require('./user-routes/booking.routes'));
 router.use('/users', require('./user-routes/cart.routes'));
 router.use('/users/fcm-tokens', require('./user-routes/fcmToken.routes'));
+router.use('/users', require('./user-routes/coupon.routes'));
+router.use('/users', require('./user-routes/referral.routes'));
 
 // ─── Scrap ─────────────────────────────────────────────────────────────────
 router.use('/scrap', require('./scrap.routes'));
@@ -72,6 +74,8 @@ router.use('/admin/worker-plans', require('./admin-routes/workerPlanManagement.r
 router.use('/admin', require('./admin-routes/settings.routes'));
 router.use('/admin', require('./admin-routes/reviewManagement.routes'));
 router.use('/admin', require('./admin-routes/reportManagement.routes'));
+router.use('/admin', require('./admin-routes/couponManagement.routes'));
+router.use('/admin', require('./admin-routes/notificationBroadcast.routes'));
 router.use('/admin/settlements', require('./admin-routes/settlementManagement.routes'));
 router.use('/admin/admins', require('./admin-routes/adminManagement.routes'));
 router.use('/image', require('./admin-routes/image.routes'));

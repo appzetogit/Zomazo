@@ -248,6 +248,15 @@ const register = async (req, res) => {
       .then(({ linkSatellite }) => linkSatellite(User, user._id, { phone, name, email }))
       .catch((err) => console.warn(`[Identity] SP link skipped: ${err.message}`));
 
+    // A referral code entered at sign-up. Awaited so the referrer is credited
+    // before we answer, but it never fails the sign-up (applyReferralAtSignup
+    // does not throw).
+    if (req.body.referralCode) {
+      const { applyReferralAtSignup } = require('../../services/referralService');
+      const outcome = await applyReferralAtSignup({ refereeId: user._id, refereePhone: phone, code: req.body.referralCode });
+      if (outcome.status !== 'credited') console.log(`[Referral] ${phone}: ${outcome.status}${outcome.reason ? ` (${outcome.reason})` : ''}`);
+    }
+
     // Send Welcome Email
     if (email) {
       sendWelcomeEmail(email, name).catch(err => console.error(err));

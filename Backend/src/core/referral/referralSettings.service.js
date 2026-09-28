@@ -24,7 +24,9 @@ const KEYS = {
   partnerLimit: 'referral.partnerLimit',
 };
 
-export const REFERRAL_VERTICALS = ['food', 'quickCommerce', 'taxi'];
+// serviceProvider has no referral screen of its own: Master is its only source
+// (modules/serviceProvider/services/referralService.js).
+export const REFERRAL_VERTICALS = ['food', 'quickCommerce', 'taxi', 'serviceProvider'];
 
 const NONE = Object.freeze({ customerReward: null, customerLimit: null, partnerReward: null, partnerLimit: null });
 
@@ -151,11 +153,25 @@ export async function referralOverview() {
     };
   };
 
+  // Services pays only what Master says, customers only, at sign-up.
+  const servicesRow = async () => {
+    const master = await resolveMasterReferral('serviceProvider');
+    const field = (m) => (m !== null ? { value: m, from: 'master' } : { value: 0, from: 'none' });
+    return {
+      vertical: 'serviceProvider',
+      customerReward: field(master.customerReward),
+      customerLimit: field(master.customerLimit),
+      partnerReward: { value: null, from: 'none' },
+      partnerLimit: { value: null, from: 'none' },
+    };
+  };
+
   return {
     services: await Promise.all([
       storeRow('food', FoodReferralSettings),
       storeRow('quickCommerce', QuickReferralSettings),
       taxiRow(),
+      servicesRow(),
     ]),
   };
 }

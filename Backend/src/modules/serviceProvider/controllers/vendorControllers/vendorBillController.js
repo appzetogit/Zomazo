@@ -187,7 +187,11 @@ const createOrUpdateBill = async (req, res) => {
 
     const totalGST = parseFloat((originalGST + vendorServiceGST + partsGST).toFixed(2));
     const finalTransportCharges = Number(transportCharges) || 0;
-    const grandTotal = parseFloat((totalServiceBaseForBill + totalPartsBase + totalGST + visitingCharges + finalTransportCharges).toFixed(2));
+    // The booking's coupon comes off the bill (platform-funded; see
+    // vendorBookingController's bill for the same rule).
+    const billBeforeCoupon = parseFloat((totalServiceBaseForBill + totalPartsBase + totalGST + visitingCharges + finalTransportCharges).toFixed(2));
+    const couponDiscount = Math.min(Math.max(0, Number(booking.promoDiscount) || 0), billBeforeCoupon);
+    const grandTotal = parseFloat((billBeforeCoupon - couponDiscount).toFixed(2));
 
     // ═══════════════════════════════════════
     // 5. REVENUE SPLIT (% applied on BASE only)
@@ -234,6 +238,7 @@ const createOrUpdateBill = async (req, res) => {
       totalGST,
       visitingCharges,
       transportCharges: finalTransportCharges,
+      couponDiscount,
       grandTotal,
       payoutConfig: {
         serviceSplitPercentage: serviceSplitPct,

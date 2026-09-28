@@ -145,6 +145,9 @@ await check('the overview says where each number comes from', async () => {
   assert.deepEqual(by.taxi.customerReward, { value: 0, from: 'master' });
   assert.deepEqual(by.taxi.partnerLimit, { value: null, from: 'none' });
   assert.equal(by.taxi.afterRides.user, 2);
+  // Services has no screen of its own, so the global Master value is what it pays.
+  assert.deepEqual(by.serviceProvider.customerReward, { value: 50, from: 'master' });
+  assert.deepEqual(by.serviceProvider.partnerReward, { value: null, from: 'none' });
 });
 
 console.log('\nClearing');

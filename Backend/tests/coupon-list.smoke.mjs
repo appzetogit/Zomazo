@@ -81,8 +81,8 @@ console.log('\nThe list');
 await check('every service in one list', async () => {
   const res = await coupons.listCoupons(owner, {});
   assert.equal(res.total, 6);
-  // The Shop is a source too; this fixture has no Shop coupons.
-  assert.deepEqual(res.sources.map((s) => s.key), ['food', 'quick', 'taxi', 'shop']);
+  // The Shop and Services are sources too; this fixture has none of theirs yet.
+  assert.deepEqual(res.sources.map((s) => s.key), ['food', 'quick', 'taxi', 'shop', 'services']);
 });
 
 await check('each coupon reads plainly', async () => {
@@ -163,6 +163,27 @@ await check('an expired coupon is not resumed', async () => {
   await assert.rejects(() => coupons.setCouponLive(owner, 'food', String(f.expired._id), true), /end date has passed/);
   assert.equal((await FoodOffer.findById(f.expired._id).lean()).status, 'inactive');
   await coupons.setCouponLive(owner, 'food', String(f.expired._id), false);
+});
+
+await check('a Services coupon is listed, and pauses through its status', async () => {
+  const { default: SPCoupon } = await import('../src/modules/serviceProvider/models/Coupon.js');
+  const sp = await SPCoupon.create({
+    couponCode: 'FIXIT15', discountType: 'percentage', discountValue: 15, maxDiscount: 150,
+    minOrderValue: 299, usageLimit: 50, usedCount: 2, status: 'active', startDate: past, endDate: future,
+  });
+  const res = await coupons.listCoupons(owner, { source: 'services' });
+  assert.deepEqual(res.items.map((r) => r.code), ['FIXIT15']);
+  const [row] = res.items;
+  assert.equal(row.sourceLabel, 'Services');
+  assert.equal(row.discount, '15% off up to ₹150');
+  assert.equal(row.where, 'All services');
+  assert.equal(row.state, 'live');
+  assert.equal(row.limit, 50);
+  const paused = await coupons.setCouponLive(owner, 'services', String(sp._id), false);
+  assert.equal(paused.state, 'paused');
+  assert.equal((await SPCoupon.findById(sp._id).lean()).status, 'paused');
+  await coupons.setCouponLive(owner, 'services', String(sp._id), true);
+  assert.equal((await SPCoupon.findById(sp._id).lean()).status, 'active');
 });
 
 console.log('\nWho sees what');

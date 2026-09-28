@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { platformSettingsAPI } from "@food/api"
 import { toast } from "sonner"
 import { Loader2, Gift, Info, ExternalLink } from "lucide-react"
+import { SERVICE_PROVIDER_ENABLED } from "@/config/features"
 
 /**
  * Master > Referral: what a referral pays, set once for every service.
@@ -28,9 +29,12 @@ const SCOPES = [
   { id: "food", level: "vertical", label: "Food" },
   { id: "quickCommerce", level: "vertical", label: "Quick & Medical" },
   { id: "taxi", level: "vertical", label: "Taxi" },
+  // Services has no referral screen of its own: what is set here (or under
+  // "All services") is all it pays, to customers, at sign-up.
+  ...(SERVICE_PROVIDER_ENABLED ? [{ id: "serviceProvider", level: "vertical", label: "Services" }] : []),
 ]
 
-const SERVICE_LABEL = { food: "Food", quickCommerce: "Quick & Medical", taxi: "Taxi" }
+const SERVICE_LABEL = { food: "Food", quickCommerce: "Quick & Medical", taxi: "Taxi", serviceProvider: "Services" }
 
 // Each service's own referral screen, for the rules Master does not set.
 const OWN_SCREENS = [
@@ -87,6 +91,10 @@ function Source({ from }) {
 }
 
 function Cell({ field, money }) {
+  // "none": nothing sets it. 0 there is a reward nobody pays (Services with no
+  // Master value); null is a cap that does not exist (Taxi).
+  if (field && field.from === "none" && field.value === 0) return <span className="text-neutral-400">Off</span>
+  if (field && field.from === "none" && money) return <span className="text-neutral-400">—</span>
   if (!field || field.from === "none") return <span className="text-neutral-400">No cap</span>
   const v = field.value
   const shown = money ? rupees(v) : Number(v) > 0 ? `${v} people` : "Off"
@@ -107,6 +115,8 @@ export default function MasterReferral() {
 
   const scope = SCOPES.find((s) => s.id === scopeId) || SCOPES[0]
   const isTaxi = scopeId === "taxi"
+  // Services pays customers only; it has no rider or driver referral.
+  const isServices = scopeId === "serviceProvider"
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -137,7 +147,9 @@ export default function MasterReferral() {
     try {
       const id = scope.level === "global" ? "*" : scopeId
       // Taxi has no per-person cap, so its caps are never written.
-      const names = Object.keys(KEYS).filter((n) => !(isTaxi && n.endsWith("Limit")))
+      const names = Object.keys(KEYS)
+        .filter((n) => !(isTaxi && n.endsWith("Limit")))
+        .filter((n) => !(isServices && n.startsWith("partner")))
       await Promise.all(names.map((n) => platformSettingsAPI.set(KEYS[n], { level: scope.level, scopeId: id, value: values[n] })))
       toast.success(`Referral saved for ${scope.label}`)
       await load()
@@ -153,7 +165,7 @@ export default function MasterReferral() {
       <div className="mx-auto max-w-3xl space-y-5">
         <div>
           <h1 className="text-2xl font-semibold text-neutral-900">Referral</h1>
-          <p className="mt-1 text-sm text-neutral-600">What an invite pays, set once for Food, Quick &amp; Medical and Taxi.</p>
+          <p className="mt-1 text-sm text-neutral-600">What an invite pays, set once for Food, Quick &amp; Medical, Taxi{SERVICE_PROVIDER_ENABLED ? " and Services" : ""}.</p>
         </div>
 
         <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
@@ -184,7 +196,7 @@ export default function MasterReferral() {
                     </td>
                   </tr>
                 ) : (
-                  overview.services.map((s) => (
+                  overview.services.filter((s) => s.vertical !== "serviceProvider" || SERVICE_PROVIDER_ENABLED).map((s) => (
                     <tr key={s.vertical}>
                       <td className="px-5 py-3 font-medium text-neutral-900">
                         {SERVICE_LABEL[s.vertical] || s.vertical}
@@ -227,7 +239,9 @@ export default function MasterReferral() {
               <p className="mt-0.5 text-sm text-neutral-500">
                 {scope.id === "*"
                   ? "Applies everywhere unless a service has its own value in its tab."
-                  : `Overrides the "All services" value for ${scope.label}. Leave empty to use it.`}
+                  : isServices
+                    ? 'Services has no referral screen of its own: this, or the "All services" value, is what it pays the customer whose code a new customer signed up with. With neither set, it pays nothing.'
+                    : `Overrides the "All services" value for ${scope.label}. Leave empty to use it.`}
               </p>
             </div>
           </div>
@@ -272,7 +286,8 @@ export default function MasterReferral() {
                   onChange={set("partnerReward")}
                   money
                   min={0}
-                  disabled={saving}
+                  disabled={saving || isServices}
+                  disabledNote={isServices ? "Services has no partner referral." : ""}
                 />
                 <Row
                   label="Rewarded rider or driver invites per person"
@@ -280,8 +295,8 @@ export default function MasterReferral() {
                   value={values.partnerLimit}
                   onChange={set("partnerLimit")}
                   min={1}
-                  disabled={saving || isTaxi}
-                  disabledNote={isTaxi ? "Taxi has no cap on invites." : ""}
+                  disabled={saving || isTaxi || isServices}
+                  disabledNote={isTaxi ? "Taxi has no cap on invites." : isServices ? "Services has no partner referral." : ""}
                 />
               </div>
             )}
