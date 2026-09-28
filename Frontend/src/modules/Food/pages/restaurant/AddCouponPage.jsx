@@ -15,13 +15,24 @@ import {
 import { restaurantAPI } from "@food/api"
 import { toast } from "sonner"
 
+// Offer dates are stored as UTC midnight (see offer.validator), so the UTC date
+// part is exactly what the seller picked.
+const toDateInput = (value) => {
+  if (!value) return ""
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10)
+}
+
+const numOrBlank = (value) => (value === null || value === undefined ? "" : String(value))
+
 export default function AddCouponPage(props) {
-  const { mode = "create" } = props || {}
+  const { mode = "create", couponId } = props || {}
   const isEditMode = mode === "edit"
 
   const navigate = useNavigate()
   const goBack = useRestaurantBackNavigation()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoadingCoupon, setIsLoadingCoupon] = useState(isEditMode)
   const [showDiscountTypeDropdown, setShowDiscountTypeDropdown] = useState(false)
   const discountTypeRef = useRef(null)
 
@@ -47,6 +58,40 @@ export default function AddCouponPage(props) {
     return () => document.removeEventListener("mousedown", handle)
   }, [])
 
+  useEffect(() => {
+    if (!isEditMode || !couponId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await restaurantAPI.listMyOffers()
+        const offers = res.data?.data?.offers || []
+        const coupon = offers.find((o) => String(o.id || o._id) === String(couponId))
+        if (cancelled) return
+        if (!coupon) {
+          toast.error("Coupon not found")
+          navigate("/restaurant/coupon")
+          return
+        }
+        setFormData({
+          couponCode: coupon.couponCode || "",
+          discountType: coupon.discountType || "percentage",
+          discountValue: numOrBlank(coupon.discountValue),
+          minOrderValue: numOrBlank(coupon.minOrderValue),
+          maxDiscount: numOrBlank(coupon.maxDiscount),
+          usageLimit: numOrBlank(coupon.usageLimit),
+          perUserLimit: numOrBlank(coupon.perUserLimit),
+          startDate: toDateInput(coupon.startDate),
+          endDate: toDateInput(coupon.endDate),
+        })
+      } catch (error) {
+        if (!cancelled) toast.error(error.response?.data?.message || "Failed to load coupon")
+      } finally {
+        if (!cancelled) setIsLoadingCoupon(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [isEditMode, couponId, navigate])
+
   const set = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }))
@@ -66,6 +111,8 @@ export default function AddCouponPage(props) {
       e.discountValue = "Enter a valid discount value"
     if (formData.discountType === "percentage" && Number(formData.discountValue) > 100)
       e.discountValue = "Percentage cannot exceed 100"
+    if (formData.discountType === "percentage" && (formData.maxDiscount === "" || isNaN(formData.maxDiscount) || Number(formData.maxDiscount) <= 0))
+      e.maxDiscount = "Maximum discount is required for percentage coupons"
     if (!formData.startDate) e.startDate = "Start date is required"
     if (!formData.endDate) e.endDate = "End date is required"
     if (formData.startDate && formData.endDate && new Date(formData.startDate) > new Date(formData.endDate))
@@ -88,10 +135,14 @@ export default function AddCouponPage(props) {
         perUserLimit: formData.perUserLimit ? Number(formData.perUserLimit) : undefined,
         startDate: formData.startDate || undefined,
         endDate: formData.endDate || undefined,
-        status: "active"
       }
-      await restaurantAPI.createMyOffer(payload)
-      toast.success("Coupon created successfully!")
+      if (isEditMode) {
+        await restaurantAPI.updateMyOffer(couponId, payload)
+        toast.success("Coupon updated")
+      } else {
+        await restaurantAPI.createMyOffer({ ...payload, status: "active" })
+        toast.success("Coupon created successfully!")
+      }
       navigate("/restaurant/coupon")
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || "Failed to save coupon")
@@ -135,7 +186,7 @@ export default function AddCouponPage(props) {
           </div>
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isLoadingCoupon}
             className="hidden sm:inline-flex items-center justify-center gap-2 px-6 py-2 bg-gray-900 hover:bg-black text-white text-sm font-semibold rounded-xl transition-all shadow-sm disabled:opacity-50"
           >
             {isSubmitting ? (
@@ -147,6 +198,12 @@ export default function AddCouponPage(props) {
         </div>
       </div>
 
+      {isLoadingCoupon ? (
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16 flex flex-col items-center gap-3">
+          <Loader2 className="w-7 h-7 animate-spin text-gray-700" />
+          <p className="text-sm text-gray-600">Loading coupon...</p>
+        </div>
+      ) : (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Basic Details */}
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
@@ -252,17 +309,18 @@ export default function AddCouponPage(props) {
             {/* Max Discount (only for percentage) */}
             {formData.discountType === "percentage" && (
               <div>
-                <FieldLabel>Maximum Discount Cap (₹)</FieldLabel>
+                <FieldLabel required>Maximum Discount Cap (₹)</FieldLabel>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">₹</span>
                   <input
                     type="number"
                     value={formData.maxDiscount}
                     onChange={(e) => set("maxDiscount", e.target.value)}
-                    placeholder="No cap (Unlimited)"
+                    placeholder="e.g. 100"
                     className={`${inputCls("maxDiscount")} pl-8`}
                   />
                 </div>
+                <ErrorMsg field="maxDiscount" />
               </div>
             )}
           </div>
@@ -356,6 +414,7 @@ export default function AddCouponPage(props) {
           </button>
         </div>
       </div>
+      )}
     </div>
   )
 }

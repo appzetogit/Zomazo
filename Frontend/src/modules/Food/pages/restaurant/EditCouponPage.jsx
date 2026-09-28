@@ -1,15 +1,11 @@
-import { useParams, useNavigate } from "react-router-dom"
+import { Navigate, useParams } from "react-router-dom"
 import AddCouponPage from "./AddCouponPage"
 
 export default function EditCouponPage() {
   const { id } = useParams()
-  const navigate = useNavigate()
 
   // If no id, just go back to coupon list
-  if (!id) {
-    navigate("/restaurant/coupon")
-    return null
-  }
+  if (!id) return <Navigate to="/restaurant/coupon" replace />
 
-  return <AddCouponPage mode="edit" couponId={id} />
+  return <AddCouponPage key={id} mode="edit" couponId={id} />
 }

@@ -1510,6 +1510,7 @@ export const restaurantAPI = {
   /** My Offers (Coupons) */
   listMyOffers: () => apiClient.get("/food/restaurant/my-deals", { contextModule: "restaurant" }),
   createMyOffer: (body) => apiClient.post("/food/restaurant/my-deals", body, { contextModule: "restaurant" }),
+  updateMyOffer: (id, body) => apiClient.patch(`/food/restaurant/my-deals/${id}`, body, { contextModule: "restaurant" }),
   deleteMyOffer: (id) => apiClient.delete(`/food/restaurant/my-deals/${id}`, { contextModule: "restaurant" }),
   updateMyOfferStatus: (id, status) => apiClient.patch(`/food/restaurant/my-deals/${id}/status`, { status }, { contextModule: "restaurant" }),
   /** Public Offers for users (global/selected restaurant) */

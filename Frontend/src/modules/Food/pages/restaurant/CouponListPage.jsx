@@ -59,6 +59,22 @@ export default function CouponListPage() {
     }
   }
 
+  const [togglingId, setTogglingId] = useState(null)
+  const handleToggleStatus = async (coupon) => {
+    const id = coupon.id || coupon._id
+    const next = coupon.status === "active" ? "inactive" : "active"
+    setTogglingId(id)
+    try {
+      await restaurantAPI.updateMyOfferStatus(id, next)
+      setCoupons((prev) => prev.map((c) => ((c.id || c._id) === id ? { ...c, status: next } : c)))
+      toast.success(next === "active" ? "Coupon activated" : "Coupon deactivated")
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update coupon")
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
   const handleCopyCode = (code) => {
     navigator.clipboard.writeText(code)
     toast.success("Code copied!")
@@ -174,6 +190,13 @@ export default function CouponListPage() {
                                   data-menu-id={coupon.id}
                                 >
                                   <button
+                                    onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); navigate(`/restaurant/coupon/${coupon.id}/edit`) }}
+                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                    <span>Edit</span>
+                                  </button>
+                                  <button
                                     onClick={(e) => { e.stopPropagation(); handleDelete(coupon.id); setOpenMenuId(null) }}
                                     className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
                                   >
@@ -235,6 +258,23 @@ export default function CouponListPage() {
                           )}
                         </div>
                       </div>
+                    </div>
+                    <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-600">
+                        {coupon.status === "active" ? "Enabled" : "Disabled"}
+                        {typeof coupon.usedCount === "number" ? ` · ${coupon.usedCount} used` : ""}
+                      </span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={coupon.status === "active"}
+                        aria-label={coupon.status === "active" ? "Deactivate coupon" : "Activate coupon"}
+                        disabled={togglingId === coupon.id}
+                        onClick={() => handleToggleStatus(coupon)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${coupon.status === "active" ? "bg-emerald-500" : "bg-gray-300"}`}
+                      >
+                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${coupon.status === "active" ? "translate-x-5" : "translate-x-0.5"}`} />
+                      </button>
                     </div>
                   </motion.div>
                 )

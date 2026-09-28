@@ -2659,6 +2659,48 @@ export async function createRestaurantOffer(restaurantId, body) {
 }
 
 /**
+ * Edit a seller's own coupon. `body` is the output of validateCreateOfferDto.
+ * Ownership is part of the filter, so another seller's (or an admin's) coupon is
+ * indistinguishable from a missing one. Usage counters and cost split are never touched.
+ */
+export async function updateRestaurantOffer(restaurantId, offerId, body) {
+    if (!mongoose.Types.ObjectId.isValid(String(offerId))) {
+        throw new NotFoundError('Offer not found or not owned by you');
+    }
+    const ownFilter = {
+        _id: new mongoose.Types.ObjectId(offerId),
+        restaurantId: new mongoose.Types.ObjectId(restaurantId),
+        createdByRole: 'RESTAURANT'
+    };
+    const current = await FoodOffer.findOne(ownFilter).lean();
+    if (!current) {
+        throw new NotFoundError('Offer not found or not owned by you');
+    }
+    if (body.couponCode !== current.couponCode) {
+        const clash = await FoodOffer.findOne({ couponCode: body.couponCode, _id: { $ne: current._id } }).lean();
+        if (clash) throw new ValidationError('Coupon code already exists');
+    }
+    if (body.usageLimit != null && body.usageLimit > 0 && body.usageLimit < (current.usedCount || 0)) {
+        throw new ValidationError(`Usage limit cannot be below the ${current.usedCount} redemptions already made`);
+    }
+
+    const $set = {
+        couponCode: body.couponCode,
+        discountType: body.discountType,
+        discountValue: body.discountValue,
+        customerScope: body.customerScope || current.customerScope || 'all',
+        minOrderValue: body.minOrderValue ?? 0,
+        maxDiscount: body.maxDiscount ?? null,
+        usageLimit: body.usageLimit ?? null,
+        perUserLimit: body.perUserLimit ?? null,
+        startDate: body.startDate ?? null,
+        endDate: body.endDate ?? null,
+        isFirstOrderOnly: body.isFirstOrderOnly ?? current.isFirstOrderOnly ?? false
+    };
+    return FoodOffer.findOneAndUpdate(ownFilter, { $set }, { new: true, runValidators: true });
+}
+
+/**
  * List offers for a specific restaurant.
  */
 export async function listRestaurantOffers(restaurantId) {
