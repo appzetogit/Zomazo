@@ -787,17 +787,10 @@ export default function Inventory() {
   const [showCalendar, setShowCalendar] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
   const [restaurantProfile, setRestaurantProfile] = useState(null)
-  const [stockRules, setStockRules] = useState(() => {
-    try {
-      if (typeof window === "undefined") return {}
-      const raw = localStorage.getItem(INVENTORY_STOCK_RULES_KEY)
-      const parsed = raw ? JSON.parse(raw) : {}
-      return parsed && typeof parsed === "object" ? parsed : {}
-    } catch (error) {
-      debugWarn("Failed to load stock rules:", error)
-      return {}
-    }
-  })
+  // Mirrors the server's timed out-of-stock state for display and for the
+  // in-page countdown; the server is the source of truth and resumes items
+  // itself (core/orders/stockResumeSweeper.js).
+  const [stockRules, setStockRules] = useState({})
 
   const categoryRefs = useRef({})
   const addonImageInputRef = useRef(null)
@@ -955,6 +948,8 @@ export default function Inventory() {
                   isRecommended: item.isRecommended === true || Boolean(recommendedMap?.[String(item.id)]),
                   stockQuantity: item.stock || "Unlimited",
                   unit: item.itemSizeUnit || "piece",
+                  stockResumeAt: item.stockResumeAt || null,
+                  stockOffMode: item.stockOffMode || null,
                 })
               })
             }
@@ -982,6 +977,8 @@ export default function Inventory() {
                       isRecommended: item.isRecommended === true || Boolean(recommendedMap?.[String(item.id)]),
                       stockQuantity: item.stock || "Unlimited",
                       unit: item.itemSizeUnit || "piece",
+                      stockResumeAt: item.stockResumeAt || null,
+                      stockOffMode: item.stockOffMode || null,
                     })
                   })
                 }
@@ -1000,13 +997,23 @@ export default function Inventory() {
             }
           })
 
+          // The out-of-stock timer lives on the item (stockResumeAt) and the
+          // server puts it back on sale when it ends, whether or not this page
+          // is open. Rebuild each off item's rule from that.
           const nowMs = Date.now()
+          const serverRules = {}
           const withStockRules = convertedCategories.map(category => {
             const ruledItems = (category.items || []).map(item => {
-              const rule = stockRules?.[String(item.id)] || null
-              const isActiveRule = rule && (rule.mode === "manual" || (rule.resumeAt && new Date(rule.resumeAt).getTime() > nowMs))
-              if (!isActiveRule) return item
-              return { ...item, inStock: false, isAvailable: false, stockRule: rule }
+              if (item.inStock) return item
+              const resumeMs = new Date(item.stockResumeAt || "").getTime()
+              const rule = Number.isFinite(resumeMs) && resumeMs > nowMs
+                ? {
+                    mode: item.stockOffMode && item.stockOffMode !== "manual" ? item.stockOffMode : "custom-date-time",
+                    resumeAt: item.stockResumeAt,
+                  }
+                : { mode: "manual", resumeAt: null }
+              serverRules[String(item.id)] = rule
+              return { ...item, stockRule: rule }
             })
             return {
               ...category,
@@ -1017,6 +1024,7 @@ export default function Inventory() {
           })
           
           setCategories(withStockRules)
+          setStockRules(serverRules)
           setExpandedCategories(withStockRules.map(c => c.id))
         }
 
@@ -1034,7 +1042,7 @@ export default function Inventory() {
         setLoadingAddons(false)
       }
     }
-  }, [recommendedMap, stockRules])
+  }, [recommendedMap])
 
   useEffect(() => {
     fetchMenuAndAddons()
@@ -1262,14 +1270,12 @@ export default function Inventory() {
     }
   }, [categories])
 
+  // Rules used to be kept here; drop what older builds left behind.
   useEffect(() => {
     try {
-      if (typeof window === "undefined") return
-      localStorage.setItem(INVENTORY_STOCK_RULES_KEY, JSON.stringify(stockRules))
-    } catch (error) {
-      debugWarn("Failed to save stock rules:", error)
-    }
-  }, [stockRules])
+      if (typeof window !== "undefined") localStorage.removeItem(INVENTORY_STOCK_RULES_KEY)
+    } catch {}
+  }, [])
 
   useEffect(() => {
     if (!stockRules || Object.keys(stockRules).length === 0) return
@@ -1508,6 +1514,7 @@ export default function Inventory() {
       const payload = {
         isAvailable: available,
         stockResumeAt: available ? null : (stockRule?.resumeAt || null),
+        ...(available ? {} : { stockOffMode: stockRule?.mode || "manual" }),
       }
 
       // Backend source of truth is food_items. Update availability via /food/restaurant/foods/:id.

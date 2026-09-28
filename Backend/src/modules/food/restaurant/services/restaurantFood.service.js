@@ -438,6 +438,18 @@ export async function updateRestaurantFood(restaurantId, foodId, body = {}) {
             : body.isAvailable !== false;
         update.isActive = nextIsActive;
         update.isAvailable = nextIsActive;
+        // A timed "out of stock" is held here, not in the panel's browser, so it
+        // ends on time whether or not anyone has the panel open
+        // (see foodAvailability.service.js). Switching back on clears it.
+        if (nextIsActive) {
+            update.stockResumeAt = null;
+        } else if (body.stockResumeAt !== undefined) {
+            const resumeAt = body.stockResumeAt ? new Date(body.stockResumeAt) : null;
+            if (resumeAt && Number.isNaN(resumeAt.getTime())) {
+                throw new ValidationError('stockResumeAt is not a valid date');
+            }
+            update.stockResumeAt = resumeAt && resumeAt.getTime() > Date.now() ? resumeAt : null;
+        }
     }
     if (body.isRecommended !== undefined) {
         update.isRecommended = normalizeRecommendedFlag(body.isRecommended);

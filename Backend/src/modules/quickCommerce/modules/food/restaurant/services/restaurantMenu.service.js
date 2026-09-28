@@ -64,6 +64,10 @@ const buildMenuFromFoods = async (foods = []) => {
                 : (food.image ? [food.image] : []),
             foodType: food.foodType || 'Non-Veg',
             isAvailable: food.isAvailable !== false,
+            // When a timed "out of stock" ends; the server puts the item back
+            // then (core/orders/stockResumeSweeper.js). Null for a manual off.
+            stockResumeAt: food.isAvailable === false && food.stockResumeAt ? new Date(food.stockResumeAt).toISOString() : null,
+            stockOffMode: food.isAvailable === false ? (food.stockOffMode || null) : null,
             // null means the seller does not count this item, which the app has
             // to tell apart from zero so it does not render "0 left" on
             // everything that predates inventory.

@@ -349,6 +349,14 @@ const startServer = async () => {
                 .then(({ startOrderHoldSweeper }) => startOrderHoldSweeper())
                 .catch((err) => logger.error(`Order hold sweeper failed to start: ${err.message}`));
 
+            // Puts items back on sale when a seller's timed "out of stock" ends.
+            // Not tied to BACKGROUND_JOBS_ENABLED: an item switched off "for 2 hours"
+            // must come back, and the restore is idempotent across instances.
+            // See core/orders/stockResumeSweeper.js.
+            import('./src/core/orders/stockResumeSweeper.js')
+                .then(({ startStockResumeSweeper }) => startStockResumeSweeper())
+                .catch((err) => logger.error(`Stock resume sweeper failed to start: ${err.message}`));
+
             if (!config.backgroundJobsEnabled) {
                 logger.warn('BACKGROUND_JOBS_ENABLED=false — skipping offer expiry and FSSAI sync (read-mostly instance)');
                 return;
