@@ -888,14 +888,13 @@ export const payRideCompletionWithWallet = async (req, res) => {
 
     const transferId = crypto.randomUUID();
     userWallet.balance = roundMoney(Number(userWallet.balance || 0) - paymentAmounts.totalCharge);
-    userWallet.transactions.push({
+    userWallet.transactions.unshift({
       kind: 'debit',
       amount: paymentAmounts.totalCharge,
       title: `Ride payment for ${rideId.slice(-6)}${tipAmount > 0 ? ' with tip' : ''}`,
       provider: 'ride_completion_wallet',
       providerPaymentId: transferId,
     });
-    userWallet.transactions = userWallet.transactions.slice(-50);
     await userWallet.save({ session });
 
     const result = await finalizeRideCompletion({

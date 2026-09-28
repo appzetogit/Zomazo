@@ -134,7 +134,7 @@ const applyUserWalletAdjustment = async ({
     updateFilter,
     {
       $inc: { [normalizedField]: normalizedKind === 'credit' ? normalizedAmount : -normalizedAmount },
-      $push: { transactions: { $each: [tx], $slice: -50 } },
+      $push: { transactions: { $each: [tx], $position: 0 } },
     },
     { session },
   );

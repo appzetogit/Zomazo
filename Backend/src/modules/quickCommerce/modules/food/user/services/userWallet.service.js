@@ -147,46 +147,26 @@ export const createWalletTopupOrder = async (userId, amountInr) => {
     };
 };
 
+/*
+ * Verify a top-up and credit the wallet -- through Food's verifier, the one
+ * every service now shares (this is the customer's ONE wallet).
+ *
+ * This fork's own copy credited the amount the CALLER sent: a Razorpay
+ * signature covers "orderId|paymentId", not the amount, so paying Rs 1 and
+ * posting `amount: 100000` credited a hundred thousand rupees, spendable in
+ * every app. It also credited anything at all when no gateway was configured,
+ * and would add the same payment to a second account. Food fixed all three on
+ * 7 Sep; the fix never reached this copy. Food's verifier takes the amount from
+ * the gateway, refuses without one, and refuses a payment already in another
+ * wallet. The wallet it credits is found through the Quick id's platform
+ * account, as every other wallet move here is (core/wallet/linkedWallet.js).
+ */
 export const verifyWalletTopupPayment = async (userId, payload) => {
-    const orderId = String(payload?.razorpayOrderId || '').trim();
-    const paymentId = String(payload?.razorpayPaymentId || '').trim();
-    const signature = String(payload?.razorpaySignature || '').trim();
-    const amount = Number(payload?.amount);
-
-    if (!orderId) throw new ValidationError('razorpayOrderId is required');
-    if (!paymentId) throw new ValidationError('razorpayPaymentId is required');
-    if (!signature) throw new ValidationError('razorpaySignature is required');
-    if (!Number.isFinite(amount) || amount <= 0) throw new ValidationError('amount is required');
-
-    const wallet = await ensureWallet(userId);
-    const existing = wallet.transactions.find((t) => String(t.razorpayOrderId || '') === orderId);
-    if (existing && String(existing.status).toLowerCase() === 'completed') {
-        return { wallet: await getUserWallet(userId) };
-    }
-
-    // If razorpay not configured (dev), accept and credit wallet.
-    const ok = isRazorpayConfigured()
-        ? verifyPaymentSignature(orderId, paymentId, signature)
-        : true;
-    if (!ok) {
-        throw new ValidationError('Payment verification failed');
-    }
-
-    // Store ONLY after payment is verified.
-    wallet.transactions.unshift({
-        type: 'addition',
-        amount,
-        status: 'Completed',
-        description: isRazorpayConfigured() ? 'Wallet top-up' : 'Wallet top-up (dev)',
-        metadata: { source: 'wallet_topup', mode: isRazorpayConfigured() ? 'razorpay' : 'dev' },
-        razorpayOrderId: orderId,
-        razorpayPaymentId: paymentId,
-        razorpaySignature: signature
-    });
-
-    wallet.balance = Number(wallet.balance || 0) + amount;
-    await wallet.save();
-
+    const [{ verifyWalletTopupPayment: verifyShared }, { walletOwner }] = await Promise.all([
+        import('../../../../../food/user/services/userWallet.service.js'),
+        import('../../../../../../core/wallet/linkedWallet.js'),
+    ]);
+    await verifyShared(String(await walletOwner(userId)), payload);
     return { wallet: await getUserWallet(userId) };
 };
 

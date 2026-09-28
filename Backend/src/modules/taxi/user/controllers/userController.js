@@ -107,8 +107,54 @@ const serializeUserWalletTransaction = (entry = {}) => ({
   createdAt: entry.createdAt || null,
 });
 
+/*
+ * Credit a gateway top-up to one wallet, once.
+ *
+ * The check used to be "has THIS wallet seen the payment", read and then
+ * written in two steps. So the same payment could be credited to a second
+ * account, and two verifies of it arriving together both credited. The payment
+ * is now refused if any wallet already holds it, and the credit itself only
+ * lands on a wallet that does not yet have it -- one atomic step.
+ *
+ * @returns {Promise<boolean>} true when this call credited it
+ */
+const creditTopupOnce = async (userId, tx, amount) => {
+  const refs = [tx.providerPaymentId, tx.providerOrderId].filter(Boolean);
+  const holder = await UserWallet.findOne({
+    $or: [
+      { 'transactions.providerPaymentId': { $in: refs } },
+      { 'transactions.providerOrderId': { $in: refs } },
+    ],
+  })
+    .select('userId')
+    .lean();
+  if (holder) {
+    if (String(holder.userId) !== String(userId)) {
+      throw new ApiError(409, 'This payment has already been added to another wallet');
+    }
+    return false;
+  }
+  const result = await UserWallet.updateOne(
+    { userId, 'transactions.providerPaymentId': { $ne: tx.providerPaymentId } },
+    { $inc: { balance: amount }, $push: { transactions: { $each: [tx], $position: 0 } } },
+  );
+  return result.modifiedCount === 1;
+};
+
+/*
+ * The newest ten rows, by date.
+ *
+ * Taxi used to append rows and trim the array to its last 50, then reverse it
+ * for display. On the ONE wallet every other service adds rows at the front,
+ * so that trim deleted a customer's newest Food, Quick and Shop history, and
+ * the reversal showed it upside down. Taxi now adds at the front too and never
+ * trims; rows written the old way are still in the array, so the order is taken
+ * from their dates rather than their positions.
+ */
+const RECENT_TRANSACTIONS = 10;
 const buildUserWalletPayload = (wallet) => {
   const transactions = Array.isArray(wallet?.transactions) ? wallet.transactions : [];
+  const at = (entry) => new Date(entry?.createdAt || 0).getTime() || 0;
 
   return {
     balance: Number(wallet?.balance || 0),
@@ -116,7 +162,8 @@ const buildUserWalletPayload = (wallet) => {
     currency: 'INR',
     recentTransactions: transactions
       .slice()
-      .reverse()
+      .sort((a, b) => at(b) - at(a))
+      .slice(0, RECENT_TRANSACTIONS)
       .map(serializeUserWalletTransaction),
   };
 };
@@ -1166,7 +1213,7 @@ const creditUserWalletByReference = async ({ userId, amount, title, referenceKey
               referenceKey: normalizedReferenceKey,
             },
           ],
-          $slice: -50,
+          $position: 0,
         },
       },
     },
@@ -1642,7 +1689,7 @@ export const getUserWallet = async (req, res) => {
   }
 
   await ensureUserWallet(userId);
-  const wallet = await UserWallet.findOne({ userId }).select('balance refundWallet transactions').slice('transactions', -10).lean();
+  const wallet = await UserWallet.findOne({ userId }).select('balance refundWallet transactions').lean();
   const transactions = Array.isArray(wallet?.transactions) ? wallet.transactions : [];
 
   res.json({
@@ -1682,11 +1729,11 @@ export const topupUserWallet = async (req, res) => {
     { userId },
     {
       $inc: { balance: amount },
-      $push: { transactions: { $each: [tx], $slice: -50 } },
+      $push: { transactions: { $each: [tx], $position: 0 } },
     },
   );
 
-  const updatedWallet = await UserWallet.findOne({ userId }).select('balance transactions').slice('transactions', -10).lean();
+  const updatedWallet = await UserWallet.findOne({ userId }).select('balance transactions').lean();
   const updatedWalletWithRefund = updatedWallet
     ? { ...updatedWallet, refundWallet: Number(updatedWallet.refundWallet || 0) }
     : updatedWallet;
@@ -1744,7 +1791,7 @@ export const transferUserWallet = async (req, res) => {
 
   const senderUpdate = await UserWallet.updateOne(
     { userId: senderId, balance: { $gte: amount } },
-    { $inc: { balance: -amount }, $push: { transactions: { $each: [debitTx], $slice: -50 } } },
+    { $inc: { balance: -amount }, $push: { transactions: { $each: [debitTx], $position: 0 } } },
   );
 
   if (!senderUpdate?.modifiedCount) {
@@ -1753,7 +1800,7 @@ export const transferUserWallet = async (req, res) => {
 
   const recipientUpdate = await UserWallet.updateOne(
     { userId: recipient._id },
-    { $inc: { balance: amount }, $push: { transactions: { $each: [creditTx], $slice: -50 } } },
+    { $inc: { balance: amount }, $push: { transactions: { $each: [creditTx], $position: 0 } } },
   );
 
   if (!recipientUpdate?.modifiedCount) {
@@ -1764,7 +1811,7 @@ export const transferUserWallet = async (req, res) => {
     throw new ApiError(500, 'Transfer failed');
   }
 
-  const wallet = await UserWallet.findOne({ userId: senderId }).select('balance refundWallet transactions').slice('transactions', -10).lean();
+  const wallet = await UserWallet.findOne({ userId: senderId }).select('balance refundWallet transactions').lean();
 
   const transactions = Array.isArray(wallet?.transactions) ? wallet.transactions : [];
 
@@ -1822,7 +1869,7 @@ export const transferUserWalletToDriver = async (req, res) => {
     }
 
     senderWallet.balance = Math.round((Number(senderWallet.balance || 0) - amount) * 100) / 100;
-    senderWallet.transactions.push({
+    senderWallet.transactions.unshift({
       kind: 'debit',
       amount,
       title: `Sent to driver ${driverDisplayName}`,
@@ -1830,7 +1877,6 @@ export const transferUserWalletToDriver = async (req, res) => {
       provider: 'internal_driver_wallet_transfer',
       providerPaymentId: transferId,
     });
-    senderWallet.transactions = senderWallet.transactions.slice(-50);
     await senderWallet.save({ session });
 
     const walletUpdate = await applyDriverWalletAdjustment({
@@ -1872,7 +1918,7 @@ export const transferUserWalletToDriver = async (req, res) => {
 
     const refreshedWallet = await UserWallet.findOne({ userId: senderId })
       .select('balance refundWallet transactions')
-      .slice('transactions', -10)
+      
       .lean();
 
     res.status(201).json({
@@ -2050,7 +2096,7 @@ export const payRentalAdvanceWithWallet = async (req, res) => {
     }
 
     wallet.balance = Math.round((Number(wallet.balance || 0) - amount) * 100) / 100;
-    wallet.transactions.push({
+    wallet.transactions.unshift({
       kind: 'debit',
       amount,
       title: 'Rental Advance Payment',
@@ -2059,9 +2105,6 @@ export const payRentalAdvanceWithWallet = async (req, res) => {
       referenceKey,
     });
 
-    if (wallet.transactions.length > 50) {
-      wallet.transactions = wallet.transactions.slice(-50);
-    }
 
     await wallet.save();
   }
@@ -2125,33 +2168,16 @@ export const verifyRazorpayWalletTopup = async (req, res) => {
 
   await ensureUserWallet(userId);
 
-  const alreadyCredited = await UserWallet.findOne({
-    userId,
-    'transactions.providerPaymentId': paymentId,
-  })
-    .select('_id')
-    .lean();
+  await creditTopupOnce(userId, {
+    kind: 'credit',
+    amount,
+    title: 'Wallet Refilled',
+    provider: 'razorpay',
+    providerOrderId: orderId,
+    providerPaymentId: paymentId,
+  }, amount);
 
-  if (!alreadyCredited) {
-    const tx = {
-      kind: 'credit',
-      amount,
-      title: 'Wallet Refilled',
-      provider: 'razorpay',
-      providerOrderId: orderId,
-      providerPaymentId: paymentId,
-    };
-
-    await UserWallet.updateOne(
-      { userId },
-      {
-        $inc: { balance: amount },
-        $push: { transactions: { $each: [tx], $slice: -50 } },
-      },
-    );
-  }
-
-  const wallet = await UserWallet.findOne({ userId }).select('balance refundWallet transactions').slice('transactions', -10).lean();
+  const wallet = await UserWallet.findOne({ userId }).select('balance refundWallet transactions').lean();
   if (!wallet) {
     throw new ApiError(404, 'User not found');
   }
@@ -2171,6 +2197,16 @@ export const verifyPhonePeWalletTopup = async (req, res) => {
     throw new ApiError(400, 'merchantTransactionId is required');
   }
 
+  // The transaction id is minted with the creator's account in its tail
+  // (createPhonePeWalletTopupOrder). It arrives in the URL, so without this check
+  // anyone who learned another customer's id could verify their top-up into
+  // their own wallet. Refused before anything is asked of PhonePe.
+  const callerId = String(req.auth?.sub || '');
+  const compactCallerId = callerId.replace(/[^a-zA-Z0-9]/g, '').slice(-8) || 'usr';
+  if (!merchantTransactionId.startsWith('UWAL') || !merchantTransactionId.endsWith(compactCallerId)) {
+    throw new ApiError(403, 'This top-up belongs to another account');
+  }
+
   const { merchantId, saltKey, saltIndex, environment } = await resolvePhonePeCredentials();
   const payload = await phonePeRequest({
     method: 'GET',
@@ -2188,39 +2224,18 @@ export const verifyPhonePeWalletTopup = async (req, res) => {
 
   if (paymentState === 'COMPLETED') {
     await ensureUserWallet(userId);
-
-    const alreadyCredited = await UserWallet.findOne({
-      userId,
-      $or: [
-        { 'transactions.providerPaymentId': paymentId },
-        { 'transactions.providerOrderId': merchantTransactionId },
-      ],
-    })
-      .select('_id')
-      .lean();
-
-    if (!alreadyCredited) {
-      const tx = {
-        kind: 'credit',
-        amount,
-        title: 'Wallet Refilled',
-        provider: 'phonepe',
-        providerOrderId: merchantTransactionId,
-        providerPaymentId: paymentId,
-      };
-
-      await UserWallet.updateOne(
-        { userId },
-        {
-          $inc: { balance: amount },
-          $push: { transactions: { $each: [tx], $slice: -50 } },
-        },
-      );
-    }
+    await creditTopupOnce(userId, {
+      kind: 'credit',
+      amount,
+      title: 'Wallet Refilled',
+      provider: 'phonepe',
+      providerOrderId: merchantTransactionId,
+      providerPaymentId: paymentId,
+    }, amount);
 
     const wallet = await UserWallet.findOne({ userId })
       .select('balance refundWallet transactions')
-      .slice('transactions', -10)
+      
       .lean();
 
     res.json({
@@ -3494,3 +3509,6 @@ export const listMyBusBookings = async (req, res) => {
     },
   });
 };
+
+// For tests: the one-credit rule and the wallet screen's ordering.
+export const __testables = { creditTopupOnce, buildUserWalletPayload };

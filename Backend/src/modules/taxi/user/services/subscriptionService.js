@@ -215,14 +215,13 @@ export const purchaseUserSubscription = async ({ userId, planId, paymentSource =
     : null;
 
   wallet.balance = roundMoney(Number(wallet.balance || 0) - amount);
-  wallet.transactions.push({
+  wallet.transactions.unshift({
     kind: 'debit',
     amount,
     title: `Subscription purchase: ${plan.name || 'Plan'}`,
     provider: 'user_subscription_wallet',
     providerPaymentId: `sub_${Date.now().toString(36)}_${String(plan._id).slice(-6)}`,
   });
-  wallet.transactions = wallet.transactions.slice(-50);
 
   const subscription = new UserSubscription({
     userId,

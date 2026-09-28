@@ -3982,7 +3982,7 @@ export const adjustUserWallet = async (id, payload = {}) => {
   const nextBalance = operation === 'credit' ? currentBalance + amount : currentBalance - amount;
 
   wallet.balance = nextBalance;
-  wallet.transactions.push({
+  wallet.transactions.unshift({
     kind: operation,
     amount,
     title: payload.description || `Admin adjustment (${operation})`,

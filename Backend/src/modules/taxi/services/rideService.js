@@ -206,7 +206,7 @@ const creditUserWalletByReference = async ({ userId, amount, title, referenceKey
               referenceKey: normalizedReferenceKey,
             },
           ],
-          $slice: -50,
+          $position: 0,
         },
       },
     },
