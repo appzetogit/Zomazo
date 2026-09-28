@@ -548,7 +548,9 @@ export default function ItemDetailsPage() {
         const data = response?.data?.data || response?.data || null
         if (!cancelled && data && data.commissionValue !== undefined) {
           setCommission({
-            type: data.commissionType === 'flat' ? 'flat' : 'percentage',
+            // Both backends store a flat rate as 'amount'; reading only 'flat'
+            // showed a Rs 20 fee as 20% of the price.
+            type: data.commissionType === 'flat' || data.commissionType === 'amount' ? 'flat' : 'percentage',
             value: Number(data.commissionValue) || 0,
             label: data.commissionLabel || '',
           })
@@ -561,6 +563,9 @@ export default function ItemDetailsPage() {
     fetchCommission()
 
     const fetchTaxSettings = async () => {
+      // Quick commerce has no "prices include GST" setting (no /tax-settings
+      // route either); its prices are always net, which is the default below.
+      if (isQcStore) return
       try {
         const response = await restaurantAPI.getTaxSettings()
         const data = response?.data?.data || response?.data || null

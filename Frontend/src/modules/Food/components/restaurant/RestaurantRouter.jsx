@@ -1,8 +1,16 @@
 import { Suspense, lazy } from "react"
-import { Routes, Route } from "react-router-dom"
+import { Routes, Route, Navigate } from "react-router-dom"
 import ProtectedRoute from "@food/components/ProtectedRoute"
 import Loader from "@food/components/Loader"
 import RestaurantLayout from "@food/components/restaurant/RestaurantLayout"
+import { isQcSeller } from "@food/utils/sellerVertical"
+
+// Food-only pages (utils/sellerVertical.js). The menus already hide them from
+// quick-commerce sellers; this covers a bookmarked or typed URL, which would
+// otherwise open a page whose every request 404s on /qc.
+function FoodOnly({ children }) {
+  return isQcSeller() ? <Navigate to="/food/restaurant/explore" replace /> : children
+}
 
 // Lazy Loading Components
 const AllOrdersPage = lazy(() => import("@food/pages/restaurant/AllOrdersPage"))
@@ -76,14 +84,14 @@ export default function RestaurantRouter() {
         <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><RestaurantNotifications /></ProtectedRoute>} path="notifications" />
         <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><AllOrdersPage /></ProtectedRoute>} path="orders/all" />
         <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><CouponListPage /></ProtectedRoute>} path="coupon" />
-        <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><FreebieOffersPage /></ProtectedRoute>} path="free-item-offers" />
-        <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><BogoOffersPage /></ProtectedRoute>} path="bogo-offers" />
-        <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><CombosPage /></ProtectedRoute>} path="combos" />
+        <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><FoodOnly><FreebieOffersPage /></FoodOnly></ProtectedRoute>} path="free-item-offers" />
+        <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><FoodOnly><BogoOffersPage /></FoodOnly></ProtectedRoute>} path="bogo-offers" />
+        <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><FoodOnly><CombosPage /></FoodOnly></ProtectedRoute>} path="combos" />
         <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><AddCouponPage /></ProtectedRoute>} path="coupon/new" />
         <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><EditCouponPage /></ProtectedRoute>} path="coupon/:id/edit" />
         <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><DeliverySettings /></ProtectedRoute>} path="delivery-settings" />
-        <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><GstSettings /></ProtectedRoute>} path="gst-settings" />
-        <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><DeliveryRadius /></ProtectedRoute>} path="delivery-radius" />
+        <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><FoodOnly><GstSettings /></FoodOnly></ProtectedRoute>} path="gst-settings" />
+        <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><FoodOnly><DeliveryRadius /></FoodOnly></ProtectedRoute>} path="delivery-radius" />
         <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><RushHour /></ProtectedRoute>} path="rush-hour" />
         <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><MenuCategoriesPage /></ProtectedRoute>} path="menu-categories" />
         <Route element={<ProtectedRoute requiredRole="restaurant" loginPath="/food/restaurant/login"><RestaurantStatus /></ProtectedRoute>} path="status" />

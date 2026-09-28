@@ -83,6 +83,37 @@ export const getCurrentRestaurantController = async (req, res, next) => {
     }
 };
 
+/**
+ * The commission rate that currently applies to this seller.
+ *
+ * Ported from the food router: the shared item form asks for it to show what a
+ * product earns before it is saved, and on /qc the call used to 404. Resolved
+ * through getRestaurantCommissionSnapshot, the same function order placement
+ * uses to charge commission here (including a pharmacy's medical default), so
+ * the preview matches what the seller is actually billed.
+ */
+export const getRestaurantCommissionRateController = async (req, res, next) => {
+    try {
+        const restaurantId = req.user?.userId;
+        const { getRestaurantCommissionSnapshot } = await import(
+            '../../orders/services/foodTransaction.service.js'
+        );
+        // A synthetic order of 100 so a percentage reads directly, and a flat
+        // rate comes back as its own amount.
+        const snapshot = await getRestaurantCommissionSnapshot({
+            restaurantId,
+            pricing: { subtotal: 100 },
+        });
+        return sendResponse(res, 200, 'Commission fetched successfully', {
+            commissionType: snapshot.commissionType,
+            commissionValue: snapshot.commissionValue,
+            commissionLabel: '',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const updateRestaurantProfileController = async (req, res, next) => {
     try {
         const restaurantId = req.user?.userId;

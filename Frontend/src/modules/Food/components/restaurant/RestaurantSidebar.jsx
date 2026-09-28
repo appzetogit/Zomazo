@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { BarChart3, Boxes, Building2, ChevronLeft, ChevronRight, Clock, Compass, Copy, Download, FileText, Gift, Landmark, LifeBuoy, Map, Package, Star, Store, Tag, Utensils, Wallet } from "lucide-react"
+import { isFoodOnlySellerRoute, isQcSeller } from "@food/utils/sellerVertical"
 
 /**
  * Desktop sidebar for the restaurant dashboard.
@@ -9,11 +10,16 @@ import { BarChart3, Boxes, Building2, ChevronLeft, ChevronRight, Clock, Compass,
  * existing bottom nav.
  */
 
-const isQcStore = () => {
-  try { return localStorage.getItem("restaurant_vertical") === "qc" } catch { return false }
-}
+const isQcStore = isQcSeller
 
-const getNavSections = (base) => [
+// Food-only pages (see utils/sellerVertical.js) are dropped for quick-commerce
+// sellers rather than left to open onto a 404.
+const getNavSections = (base) => buildNavSections(base).map((section) => ({
+  ...section,
+  items: isQcStore() ? section.items.filter((item) => !isFoodOnlySellerRoute(item.path)) : section.items,
+}))
+
+const buildNavSections = (base) => [
   {
     label: "OPERATIONS",
     items: [

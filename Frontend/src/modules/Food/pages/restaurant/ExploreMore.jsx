@@ -40,6 +40,7 @@ import { firebaseAuth, ensureFirebaseInitialized } from "@food/firebase"
 import BottomNavOrders from "@food/components/restaurant/BottomNavOrders"
 import DeleteAccountModal from "@food/components/DeleteAccountModal"
 import { toast } from "sonner"
+import { isFoodOnlySellerRoute } from "@food/utils/sellerVertical"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -771,7 +772,10 @@ export default function ExploreMore() {
     try { return localStorage.getItem("restaurant_vertical") === "qc" } catch { return false }
   })()
   // Section data
-  const manageOutletItems = [
+  // Food-only pages (utils/sellerVertical.js) are hidden from quick-commerce
+  // sellers: their routes do not exist on /qc.
+  const forVertical = (items) => (isQcStore ? items.filter((item) => !isFoodOnlySellerRoute(item.route)) : items)
+  const manageOutletItems = forVertical([
     { id: 1, label: "Outlet info", icon: Info, route: "/restaurant/outlet-info" },
     { id: 2, label: "Outlet timings", icon: Clock, route: "/restaurant/outlet-timings" },
     { id: 3, label: "Dining Reservations", icon: Calendar, route: "/restaurant/reservations" },
@@ -779,18 +783,18 @@ export default function ExploreMore() {
     { id: "coupons-nav", label: "Offers & Coupons", icon: FileCheck, route: "/restaurant/coupon" },
     { id: "freebie-nav", label: "Free Item Offers", icon: FileCheck, route: "/restaurant/free-item-offers" },
     { id: "bogo-nav", label: "Buy One Get One", icon: FileCheck, route: "/restaurant/bogo-offers" },
-      { id: "combos-nav", label: "Combos", icon: FileCheck, route: "/restaurant/combos" },
+    { id: "combos-nav", label: "Combos", icon: FileCheck, route: "/restaurant/combos" },
     { id: "analytics-nav", label: "Analytics", icon: BarChart2, route: "/restaurant/analytics" },
     // Stores and medical stores (quick commerce) count stock per size.
     ...(isQcStore ? [{ id: "stock-nav", label: "Stock", icon: Settings, route: "/restaurant/stock" }] : []),
-  ]
+  ])
 
-  const settingsItems = [
+  const settingsItems = forVertical([
     { id: 3, label: "Delivery settings", icon: Truck, route: "/restaurant/delivery-settings" },
     { id: "radius-nav", label: "Delivery radius", icon: MapPin, route: "/restaurant/delivery-radius" },
     { id: "gst-nav", label: "GST on menu prices", icon: Receipt, route: "/restaurant/gst-settings" },
     { id: 4, label: "Zone Setup", icon: MapPin, route: "/restaurant/zone-setup" },
-  ]
+  ])
 
   const ordersItems = [
     { id: 1, label: "Order history", icon: FileText, route: "/restaurant/orders/all" },

@@ -8,6 +8,7 @@ import {
     getApprovedRestaurantController,
     listPublicOffersController,
     getCurrentRestaurantController,
+    getRestaurantCommissionRateController,
     updateRestaurantProfileController,
     updateRestaurantAcceptingOrdersController,
     updateCurrentRestaurantDiningSettingsController,
@@ -148,6 +149,11 @@ router.get('/categories/public', cacheResponse(600, 'categories'), listCategorie
 
 // Restaurant dashboard/profile (Bearer token + RESTAURANT role)
 router.get('/current', authMiddleware, requireRestaurant, getCurrentRestaurantController);
+// The shared panel's item form previews what a product earns. The food-only
+// seller settings (tax-settings, service-radius, freebie/BOGO/combos) are NOT
+// mirrored here: quick-commerce pricing and serviceability read none of them,
+// so the panel hides those screens for these sellers instead.
+router.get('/commission', authMiddleware, requireRestaurant, getRestaurantCommissionRateController);
 /**
  * Account deletion, initiated by the seller themselves.
  *
