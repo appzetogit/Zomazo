@@ -898,7 +898,11 @@ const respondToJob = async (req, res) => {
     if (status === 'ACCEPTED') {
       booking.status = BOOKING_STATUS.ASSIGNED;
       booking.workerId = workerId; // Assign the worker
-      booking.bookingModel = 'worker'; // Ensure model is set
+      // Only a direct request (no vendor) is a worker-model booking. A vendor's job
+      // that the vendor assigned stays 'vendor': vendorBillController pays out 100%
+      // to the worker for 'worker' bookings, so flipping it here on accept cut the
+      // vendor -- and the platform -- out of a job they own.
+      if (!booking.vendorId) booking.bookingModel = 'worker';
       booking.workerAcceptedAt = new Date();
       booking.workerResponse = 'ACCEPTED';
 
