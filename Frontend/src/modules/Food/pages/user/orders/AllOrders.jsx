@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ArrowLeft, ChevronRight, Loader2, AlertCircle, ShoppingBag } from "lucide-react"
 import { orderAPI } from "@food/api"
+import { ECOMMERCE_ENABLED } from "@/config/features"
 
 /**
  * Every order the customer has placed, across Food, Quick, rides and
@@ -18,6 +19,7 @@ const SERVICE_CHIPS = [
   { key: "quick_all", label: "Quick" },
   { key: "rides", label: "Rides" },
   { key: "services", label: "Services" },
+  ...(ECOMMERCE_ENABLED ? [{ key: "shop", label: "Shop" }] : []),
 ]
 
 const STATE_TABS = [
