@@ -1,30 +1,7 @@
 import mongoose from 'mongoose';
+import { buildReferralLogSchema } from '../../../../../food/admin/models/referralLog.model.js';
 
-const referralLogSchema = new mongoose.Schema(
-    {
-        referrerId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-        refereeId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-        role: {
-            type: String,
-            enum: ['USER', 'DELIVERY_PARTNER'],
-            required: true,
-            index: true
-        },
-        rewardAmount: { type: Number, required: true, min: 0, default: 0 },
-        status: {
-            type: String,
-            enum: ['pending', 'credited', 'rejected'],
-            default: 'pending',
-            index: true
-        },
-        reason: { type: String, default: '' }
-    },
-    { collection: 'food_referral_logs', timestamps: true }
-);
-
-// One referral credit decision per created account per role.
-referralLogSchema.index({ refereeId: 1, role: 1 }, { unique: true });
-referralLogSchema.index({ referrerId: 1, role: 1, createdAt: -1 });
-
-export const FoodReferralLog = mongoose.models.QCReferralLog || mongoose.model('QCReferralLog', referralLogSchema, 'qc_referral_logs');
-
+// Food's referral log schema (one set of rules), in quick commerce's own
+// collection: share the code, keep the collection (FORK_COLLAPSE.md).
+export const FoodReferralLog =
+    mongoose.models.QCReferralLog || mongoose.model('QCReferralLog', buildReferralLogSchema(), 'qc_referral_logs');

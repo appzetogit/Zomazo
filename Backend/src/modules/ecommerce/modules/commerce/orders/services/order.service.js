@@ -72,6 +72,7 @@ import {
   STATUS_PRIORITY,
 } from './order.helpers.js';
 import { getShippingProvider } from '../../delivery/services/shipping/index.js';
+import { COD_BLOCKED_MESSAGE, isBlockedFromCod } from '../../../../../../core/identity/codBlock.js';
 
 
 
@@ -610,6 +611,11 @@ export async function createOrder(userId, dto, options = {}) {
     // cash collection, deposits and cashInHand are all live).
     if (paymentMethod === "cash" && String(process.env.COD_ENABLED || "true") !== "true") {
       throw new ValidationError("Cash on Delivery is no longer available. Please pay online.");
+    }
+    // An admin's COD block on the customer's account applies here too, not only
+    // in Food (core/identity/codBlock.js).
+    if (paymentMethod === "cash" && (await isBlockedFromCod(userId))) {
+      throw new ValidationError(COD_BLOCKED_MESSAGE);
     }
     const isCash = paymentMethod === "cash";
     const isWallet = paymentMethod === "wallet";

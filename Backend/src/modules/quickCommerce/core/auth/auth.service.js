@@ -245,11 +245,25 @@ export const verifyUserOtpAndLogin = async (
               Number(settingsDoc.referralLimitUser) || 0,
             );
 
-            if (
-              reward > 0 &&
-              limit > 0 &&
-              Number(referrer.referralCount || 0) < limit
-            ) {
+            /*
+             * One reward per phone number, ever, and the cap claimed atomically --
+             * the two fixes the platform sign-in (core/auth/auth.service.js) got
+             * and this fork never did. Without them, deleting the account and
+             * signing up again with the same phone paid the referrer again, and
+             * parallel sign-ups read the count, then incremented it, past the cap.
+             */
+            const refereePhone = String(userDoc.phone || "").replace(/\D/g, "").slice(-10);
+            const phoneAlreadyRewarded = refereePhone
+              ? await FoodReferralLog.exists({ refereePhone, role: "USER", status: "credited" })
+              : false;
+            const claimed = reward > 0 && limit > 0 && !phoneAlreadyRewarded
+              ? await FoodUser.updateOne(
+                  { _id: referrerId, $or: [{ referralCount: { $lt: limit } }, { referralCount: { $exists: false } }] },
+                  { $inc: { referralCount: 1 } },
+                )
+              : null;
+
+            if (claimed?.modifiedCount === 1) {
               userDoc.referredBy = referrerId;
               await userDoc.save();
 
@@ -259,19 +273,14 @@ export const verifyUserOtpAndLogin = async (
                 role: "USER",
                 rewardAmount: reward,
                 status: "credited",
+                refereePhone,
               });
 
-              await Promise.all([
-                FoodUser.updateOne(
-                  { _id: referrerId },
-                  { $inc: { referralCount: 1 } },
-                ),
-                creditReferralReward(referrerId, reward, {
-                  role: "USER",
-                  refereeId: String(userDoc._id),
-                  referralLogId: String(log._id),
-                }),
-              ]);
+              await creditReferralReward(referrerId, reward, {
+                role: "USER",
+                refereeId: String(userDoc._id),
+                referralLogId: String(log._id),
+              });
             } else {
               await FoodReferralLog.create({
                 referrerId,
@@ -279,8 +288,11 @@ export const verifyUserOtpAndLogin = async (
                 role: "USER",
                 rewardAmount: reward,
                 status: "rejected",
+                refereePhone,
                 reason:
-                  reward <= 0
+                  phoneAlreadyRewarded
+                    ? "phone_already_rewarded"
+                    : reward <= 0
                     ? "reward_disabled"
                     : limit <= 0
                       ? "limit_disabled"

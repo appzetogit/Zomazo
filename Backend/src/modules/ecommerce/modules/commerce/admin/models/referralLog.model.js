@@ -1,31 +1,6 @@
-import mongoose from 'mongoose';
-
 import { ecomModel } from '../../../../config/ecomModel.js';
-const referralLogSchema = new mongoose.Schema(
-    {
-        referrerId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-        refereeId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-        role: {
-            type: String,
-            enum: ['USER', 'DELIVERY_PARTNER'],
-            required: true,
-            index: true
-        },
-        rewardAmount: { type: Number, required: true, min: 0, default: 0 },
-        status: {
-            type: String,
-            enum: ['pending', 'credited', 'rejected'],
-            default: 'pending',
-            index: true
-        },
-        reason: { type: String, default: '' }
-    },
-    { collection: 'referral_logs', timestamps: true }
-);
+import { buildReferralLogSchema } from '../../../../../food/admin/models/referralLog.model.js';
 
-// One referral credit decision per created account per role.
-referralLogSchema.index({ refereeId: 1, role: 1 }, { unique: true });
-referralLogSchema.index({ referrerId: 1, role: 1, createdAt: -1 });
-
-export const ReferralLog = ecomModel('ReferralLog', referralLogSchema);
-
+// Food's referral log schema (one set of rules, refereePhone included), in the
+// Shop's own collection (ecom_referral_logs): share the code, keep the data.
+export const ReferralLog = ecomModel('ReferralLog', buildReferralLogSchema(), 'referral_logs');

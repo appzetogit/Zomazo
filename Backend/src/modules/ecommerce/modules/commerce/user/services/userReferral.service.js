@@ -135,9 +135,13 @@ export const getUserReferralDetails = async (userId) => {
 export const creditShopSignupReferral = async ({ refereeId, ref } = {}) => {
     const code = String(ref || '').trim();
     if (!code || !mongoose.Types.ObjectId.isValid(String(refereeId || ''))) return { credited: false, reason: 'no_referral' };
-    const referee = await User.findById(refereeId).select('_id referredBy platformUserId').lean();
+    const referee = await User.findById(refereeId).select('_id referredBy platformUserId phone').lean();
     if (!referee) return { credited: false, reason: 'no_referee' };
     if (referee.referredBy) return { credited: false, reason: 'already_referred' };
+    // One reward per phone number, ever, as on the platform sign-in: deleting
+    // the Shop account and signing up again makes a new row (a new refereeId),
+    // which the unique index alone would pay again.
+    const refereePhone = String(referee.phone || '').replace(/\D/g, '').slice(-10);
 
     const or = [{ referralCode: code }];
     if (mongoose.Types.ObjectId.isValid(code)) {
@@ -163,11 +167,20 @@ export const creditShopSignupReferral = async ({ refereeId, ref } = {}) => {
             refereeId: referee._id,
             role: 'USER',
             rewardAmount: reward,
-            status: 'pending'
+            status: 'pending',
+            refereePhone
         });
     } catch (err) {
         if (err?.code === 11000) return { credited: false, reason: 'already_referred' };
         throw err;
+    }
+
+    const phoneAlreadyRewarded = refereePhone
+        ? await ReferralLog.exists({ refereePhone, role: 'USER', status: 'credited', _id: { $ne: log._id } })
+        : false;
+    if (phoneAlreadyRewarded) {
+        await ReferralLog.updateOne({ _id: log._id }, { $set: { status: 'rejected', reason: 'phone_already_rewarded' } });
+        return { credited: false, reason: 'phone_already_rewarded' };
     }
 
     const claimed = reward > 0 && limit > 0
