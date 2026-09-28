@@ -197,7 +197,7 @@ async function servicesOverview() {
   const settings = await coll('sp_settings').findOne({ type: 'global' });
   // Defaults from modules/serviceProvider/utils/commission.js and the bill controller.
   const servicePayout = Number(settings?.servicePayoutPercentage ?? 90);
-  const partsPayout = Number(settings?.partsPayoutPercentage ?? 10);
+  const partsPayout = Number(settings?.partsPayoutPercentage ?? 100);
   return {
     platformShare: {
       service: round(100 - servicePayout),

@@ -611,7 +611,7 @@ function RestaurantDetailsContent() {
             debugWarn("Outlet timings fetch failed, falling back to delivery timings:", outletError?.message)
           }
 
-          // Fetch menu and inventory for this restaurant
+          // Fetch the menu for this restaurant
           // If no restaurant ID, try to find matching restaurant by name
           let restaurantIdForMenu = transformedRestaurant.id
 
@@ -913,65 +913,8 @@ function RestaurantDetailsContent() {
               setLoadingMenuItems(false)
             }
 
-            try {
-              debugLog('? Fetching inventory for restaurant ID:', restaurantIdForMenu)
-              let inventoryResponse = null
-              let resolvedInventoryLookupId = null
-              for (const lookupId of normalizedLookupIds) {
-                try {
-                  debugLog('? Fetching inventory for restaurant lookup ID:', lookupId)
-                  const response = await restaurantAPI.getInventoryByRestaurantId(lookupId)
-                  if (response?.data?.success) {
-                    inventoryResponse = response
-                    resolvedInventoryLookupId = lookupId
-                    break
-                  }
-                } catch (lookupError) {
-                  if (lookupError?.response?.status !== 404) {
-                    throw lookupError
-                  }
-                }
-              }
-              if (!inventoryResponse) {
-                throw Object.assign(new Error('Inventory not found'), { response: { status: 404 } })
-              }
-              debugLog('? Inventory resolved using lookup ID:', resolvedInventoryLookupId)
-              if (inventoryResponse.data && inventoryResponse.data.success && inventoryResponse.data.data && inventoryResponse.data.data.inventory) {
-                const inventoryCategories = inventoryResponse.data.data.inventory.categories || []
-
-                // Normalize inventory categories to ensure proper structure
-                const normalizedInventory = inventoryCategories.map((category, index) => ({
-                  id: category.id || `category-${index}`,
-                  name: category.name || "Unnamed Category",
-                  description: category.description || "",
-                  itemCount: category.itemCount || (category.items?.length || 0),
-                  inStock: category.inStock !== undefined ? category.inStock : true,
-                  items: Array.isArray(category.items) ? category.items.map(item => ({
-                    id: String(item.id || Date.now() + Math.random()),
-                    name: item.name || "Unnamed Item",
-                    inStock: item.inStock !== undefined ? item.inStock : true,
-                    isVeg: item.isVeg !== undefined ? item.isVeg : true,
-                    stockQuantity: item.stockQuantity || "Unlimited",
-                    unit: item.unit || "piece",
-                    expiryDate: item.expiryDate || null,
-                    lastRestocked: item.lastRestocked || null,
-                  })) : [],
-                  order: category.order !== undefined ? category.order : index,
-                }))
-
-                setRestaurant(prev => ({
-                  ...prev,
-                  inventory: normalizedInventory,
-                }))
-                debugLog('? Fetched and normalized inventory categories:', normalizedInventory)
-              }
-            } catch (inventoryError) {
-              if (inventoryError.response && inventoryError.response.status === 404) {
-                debugLog('? Inventory not found for this restaurant (might be a dining-only listing).')
-              } else {
-                debugError('? Error fetching inventory:', inventoryError)
-              }
-            }
+            // Stock comes with the menu (each item's availability); there is no
+            // separate customer inventory endpoint to ask.
           }
           else {
             setLoadingMenuItems(false)

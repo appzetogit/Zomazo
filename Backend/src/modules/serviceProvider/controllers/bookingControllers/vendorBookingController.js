@@ -3,7 +3,7 @@ const Booking = require('../../models/Booking');
 const Worker = require('../../models/Worker');
 const { validationResult } = require('express-validator');
 const { BOOKING_STATUS, PAYMENT_STATUS } = require('../../utils/constants');
-const { DEFAULT_SERVICE_PAYOUT_PCT } = require('../../utils/commission');
+const { DEFAULT_SERVICE_PAYOUT_PCT, DEFAULT_PARTS_PAYOUT_PCT } = require('../../utils/commission');
 const { withTransaction, abort } = require('../../utils/withTransaction');
 const { effectiveCashLimit } = require('../../utils/cashLimit');
 const { createNotification } = require('../notificationControllers/notificationController');
@@ -1052,7 +1052,7 @@ const completeSelfJob = async (req, res) => {
     const Settings = require('../../models/Settings');
     const settings = await Settings.findOne({ type: 'global' });
     const serviceSplitPct = settings?.servicePayoutPercentage ?? DEFAULT_SERVICE_PAYOUT_PCT;
-    const partsSplitPct = settings?.partsPayoutPercentage ?? 10;
+    const partsSplitPct = settings?.partsPayoutPercentage ?? DEFAULT_PARTS_PAYOUT_PCT;
     const serviceGstPct = settings?.serviceGstPercentage ?? 18;
     const partsGstPct = settings?.partsGstPercentage ?? 18;
 

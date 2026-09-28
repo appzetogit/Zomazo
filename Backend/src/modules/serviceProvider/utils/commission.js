@@ -14,6 +14,9 @@ const Settings = require('../models/Settings');
 
 // Must stay in sync with the Settings schema default.
 const DEFAULT_SERVICE_PAYOUT_PCT = 90;
+// The vendor keeps all of a part's price unless the admin sets otherwise; the
+// Settings model defaults to the same.
+const DEFAULT_PARTS_PAYOUT_PCT = 100;
 
 /**
  * Resolve the configured service payout percentage (vendor's share, 0-100).
@@ -39,6 +42,7 @@ const getCommissionRates = async () => {
 
 module.exports = {
   DEFAULT_SERVICE_PAYOUT_PCT,
+  DEFAULT_PARTS_PAYOUT_PCT,
   getServicePayoutPct,
   getCommissionRates
 };
