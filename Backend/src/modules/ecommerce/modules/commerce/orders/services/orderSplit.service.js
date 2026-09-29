@@ -4,7 +4,7 @@ import { Order } from '../models/order.model.js';
 import { ValidationError, NotFoundError } from '../../../../core/auth/errors.js';
 import { logger } from '../../../../utils/logger.js';
 import { restoreOrderStock } from './inventory.service.js';
-import { applyCheckoutShare, calculateOrderPricing, loadActiveFeeSettings, resolveCoupon } from './order-pricing.service.js';
+import { applyCheckoutShare, calculateOrderPricing, loadActiveFeeSettings, resolveCoupon, sellerFundedShareOfCoupon } from './order-pricing.service.js';
 import { normalizeDeliveryAddress } from '../../shared/geo.utils.js';
 import { readAddressPoint, findZoneForPoint } from '../../shared/zoneServiceability.js';
 import {
@@ -153,8 +153,9 @@ export async function calculateCheckoutPricing(userId, dto = {}) {
     const { gstRate } = await loadActiveFeeSettings();
     const fallbackRate = Number(gstRate || 0);
     const couponCode = appliedCoupon?.code || null;
+    const sellerFundedShare = couponTotal > 0 ? await sellerFundedShareOfCoupon(couponCode) : 1;
     const afterCoupon = stores.map((s, i) =>
-        applyCheckoutShare(s.base, s.items, { couponShare: couponShares[i], fallbackRate, couponCode }));
+        applyCheckoutShare(s.base, s.items, { couponShare: couponShares[i], fallbackRate, couponCode, sellerFundedShare }));
 
     // Coins, capped against the cart after the coupon, shared the same way.
     let coinsUsed = 0;
@@ -177,6 +178,7 @@ export async function calculateCheckoutPricing(userId, dto = {}) {
             coinsDiscount: round2(coins * coinValue),
             fallbackRate,
             couponCode,
+            sellerFundedShare,
         });
         return {
             sellerId: s.sellerId,

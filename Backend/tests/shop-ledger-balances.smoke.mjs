@@ -1,5 +1,6 @@
 /**
- * The Shop's ledger accounts for every rupee the customer paid.
+ * The Shop's ledger accounts for every rupee the customer paid, and GST
+ * follows who funded the coupon.
  *
  * Run: node tests/shop-ledger-balances.smoke.mjs
  */
@@ -41,6 +42,29 @@ await check('seller + rider + platform + tax === what the customer paid, with co
     assert.equal(a.taxAmount, 15.4, 'the delivery fee GST is tax, not profit');
     assert.equal(a.sellerShare, 190);
     assert.equal(a.platformNetProfit, r2(5 + 30 + 20 - 25 - 20), 'the platform wears the coins');
+});
+
+await check('a platform-funded coupon leaves GST on the full price; a seller-funded one lowers it', async () => {
+    const { applyCheckoutShare, sellerFundedShareOfCoupon } = await import('../src/modules/ecommerce/modules/commerce/orders/services/order-pricing.service.js');
+    const { Offer } = await import('../src/modules/ecommerce/modules/commerce/admin/models/offer.model.js');
+    await Offer.collection.insertMany([
+        { couponCode: 'PLAT100', adminBearPercentage: 100, sellerBearPercentage: 0 },
+        { couponCode: 'SELL100', adminBearPercentage: 0, sellerBearPercentage: 100 },
+        { couponCode: 'HALF', adminBearPercentage: 50, sellerBearPercentage: 50 },
+    ]);
+    assert.equal(await sellerFundedShareOfCoupon('PLAT100'), 0);
+    assert.equal(await sellerFundedShareOfCoupon('SELL100'), 1);
+    assert.equal(await sellerFundedShareOfCoupon('HALF'), 0.5);
+
+    // Rs 1000 of 18% goods, Rs 200 coupon.
+    const items = [{ price: 1000, quantity: 1, gstRate: 18 }];
+    const base = { subtotal: 1000, tax: 180, total: 1180 };
+    const platform = applyCheckoutShare(base, items, { couponShare: 200, couponCode: 'PLAT100', sellerFundedShare: 0 });
+    const seller = applyCheckoutShare(base, items, { couponShare: 200, couponCode: 'SELL100', sellerFundedShare: 1 });
+    assert.equal(platform.tax, 180, 'tax on the full Rs 1000');
+    assert.equal(platform.total, 980, 'the customer still saves the full Rs 200');
+    assert.equal(seller.tax, 144, 'tax on Rs 800');
+    assert.equal(seller.total, 944);
 });
 
 await mongoose.disconnect();

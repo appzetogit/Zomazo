@@ -21,6 +21,30 @@ import { getActiveZones, zoneEtaMinutes } from '../../shared/zoneServiceability.
 import { AVG_SPEED_KMPH, PACKING_MINUTES } from './order.helpers.js';
 import { checkFirstOrderEligibility } from './firstOrderGuard.service.js';
 import { addressBookOwner } from '../../../../../../core/identity/addressBook.js';
+import { splitDiscountForOffer } from '../../shared/discountSplit.util.js';
+
+/**
+ * How much of a coupon the SELLER funds, 0..1 -- the only part that comes off
+ * the taxable value.
+ *
+ * A seller's discount given at the time of supply reduces the value GST is
+ * charged on. A platform-funded coupon does not: the seller is still paid the
+ * full price (orderTransaction.service.js charges the coupon to the platform),
+ * so the supply is worth the full price and the tax is due on it. Taxing only
+ * what the customer paid under-collected GST on every order using one. Food
+ * and Quick apply this since 23 Sep.
+ */
+export async function sellerFundedShareOfCoupon(couponCode) {
+  if (!couponCode) return 1;
+  const offer = await Offer.findOne({ couponCode: String(couponCode).trim().toUpperCase() })
+    .select('adminBearPercentage sellerBearPercentage createdByRole')
+    .lean()
+    .catch(() => null);
+  // Unknown offer: the ledger charges it to the platform, so the tax follows.
+  if (!offer) return 0;
+  const { sellerBearPercentage } = splitDiscountForOffer(offer, 100);
+  return Math.max(0, Math.min(1, (Number(sellerBearPercentage) || 0) / 100));
+}
 
 const round2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
 
@@ -539,9 +563,10 @@ export async function resolveCoupon({ userId, codeRaw = '', subtotalsBySeller, p
  * Coins are a way of paying, not a discount on the goods, so they come off
  * the total without changing the tax.
  */
-export function applyCheckoutShare(pricing, items, { couponShare = 0, coinsDiscount = 0, fallbackRate = 0, couponCode = null } = {}) {
+export function applyCheckoutShare(pricing, items, { couponShare = 0, coinsDiscount = 0, fallbackRate = 0, couponCode = null, sellerFundedShare = 1 } = {}) {
   const discount = round2(Math.max(0, Math.min(Number(pricing.subtotal) || 0, Number(couponShare) || 0)));
-  const tax = computeItemsTax(items, { subtotal: Number(pricing.subtotal) || 0, discount, fallbackRate });
+  // Only the seller-funded part of the coupon lowers the taxable value.
+  const tax = computeItemsTax(items, { subtotal: Number(pricing.subtotal) || 0, discount: round2(discount * sellerFundedShare), fallbackRate });
   const beforeCoins = round2(Math.max(0, (Number(pricing.total) || 0) - ((Number(pricing.tax) || 0) - tax) - discount));
   const coins = round2(Math.max(0, Math.min(Number(coinsDiscount) || 0, beforeCoins)));
   return {
@@ -610,10 +635,12 @@ export async function calculateOrderPricing(userId, dto, options = {}) {
       deviceId: dto.deviceId,
     });
 
-  // GST is charged on the post-discount item value (discount is already clamped to <= subtotal).
+  // GST is charged on the item value less the SELLER-funded part of the coupon;
+  // a platform-funded coupon leaves the taxable value whole (sellerFundedShareOfCoupon).
+  const sellerFunded = discount > 0 ? await sellerFundedShareOfCoupon(appliedCoupon?.code) : 1;
   const tax = computeItemsTax(items, {
     subtotal,
-    discount,
+    discount: round2(discount * sellerFunded),
     fallbackRate: Number(feeSettings.gstRate || 0),
   });
 

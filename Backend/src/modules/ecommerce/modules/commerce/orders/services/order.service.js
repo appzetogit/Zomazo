@@ -38,6 +38,7 @@ import * as orderTransactionService from './orderTransaction.service.js';
 import * as userWalletService from '../../user/services/userWallet.service.js';
 import {
   applyCheckoutShare,
+  sellerFundedShareOfCoupon,
   calculateOrderPricing,
   calculateRiderEarning,
   estimateDeliveryPromiseMinutes,
@@ -651,6 +652,8 @@ export async function createOrder(userId, dto, options = {}) {
         coinsDiscount: checkout.coinsDiscount,
         couponCode: checkout.couponCode,
         fallbackRate: Number(gstRate || 0),
+        // Same funder rule as the checkout's own quote, so the totals agree.
+        sellerFundedShare: Number(checkout.couponShare) > 0 ? await sellerFundedShareOfCoupon(checkout.couponCode) : 1,
       });
     }
     const normalizedPricing = {
