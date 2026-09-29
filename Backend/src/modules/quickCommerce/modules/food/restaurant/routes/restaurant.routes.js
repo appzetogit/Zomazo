@@ -312,12 +312,24 @@ router.post('/categories', authMiddleware, requireRestaurant, createCategoryCont
 router.patch('/categories/:id', authMiddleware, requireRestaurant, updateCategoryController);
 router.delete('/categories/:id', authMiddleware, requireRestaurant, deleteCategoryController);
 
+/*
+ * A seller's product write drops the customer caches AFTER it succeeds. They
+ * were dropped before the write, so a customer request landing in between
+ * re-cached the old price for another minute, and the product feed
+ * (public_foods) was never dropped at all.
+ */
+const PRODUCT_CACHES = ['restaurant_menu:*', 'search_products:*', 'public_foods:*'];
+const clearProductCachesAfterWrite = (req, res, next) => {
+    res.on('finish', () => {
+        if (res.statusCode >= 400) return;
+        Promise.all(PRODUCT_CACHES.map((p) => invalidateCache(p))).catch(() => {});
+    });
+    next();
+};
+
 // Menu (restaurant dashboard) - only fields needed by UI
 router.get('/menu', authMiddleware, requireRestaurant, getMenuController);
-router.patch('/menu', authMiddleware, requireRestaurant, async (req, res, next) => {
-    await invalidateCache('restaurant_menu:*');
-    next();
-}, updateMenuController);
+router.patch('/menu', authMiddleware, requireRestaurant, clearProductCachesAfterWrite, updateMenuController);
 
 // Feedback (restaurant dashboard)
 router.post('/feedback-experience', authMiddleware, requireRestaurant, feedbackExperienceController.createFeedbackExperience);
@@ -326,30 +338,15 @@ router.post('/feedback-experience', authMiddleware, requireRestaurant, feedbackE
 router.get('/restaurants/:id/addons', cacheResponse(SLOW_TTL, 'restaurant_addons'), getPublicRestaurantAddonsController);
 
 // Foods (restaurant creates/updates items -> stored in food_items collection)
-router.post('/foods', authMiddleware, requireRestaurant, async (req, res, next) => {
-    await invalidateCache('restaurant_menu:*');
-    next();
-}, createRestaurantFoodController);
+router.post('/foods', authMiddleware, requireRestaurant, clearProductCachesAfterWrite, createRestaurantFoodController);
 // Declared before /foods/:id so "stock" and "low-stock" are not swallowed as ids.
-router.patch('/foods/stock', authMiddleware, requireRestaurant, async (req, res, next) => {
-    await invalidateCache('restaurant_menu:*');
-    await invalidateCache('search_products:*');
-    next();
-}, updateRestaurantFoodStockController);
+router.patch('/foods/stock', authMiddleware, requireRestaurant, clearProductCachesAfterWrite, updateRestaurantFoodStockController);
 router.get('/foods/low-stock', authMiddleware, requireRestaurant, listLowStockFoodsController);
 router.get('/analytics', authMiddleware, requireRestaurant, getAnalyticsController);
 
-router.delete('/foods/:id', authMiddleware, requireRestaurant, async (req, res, next) => {
-    await invalidateCache('restaurant_menu:*');
-    await invalidateCache('search_products:*');
-    next();
-}, deleteRestaurantFoodController);
+router.delete('/foods/:id', authMiddleware, requireRestaurant, clearProductCachesAfterWrite, deleteRestaurantFoodController);
 
-router.patch('/foods/:id', authMiddleware, requireRestaurant, async (req, res, next) => {
-    await invalidateCache('restaurant_menu:*');
-    await invalidateCache('search_products:*');
-    next();
-}, updateRestaurantFoodController);
+router.patch('/foods/:id', authMiddleware, requireRestaurant, clearProductCachesAfterWrite, updateRestaurantFoodController);
 
 // Bulk Menu Upload
 router.get('/bulk-upload/template', authMiddleware, requireRestaurant, downloadBulkMenuTemplateController);

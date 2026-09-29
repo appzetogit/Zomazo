@@ -9719,6 +9719,13 @@ export const listOwnerDocumentUploadFields = async ({ activeOnly = true } = {}) 
     // every notification in between would be rejected as a SenderId mismatch.
     const { invalidateFirebaseSenderCache } = await import('../../../../core/notifications/firebase.service.js');
     invalidateFirebaseSenderCache();
+    // Quick and the Shop have their own senders, each caching the key and its
+    // OAuth token; without this they kept the old project until a restart.
+    // Best effort: a failure here must not fail the save.
+    await Promise.all([
+      import('../../../quickCommerce/core/notifications/firebase.service.js').then((m) => m.invalidateFirebaseSenderCache()),
+      import('../../../ecommerce/core/notifications/firebase.service.js').then((m) => m.clearCachedServiceAccount()),
+    ]).catch(() => {});
     return { settings: settings.firebase };
   };
 
