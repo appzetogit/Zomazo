@@ -662,7 +662,9 @@ export async function deleteRestaurantFood(restaurantId, foodId) {
     // shoppers until the cache expires.
     try {
         const { invalidateCache } = await import('../../../../middleware/cache.js');
-        await invalidateCache(`restaurant_menu:${context.restaurantId}`);
+        // Keys are prefix:METHOD:url, so a bare id matched nothing; only the
+        // wildcard clears the menu (Food's a486f992, missed here).
+        await invalidateCache('restaurant_menu:*');
         await invalidateCache('search_products:*');
     } catch (err) {
         console.error('Failed to invalidate cache after product delete:', err);
