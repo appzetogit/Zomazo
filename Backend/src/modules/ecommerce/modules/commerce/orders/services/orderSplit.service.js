@@ -20,6 +20,7 @@ import {
     releasePaidOrder,
 } from './order.service.js';
 import { deductWalletBalance, refundWalletBalance } from '../../user/services/userWallet.service.js';
+import { claimCouponForCustomer, returnCouponClaim, releaseCouponClaim } from './couponClaim.service.js';
 import {
     createRazorpayOrder,
     fetchRazorpayOrder,
@@ -229,6 +230,7 @@ async function unwindCheckout(checkout, orders) {
         }
     }
     await releaseFirstOrderClaim({ checkoutId: checkout._id }).catch(() => {});
+    await releaseCouponClaim(Checkout, checkout._id).catch(() => {});
     try {
         await reverseRedemption(checkout._id, { note: 'Checkout not completed' });
     } catch (err) {
@@ -291,12 +293,29 @@ export async function createSplitCheckout(userId, dto = {}) {
         }
     }
 
+    // The coupon's per-customer use, claimed once for the whole checkout.
+    let couponClaim = null;
+    if (quote.discount > 0 && quote.couponCode) {
+        try {
+            couponClaim = await claimCouponForCustomer({ couponCode: quote.couponCode, userId });
+        } catch (err) {
+            await releaseFirstOrderClaim({ checkoutId: checkout._id }).catch(() => {});
+            await Checkout.deleteOne({ _id: checkout._id });
+            throw err;
+        }
+        if (couponClaim) {
+            checkout.couponClaim = { offerId: couponClaim.offerId, releasedAt: null };
+            await checkout.save();
+        }
+    }
+
     // Coins first: if they are no longer there, nothing else has happened yet.
     if (quote.coinsUsed > 0) {
         try {
             await redeemCoins({ userId, orderId: checkout._id, coins: quote.coinsUsed });
         } catch (err) {
             await releaseFirstOrderClaim({ checkoutId: checkout._id }).catch(() => {});
+            if (couponClaim) await returnCouponClaim(couponClaim, userId);
             await Checkout.deleteOne({ _id: checkout._id });
             throw err;
         }
@@ -524,6 +543,7 @@ export async function abandonCheckout(userId, checkoutId) {
     await Checkout.updateOne({ _id: checkout._id }, { $set: { status: 'cancelled', 'payment.status': 'failed' } });
     await reverseRedemption(checkout._id, { note: 'Payment not completed' });
     await releaseFirstOrderClaim({ checkoutId: checkout._id });
+    await releaseCouponClaim(Checkout, checkout._id);
     return { abandoned: true };
 }
 

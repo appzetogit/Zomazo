@@ -165,8 +165,8 @@ its Quick and Shop twins. Ported, each with a smoke test:
 | ledger: delivery GST is tax, coins charged to the platform, no zero floor on the seller's share | Shop; Quick (floor) |
 | GST follows who funded the coupon | Shop |
 
-Still open: the Shop's per-customer coupon limit is checked by a read at
-pricing and counted after placement, so parallel orders can each use a
-one-per-customer coupon. Food claims it atomically at placement and releases
-it when an unpaid order is given up; the Shop needs the same claim/release on
-every abandon, sweep and unwind path before it can be switched on.
+The Shop's per-customer coupon limit is now claimed atomically at placement
+(`ecommerce/.../orders/services/couponClaim.service.js`), stored on the order or
+checkout as `couponClaim`, and given back once when the unpaid order or
+checkout is abandoned, swept or unwound. A customer's own unpaid order holding
+the coupon gives way to their retry, as in Food.

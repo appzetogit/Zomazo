@@ -35,6 +35,7 @@ import { addOrderJob } from '../../../../queues/producers/order.producer.js';
 import { fetchPolyline } from '../utils/googleMaps.js';
 import { getFirebaseDB } from '../../../../config/firebase.js';
 import * as orderTransactionService from './orderTransaction.service.js';
+import { claimCouponForCustomer, returnCouponClaim, releaseCouponClaim } from './couponClaim.service.js';
 import * as userWalletService from '../../user/services/userWallet.service.js';
 import {
   applyCheckoutShare,
@@ -140,11 +141,14 @@ export async function incrementCouponUsageForOrder(order, userId) {
           `Coupon ${couponCode} reached usage limit before increment for order ${order?._id}; discount honored.`,
         );
       }
-      await OfferUsage.updateOne(
-        { offerId: offer._id, userId: toObjectId(userId, "User ID") },
-        { $inc: { count: 1 }, $set: { lastUsedAt: new Date() } },
-        { upsert: true },
-      );
+      // Claimed at placement already (couponClaim.service.js): not counted twice.
+      if (!order?.couponClaim?.offerId) {
+        await OfferUsage.updateOne(
+          { offerId: offer._id, userId: toObjectId(userId, "User ID") },
+          { $inc: { count: 1 }, $set: { lastUsedAt: new Date() } },
+          { upsert: true },
+        );
+      }
     }
   } catch (err) {
     logger.error(`Coupon usage update failed: ${err.message}`);
@@ -184,6 +188,7 @@ export async function deletePendingPaymentOrder(orderLike) {
 
   // An abandoned payment must not hold units forever.
   await restoreOrderStock(orderLike);
+  if (!orderLike.checkoutId) await releaseCouponClaim(Order, orderLike._id);
 
   // Part of a split checkout: give back this order's coins, and once none of
   // the checkout's orders are left, close the checkout and return the rest.
@@ -206,6 +211,7 @@ export async function deletePendingPaymentOrder(orderLike) {
           { $set: { status: 'cancelled', 'payment.status': 'failed' } },
         );
         await reverseRedemption(orderLike.checkoutId, { note: 'Payment not completed' });
+        await releaseCouponClaim(Checkout, orderLike.checkoutId);
       }
     } catch (err) {
       logger.error(`Returning coins for abandoned order ${orderLike._id} failed: ${err?.message || err}`);
@@ -873,11 +879,26 @@ export async function createOrder(userId, dto, options = {}) {
       }
     }
 
+    // A single order's coupon use, claimed before the order exists (a checkout
+    // claims once for all its orders).
+    let couponClaim = null;
+    if (!checkout && normalizedPricing.couponCode && normalizedPricing.discount > 0) {
+      try {
+        couponClaim = await claimCouponForCustomer({ couponCode: normalizedPricing.couponCode, userId });
+      } catch (err) {
+        await releaseReservations(reservation);
+        if (firstOrderClaimed) await releaseFirstOrderClaim({ orderId: order._id }).catch(() => {});
+        throw err;
+      }
+      if (couponClaim) order.couponClaim = { offerId: couponClaim.offerId, releasedAt: null };
+    }
+
     try {
       await order.save();
     } catch (err) {
       await releaseReservations(reservation);
       if (firstOrderClaimed) await releaseFirstOrderClaim({ orderId: order._id }).catch(() => {});
+      if (couponClaim) await returnCouponClaim(couponClaim, userId);
       throw err;
     }
 
@@ -906,6 +927,7 @@ export async function createOrder(userId, dto, options = {}) {
       } catch (err) {
         await restoreOrderStock(order);
         await Order.deleteOne({ _id: order._id });
+        if (couponClaim) await returnCouponClaim(couponClaim, userId);
         throw err;
       }
     }

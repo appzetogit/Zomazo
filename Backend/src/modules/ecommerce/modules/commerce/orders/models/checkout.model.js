@@ -86,6 +86,11 @@ const checkoutSchema = new mongoose.Schema(
             default: 'pending',
             index: true,
         },
+        /** The coupon use this held for its customer (couponClaim.service.js); released once if given up. */
+        couponClaim: {
+            offerId: { type: mongoose.Schema.Types.ObjectId, default: null },
+            releasedAt: { type: Date, default: null },
+        },
         appliedCoupon: {
             type: mongoose.Schema.Types.Mixed,
             default: null,

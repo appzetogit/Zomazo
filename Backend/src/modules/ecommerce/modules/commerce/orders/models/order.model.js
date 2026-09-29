@@ -393,6 +393,11 @@ const orderSchema = new mongoose.Schema(
         stockRestoredAt: { type: Date, default: null },
         /** Set when an unpaid online order is given up (kept cancelled, not deleted). */
         abandonedAt: { type: Date, default: undefined },
+        /** The coupon use this held for its customer (couponClaim.service.js); released once if given up. */
+        couponClaim: {
+            offerId: { type: mongoose.Schema.Types.ObjectId, default: null },
+            releasedAt: { type: Date, default: null },
+        },
         deliveryFleet: { type: String, default: 'standard', trim: true },
         scheduledAt: { type: Date, default: null },
         /** Quick orders: delivery promise (minutes from placing) quoted at checkout; the SLA report measures against it. */
