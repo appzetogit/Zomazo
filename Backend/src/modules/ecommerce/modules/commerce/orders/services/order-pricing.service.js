@@ -22,6 +22,16 @@ import { AVG_SPEED_KMPH, PACKING_MINUTES } from './order.helpers.js';
 import { checkFirstOrderEligibility } from './firstOrderGuard.service.js';
 import { addressBookOwner } from '../../../../../../core/identity/addressBook.js';
 import { splitDiscountForOffer } from '../../shared/discountSplit.util.js';
+import {
+  DELIVERY_FEE_GST_RATE,
+  computeDeliveryFeeGst,
+  computeItemsTax,
+  resolveUserDeliveryFee,
+  calculateRiderEarning,
+} from '../../../../../../core/pricing/deliveryMath.js';
+// One copy of the delivery and tax maths for Quick and the Shop
+// (core/pricing/deliveryMath.js); re-exported for this module's callers.
+export { DELIVERY_FEE_GST_RATE, computeDeliveryFeeGst, computeItemsTax, resolveUserDeliveryFee, calculateRiderEarning };
 
 /**
  * How much of a coupon the SELLER funds, 0..1 -- the only part that comes off
@@ -49,13 +59,7 @@ export async function sellerFundedShareOfCoupon(couponCode) {
 const round2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
 
 /** Fixed 18% GST on delivery fee (separate from item GST in fee settings). */
-export const DELIVERY_FEE_GST_RATE = 0.18;
 
-export function computeDeliveryFeeGst(deliveryFee) {
-  const base = Math.max(0, Number(deliveryFee) || 0);
-  if (base <= 0) return 0;
-  return round2(base * DELIVERY_FEE_GST_RATE);
-}
 
 const applyDeliveryModePricing = (pricing, deliveryMode, quickSurcharge = 0) => {
   const surcharge = Math.max(0, Number(quickSurcharge) || 0);
@@ -146,50 +150,7 @@ export async function getDeliveryDistanceKm(seller, deliveryAddress) {
 
 // Single money-rounding rule (2 decimals) so preview and charged totals always match.
 
-function resolveBaseDeliveryFee(feeSettings = {}) {
-  const ranges = Array.isArray(feeSettings.deliveryFeeRanges)
-    ? feeSettings.deliveryFeeRanges
-    : [];
-  const rangeFees = ranges
-    .map((range) => Number(range?.fee))
-    .filter((fee) => Number.isFinite(fee) && fee >= 0);
 
-  const flat = Number(feeSettings.deliveryFee);
-  const hasPositiveFlat = Number.isFinite(flat) && flat > 0;
-
-  if (rangeFees.length > 0) {
-    const minRangeFee = Math.min(...rangeFees);
-    return hasPositiveFlat ? flat : minRangeFee;
-  }
-
-  return Number.isFinite(flat) && flat >= 0 ? flat : 0;
-}
-
-function matchFeeRange(ranges, distanceKm, pickValue) {
-  if (!Array.isArray(ranges) || ranges.length === 0 || !Number.isFinite(distanceKm)) {
-    return null;
-  }
-
-  const sorted = [...ranges].sort((a, b) => Number(a.min) - Number(b.min));
-  for (let i = 0; i < sorted.length; i += 1) {
-    const range = sorted[i] || {};
-    const min = Number(range.min);
-    const max = Number(range.max);
-    if (!Number.isFinite(min) || !Number.isFinite(max)) continue;
-
-    const isLast = i === sorted.length - 1;
-    const inRange = isLast
-      ? distanceKm >= min && distanceKm <= max
-      : distanceKm >= min && distanceKm < max;
-
-    if (inRange) {
-      const value = pickValue(range);
-      return Number.isFinite(value) ? value : null;
-    }
-  }
-
-  return null;
-}
 
 export async function loadActiveFeeSettings() {
   const feeDoc = await FeeSettings.findOne({ isActive: { $ne: false } })
@@ -234,118 +195,8 @@ async function flooredQuickPromise(estimate, zoneId) {
   }
 }
 
-/**
- * GST across a basket whose lines can sit in different slabs.
- *
- * Groceries are taxed per product — flour at 0, biscuits at 18 — so charging
- * one rate on the whole basket is wrong in both directions depending on what
- * the customer bought. A line with no rate of its own falls back to the
- * order-wide rate, which makes this identical to the old single-rate maths for
- * any basket of items that predate per-product slabs.
- *
- * The discount reduces every line in proportion to its share of the basket,
- * because a basket-level coupon is not attributable to any one product.
- */
-export function computeItemsTax(items = [], { subtotal = 0, discount = 0, fallbackRate = 0 } = {}) {
-  if (!(subtotal > 0)) return 0;
 
-  const taxableShare = Math.max(0, subtotal - discount) / subtotal;
-  let tax = 0;
 
-  for (const item of items) {
-    // null and undefined mean "no slab of its own" and must reach the fallback.
-    // Number(null) is 0, so testing the coerced value would silently make every
-    // untagged item tax-free.
-    const own = item?.gstRate;
-    const hasOwnRate = own !== null && own !== undefined && Number.isFinite(Number(own));
-    const rate = hasOwnRate ? Number(own) : Number(fallbackRate) || 0;
-    if (!(rate > 0)) continue;
-
-    const lineValue = (Number(item?.price) || 0) * (Number(item?.quantity) || 1);
-    tax += lineValue * taxableShare * (rate / 100);
-  }
-
-  return Math.round(tax);
-}
-
-export function resolveUserDeliveryFee(feeSettings = {}, { subtotal = 0, distanceKm = null } = {}) {
-  const ranges = Array.isArray(feeSettings.deliveryFeeRanges)
-    ? feeSettings.deliveryFeeRanges
-    : [];
-
-  if (ranges.length > 0 && Number.isFinite(distanceKm)) {
-    const matchedFee = matchFeeRange(ranges, distanceKm, (range) => Number(range.fee));
-    if (Number.isFinite(matchedFee)) {
-      return {
-        deliveryFee: matchedFee,
-        distanceKm: Number(distanceKm.toFixed(2)),
-        source: 'distance',
-      };
-    }
-  }
-
-  const fallbackFee = resolveBaseDeliveryFee(feeSettings);
-  return {
-    deliveryFee: fallbackFee,
-    distanceKm: Number.isFinite(distanceKm) ? Number(distanceKm.toFixed(2)) : null,
-    source: Number.isFinite(distanceKm) ? 'default_unmatched_range' : 'default',
-  };
-}
-
-export function calculateRiderEarning(feeSettings = {}, distanceKm) {
-  const ranges = Array.isArray(feeSettings.deliveryFeeRanges)
-    ? feeSettings.deliveryFeeRanges
-    : [];
-  if (ranges.length === 0) return 0;
-
-  // basePay and perKm are mutually exclusive (the admin UI enforces this too):
-  // a flat basePay wins, otherwise pay per km of the actual trip.
-  const payFor = (range, km) => {
-    const basePay = Number(range?.deliveryBoyBasePay || 0);
-    const perKm = Number(range?.deliveryBoyPerKm || 0);
-
-    if (basePay > 0) return basePay;
-    if (perKm > 0) return km * perKm;
-    return 0;
-  };
-
-  // An unknown distance is not a zero-kilometre trip.
-  //
-  // Number(null) is 0, and 0 is finite and non-negative, so coercing before
-  // testing made every order whose distance could not be resolved look like a
-  // delivery to the shop's own door. calculateDistanceKm returns null (not 0)
-  // when either endpoint lacks coordinates, and resolveUserDeliveryFee already
-  // tells the two apart -- it tests Number.isFinite on the raw value, which is
-  // false for null. This did not, so the customer correctly fell back to the
-  // base fee while the rider was paid for 0 km.
-  //
-  // Falls back to the shortest band, mirroring the customer side's fallback to
-  // the base fee. Deliberately not the widest band: one missing coordinate
-  // should not trigger a full long-distance payout. A perKm-only band is
-  // credited one kilometre so a real delivery never pays nothing.
-  if (distanceKm === null || distanceKm === undefined || distanceKm === '') {
-    const shortest = [...ranges].sort((a, b) => Number(a?.min ?? 0) - Number(b?.min ?? 0))[0];
-    const guaranteed = payFor(shortest, 1);
-    return Number.isFinite(guaranteed) ? Math.round(guaranteed) : 0;
-  }
-
-  const distance = Number(distanceKm);
-  if (!Number.isFinite(distance) || distance < 0) return 0;
-
-  const matched = matchFeeRange(ranges, distance, (range) => payFor(range, distance));
-  // A matched band is authoritative — including an explicit 0.
-  if (matched != null && Number.isFinite(matched)) return Math.round(matched);
-
-  // No band covers this distance. The customer is still charged (resolveUserDeliveryFee
-  // falls back to the base fee), so paying the rider 0 here would mean unpaid work on a
-  // real delivery whenever the bands don't span the dispatch radius. Fall back to the
-  // widest configured band instead of silently zeroing the payout.
-  const widest = [...ranges].sort(
-    (a, b) => Number(a?.max ?? 0) - Number(b?.max ?? 0),
-  )[ranges.length - 1];
-  const fallback = payFor(widest, distance);
-  return Number.isFinite(fallback) ? Math.round(fallback) : 0;
-}
 
 /**
  * The address the trip should be priced against.
