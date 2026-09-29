@@ -2862,6 +2862,13 @@ export async function updateOrderStatusAdmin(orderId, orderStatus, note = "", ad
     assertCanAcceptOrder(order, target);
     assertPrescriptionOrderPriced(order, target);
     assertBillApproved(order, target);
+    // Not before the money: an online order still waiting for its payment could
+    // be confirmed here, which also started dispatch for an order nobody had paid.
+    // (pending_payment is absent from STATUS_PRIORITY, so the advance test below
+    // lets anything through.) Cancelling stays available.
+    if (order.orderStatus === "pending_payment" && !target.startsWith("cancelled")) {
+        throw new ValidationError("This order is still waiting for the customer's payment.");
+    }
     if (!isStatusAdvance(order.orderStatus, orderStatus)) {
         throw new ValidationError(
             `Cannot change order status from '${order.orderStatus}' to '${orderStatus}'`,
