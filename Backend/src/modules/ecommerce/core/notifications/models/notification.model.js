@@ -77,7 +77,17 @@ const notificationSchema = new mongoose.Schema(
 
 notificationSchema.index({ ownerType: 1, ownerId: 1, createdAt: -1 });
 notificationSchema.index({ ownerType: 1, ownerId: 1, isRead: 1, dismissedAt: 1 });
-notificationSchema.index({ broadcastId: 1, ownerType: 1, ownerId: 1 }, { unique: true, sparse: true });
+// Dedupes a broadcast's fan-out: one row per owner per broadcast.
+//
+// Partial, not sparse. A sparse COMPOUND index only skips a document when every
+// indexed field is missing, and ownerType/ownerId are always present -- so rows
+// with no broadcastId were still indexed as (null, ownerType, ownerId), capping
+// every owner at one non-broadcast notification. An existing sparse index must be
+// dropped by hand; mongoose will not alter an index that already exists.
+notificationSchema.index(
+    { broadcastId: 1, ownerType: 1, ownerId: 1 },
+    { unique: true, partialFilterExpression: { broadcastId: { $type: 'objectId' } } }
+);
 notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
 
 export const Notification = ecomModel('Notification', notificationSchema);
