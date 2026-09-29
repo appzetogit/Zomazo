@@ -70,6 +70,39 @@ await check('a seller cannot mark its own order picked up or delivered', async (
     }
 });
 
+await check("a rider cannot cancel, skip the handover code, or read it from the status route", async () => {
+    const svc = await import('../src/modules/ecommerce/modules/commerce/orders/services/order-delivery.service.js');
+    const id = new mongoose.Types.ObjectId();
+    await Order.collection.insertOne({
+        _id: id, orderId: 'SHOPTEST2', userId: new mongoose.Types.ObjectId(), sellerId: new mongoose.Types.ObjectId(),
+        items: [{ itemId: 'i1', name: 'Lamp', price: 500, quantity: 1 }],
+        deliveryAddress: { street: '2 MG Road', city: 'Pune', state: 'MH' },
+        pricing: { subtotal: 500, total: 500 }, payment: { method: 'cash', status: 'cod_pending' },
+        orderStatus: 'ready_for_pickup', deliveryOtp: '9876', dispatch: { deliveryPartnerId: rider, status: 'accepted' },
+    });
+    await assert.rejects(svc.updateOrderStatusDelivery(String(id), rider, 'cancelled_by_seller'), /cannot cancel/);
+    const moved = await svc.updateOrderStatusDelivery(String(id), rider, 'picked_up');
+    assert.equal(moved.deliveryOtp, undefined, 'the handover code is not in the response');
+    await assert.rejects(svc.updateOrderStatusDelivery(String(id), rider, 'delivered'), /Reached drop/);
+    assert.equal((await Order.collection.findOne({ _id: id })).orderStatus, 'picked_up');
+});
+
+await check('a rider cannot accept an order dispatch never offered them', async () => {
+    const svc = await import('../src/modules/ecommerce/modules/commerce/orders/services/order-delivery.service.js');
+    const id = new mongoose.Types.ObjectId();
+    const offered = new mongoose.Types.ObjectId();
+    const stranger = new mongoose.Types.ObjectId();
+    await Order.collection.insertOne({
+        _id: id, orderId: 'SHOPTEST3', userId: new mongoose.Types.ObjectId(), sellerId: new mongoose.Types.ObjectId(),
+        items: [], pricing: { subtotal: 300, total: 300 }, payment: { method: 'razorpay', status: 'paid' },
+        orderStatus: 'confirmed', dispatch: { status: 'unassigned', offeredTo: [{ partnerId: offered, at: new Date() }] },
+    });
+    await assert.rejects(svc.acceptOrderDelivery(String(id), String(stranger)), /not offered to you/);
+    const got = await svc.acceptOrderDelivery(String(id), String(offered));
+    assert.ok(got);
+    assert.equal(String((await Order.collection.findOne({ _id: id })).dispatch.deliveryPartnerId), String(offered));
+});
+
 await mongoose.disconnect();
 await mongo.stop();
 if (failed) {

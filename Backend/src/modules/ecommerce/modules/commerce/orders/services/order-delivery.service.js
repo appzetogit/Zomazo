@@ -245,14 +245,12 @@ export async function listOrdersAvailableDelivery(deliveryPartnerId, query) {
         $or: [
           {
             'dispatch.status': 'unassigned',
-            'dispatch.offeredTo': {
-              $not: {
-                $elemMatch: {
-                  partnerId,
-                  action: 'deassigned',
-                },
-              },
-            },
+            // Only orders dispatch offered this rider (any past offer counts --
+            // dispatch re-offers to earlier recipients), as in Food since 22 Sep.
+            $and: [
+              { 'dispatch.offeredTo.partnerId': partnerId },
+              { 'dispatch.offeredTo': { $not: { $elemMatch: { partnerId, action: 'deassigned' } } } },
+            ],
             orderStatus: { $in: ['confirmed', 'preparing', 'ready_for_pickup'] },
           },
           {
@@ -471,14 +469,13 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
       $or: [
         {
           'dispatch.status': 'unassigned',
-          'dispatch.offeredTo': {
-            $not: {
-              $elemMatch: {
-                partnerId,
-                action: 'deassigned',
-              },
-            },
-          },
+          // Offered to this rider by dispatch: any rider could accept any
+          // unassigned order before -- another zone's, or a cash trip over
+          // their limit that dispatch had deliberately skipped them for.
+          $and: [
+            { 'dispatch.offeredTo.partnerId': partnerId },
+            { 'dispatch.offeredTo': { $not: { $elemMatch: { partnerId, action: 'deassigned' } } } },
+          ],
         },
         {
           'dispatch.status': 'assigned',
@@ -514,6 +511,12 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
     }
     if (!acceptedStatuses.includes(existing.orderStatus)) {
       throw new ValidationError('Order not ready for delivery assignment');
+    }
+    if (
+      existing.dispatch?.status === 'unassigned' &&
+      !(existing.dispatch?.offeredTo || []).some((o) => String(o?.partnerId) === String(deliveryPartnerId))
+    ) {
+      throw new ForbiddenError('This order was not offered to you');
     }
     if (
       existing.dispatch?.status === 'accepted' &&
@@ -1077,6 +1080,12 @@ export async function completeDelivery(orderId, deliveryPartnerId, body = {}) {
   if (!hasPickedUp) {
     throw new ValidationError('Confirm pickup before completing this delivery.');
   }
+  // A handover code must be in play. Pickup and "reached drop" create it; an
+  // order moved to picked_up through the plain status route had none, so it
+  // completed with no code at all (Food requires it since 22 Sep).
+  if (!order.deliveryVerification?.dropOtp?.required) {
+    throw new ValidationError('Tap "Reached drop" first. The customer gets a handover code to share with you.');
+  }
 
   if (
     otp &&
@@ -1208,6 +1217,19 @@ export async function updateOrderStatusDelivery(orderId, deliveryPartnerId, orde
     throw new ForbiddenError('Not your order');
   }
 
+  /*
+   * Riders move an order through pickup here. Two moves are not theirs, as in
+   * Food since 22 Sep: 'delivered' goes through completeDelivery (pickup,
+   * handover code, cash, ledger) -- set here it skipped all of them -- and a
+   * rider never cancels, which skipped the refund and released nothing.
+   */
+  if (String(orderStatus || '').startsWith('cancelled')) {
+    throw new ForbiddenError('Riders cannot cancel orders. Contact support if the order cannot be delivered.');
+  }
+  if (orderStatus === 'delivered') {
+    return completeDelivery(orderId, deliveryPartnerId, {});
+  }
+
   const from = order.orderStatus;
   if (!isStatusAdvance(from, orderStatus)) {
       throw new ValidationError(`Current order status '${from}' is further ahead than '${orderStatus}'. Order cannot be moved backwards.`);
@@ -1228,7 +1250,8 @@ export async function updateOrderStatusDelivery(orderId, deliveryPartnerId, orde
     from,
     to: orderStatus,
   });
-  return order.toObject();
+  // Loaded with the handover code: never hand that to the rider.
+  return sanitizeOrderForDeliveryPartner(order);
 }
 
 
