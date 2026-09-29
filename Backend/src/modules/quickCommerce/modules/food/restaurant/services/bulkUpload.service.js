@@ -413,8 +413,13 @@ export async function processBulkMenuUpload(restaurantId, fileBuffer, options = 
 
     if (results.success > 0) {
         try {
+            // Keys are prefix:METHOD:url, so `restaurant_menu:<id>` never matched
+            // one and a bulk upload's prices waited out the cache. Clear every
+            // cached response that carries a price instead.
             const { invalidateCache } = await import('../../../../middleware/cache.js');
-            await invalidateCache(`restaurant_menu:${restaurantId}`);
+            for (const pattern of ['restaurant_menu:*', 'public_foods:*', 'search_products:*']) {
+                await invalidateCache(pattern);
+            }
         } catch (cacheErr) {
             console.error('Failed to invalidate cache after bulk upload:', cacheErr);
         }

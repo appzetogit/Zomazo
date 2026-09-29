@@ -356,10 +356,16 @@ router.get('/bulk-upload/template', authMiddleware, requireRestaurant, downloadB
 router.post('/bulk-upload', authMiddleware, requireRestaurant, upload.single('file'), uploadBulkMenuController);
 
 // Add-ons (restaurant dashboard) - approval handled by admin
+// The public add-on list is cached for ten minutes; switching one off or
+// deleting it must drop that copy, or customers keep being offered it.
+const clearAddonCache = async (req, res, next) => {
+    await invalidateCache('restaurant_addons:*');
+    next();
+};
 router.get('/addons', authMiddleware, requireRestaurant, listAddonsController);
-router.post('/addons', authMiddleware, requireRestaurant, createAddonController);
-router.patch('/addons/:id', authMiddleware, requireRestaurant, updateAddonController);
-router.delete('/addons/:id', authMiddleware, requireRestaurant, deleteAddonController);
+router.post('/addons', authMiddleware, requireRestaurant, clearAddonCache, createAddonController);
+router.patch('/addons/:id', authMiddleware, requireRestaurant, clearAddonCache, updateAddonController);
+router.delete('/addons/:id', authMiddleware, requireRestaurant, clearAddonCache, deleteAddonController);
 
 // Orders (restaurant dashboard)
 router.get('/orders', authMiddleware, requireRestaurant, orderController.listOrdersRestaurantController);
