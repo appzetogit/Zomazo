@@ -5722,24 +5722,37 @@ export async function getWithdrawals(query = {}) {
     return { requests, total, page, limit };
 }
 
+/*
+ * A withdrawal is decided once. Any status could be set at any time, so a paid
+ * (approved) request could be flipped to rejected -- or back to pending -- and
+ * its amount counted as available again: the seller withdraws it twice. Food
+ * locked this on 11 Sep. Only a pending request moves, claimed in one update
+ * so two admins deciding together cannot both win; re-sending the same
+ * decision only updates the notes.
+ */
 export async function updateWithdrawalStatus(id, { status, adminNote, rejectionReason, transactionId }) {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) throw new ValidationError('Invalid withdrawal ID');
-    
-    const update = {
-        status: String(status).toLowerCase(),
-        adminNote,
-        rejectionReason,
-        transactionId,
-        processedAt: new Date()
-    };
 
-    const updated = await SellerWithdrawal.findByIdAndUpdate(
-        id,
-        { $set: update },
+    const next = String(status || '').toLowerCase() === 'processed' ? 'approved' : String(status || '').toLowerCase();
+    if (!['approved', 'rejected', 'pending'].includes(next)) throw new ValidationError('Invalid withdrawal status');
+
+    const notes = { adminNote, rejectionReason, transactionId };
+    let updated = await SellerWithdrawal.findOneAndUpdate(
+        { _id: id, status: 'pending' },
+        { $set: { status: next, ...notes, processedAt: next === 'pending' ? undefined : new Date() } },
         { new: true }
     ).populate('sellerId', 'sellerName').lean();
 
-    if (!updated) throw new ValidationError('Withdrawal request not found');
+    if (!updated) {
+        const current = await SellerWithdrawal.findById(id).select('status').lean();
+        if (!current) throw new ValidationError('Withdrawal request not found');
+        if (current.status !== next) throw new ValidationError(`Cannot change a ${current.status} withdrawal request`);
+        updated = await SellerWithdrawal.findOneAndUpdate(
+            { _id: id, status: next },
+            { $set: notes },
+            { new: true }
+        ).populate('sellerId', 'sellerName').lean();
+    }
     return updated;
 }
 
@@ -5793,54 +5806,57 @@ export async function updateDeliveryWithdrawalStatus(id, { status, adminNote, re
         throw new ValidationError('Invalid withdrawal status');
     }
 
-    const existing = await DeliveryWithdrawal.findById(id);
-    if (!existing) throw new ValidationError('Withdrawal request not found');
-
-    const previousStatus = String(existing.status || '').toLowerCase();
     const nextStatus = normalizedStatus;
-    const amount = Number(existing.amount || 0);
-    const deliveryPartnerId = existing.deliveryPartnerId;
+    const notes = { adminNote, rejectionReason, transactionId };
+    const existing = await DeliveryWithdrawal.findById(id).lean();
+    if (!existing) throw new ValidationError('Withdrawal request not found');
+    const previousStatus = String(existing.status || '').toLowerCase();
 
-    if (previousStatus !== 'pending' && previousStatus !== nextStatus) {
-        throw new ValidationError(`Cannot change a ${previousStatus} withdrawal request`);
-    }
+    if (previousStatus !== 'pending' || nextStatus === 'pending') {
+        // Decided already (or staying pending): the same decision may update its
+        // notes; anything else is refused. No money moves on this path.
+        if (previousStatus !== nextStatus) {
+            throw new ValidationError(`Cannot change a ${previousStatus} withdrawal request`);
+        }
+        await DeliveryWithdrawal.updateOne({ _id: id, status: previousStatus }, { $set: notes });
+    } else {
+        /*
+         * Claim the decision first, in one update: two admins approving at once
+         * both read 'pending' and both debited the wallet. Then move the money;
+         * if the balance cannot cover it, the claim is undone.
+         */
+        const claimed = await DeliveryWithdrawal.findOneAndUpdate(
+            { _id: id, status: 'pending' },
+            { $set: { status: nextStatus, ...notes, processedAt: new Date() } },
+            { new: true }
+        );
+        if (!claimed) throw new ValidationError('This withdrawal was just decided by someone else');
 
-    if (amount > 0 && previousStatus === 'pending' && nextStatus !== 'pending') {
-        const wallet = await DeliveryWallet.findOne({ deliveryPartnerId });
-        const currentBalance = Number(wallet?.balance) || 0;
-        const currentLocked = Number(wallet?.lockedAmount) || 0;
-
-        if (nextStatus === 'approved') {
-            if (currentBalance < amount) {
-                throw new ValidationError('Delivery wallet balance is lower than the requested amount');
-            }
-
-            await DeliveryWallet.findOneAndUpdate(
-                { deliveryPartnerId },
-                {
-                    $inc: {
-                        balance: -amount,
-                        totalSettled: amount,
-                        lockedAmount: -Math.min(currentLocked, amount)
-                    }
+        const amount = Number(existing.amount || 0);
+        const deliveryPartnerId = existing.deliveryPartnerId;
+        if (amount > 0) {
+            const wallet = await DeliveryWallet.findOne({ deliveryPartnerId }).lean();
+            const unlock = Math.min(Number(wallet?.lockedAmount) || 0, amount);
+            if (nextStatus === 'approved') {
+                const debited = await DeliveryWallet.findOneAndUpdate(
+                    { deliveryPartnerId, balance: { $gte: amount } },
+                    { $inc: { balance: -amount, totalSettled: amount, lockedAmount: -unlock } }
+                );
+                if (!debited) {
+                    await DeliveryWithdrawal.updateOne(
+                        { _id: id, status: 'approved' },
+                        { $set: { status: 'pending' }, $unset: { processedAt: 1 } }
+                    );
+                    throw new ValidationError('Delivery wallet balance is lower than the requested amount');
                 }
-            );
-        }
-
-        if (nextStatus === 'rejected' && currentLocked > 0) {
-            await DeliveryWallet.findOneAndUpdate(
-                { deliveryPartnerId },
-                { $inc: { lockedAmount: -Math.min(currentLocked, amount) } }
-            );
+            } else if (nextStatus === 'rejected' && unlock > 0) {
+                await DeliveryWallet.findOneAndUpdate(
+                    { deliveryPartnerId },
+                    { $inc: { lockedAmount: -unlock } }
+                );
+            }
         }
     }
-
-    existing.status = nextStatus;
-    existing.adminNote = adminNote;
-    existing.rejectionReason = rejectionReason;
-    existing.transactionId = transactionId;
-    existing.processedAt = nextStatus === 'pending' ? undefined : new Date();
-    await existing.save();
 
     return DeliveryWithdrawal.findById(id)
         .populate('deliveryPartnerId', 'name phone profilePartnerId')

@@ -1,4 +1,5 @@
 import express from 'express';
+import { requireFinancePermission } from '../../../../../../core/admin/requireFinancePermission.middleware.js';
 import * as paymentController from '../../../../core/payments/payment.controller.js';
 import * as attributeController from '../controllers/attribute.controller.js';
 import { AuthError } from '../../../../core/auth/errors.js';
@@ -390,9 +391,10 @@ router.put('/delivery-emergency-help', adminController.createOrUpdateEmergencyHe
 
 // ----- Withdrawals (admin) -----
 router.get('/withdrawals', adminController.getWithdrawals);
-router.patch('/withdrawals/:id', adminController.updateWithdrawalStatus);
+// Deciding a payout carries the finance permission and audit trail, as in Food and Quick.
+router.patch('/withdrawals/:id', requireFinancePermission('WITHDRAWAL_DECIDE'), adminController.updateWithdrawalStatus);
 router.get('/delivery/withdrawals', adminController.getDeliveryWithdrawals);
-router.patch('/delivery/withdrawals/:id', adminController.updateDeliveryWithdrawalStatus);
+router.patch('/delivery/withdrawals/:id', requireFinancePermission('WITHDRAWAL_DECIDE'), adminController.updateDeliveryWithdrawalStatus);
 router.get('/delivery/cash-limit-settlements', adminController.getCashLimitSettlements);
 
 // ----- Delivery partners & general -----
