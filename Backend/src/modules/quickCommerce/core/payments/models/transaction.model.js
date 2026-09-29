@@ -94,4 +94,14 @@ transactionSchema.index({ entityType: 1, entityId: 1, createdAt: -1 });
 transactionSchema.index({ orderId: 1, entityType: 1 });
 transactionSchema.index({ paymentId: 1, type: 1 });
 
-export const Transaction = mongoose.models.QCTransaction || mongoose.model('QCTransaction', transactionSchema, 'qc_transactions');
+/*
+ * Its own model and collection. This registered as 'QCTransaction' on
+ * qc_transactions -- the name and collection of the ORDER ledger
+ * (orders/models/foodTransaction.model.js) -- and both guard with
+ * `mongoose.models.QCTransaction ||`, so whichever file loaded first won. The
+ * order ledger does, so every row written here was validated against the order
+ * schema and refused (orderId, userId, restaurantId ... required): this entity
+ * ledger could never write. Food keeps the two apart the same way
+ * (Transaction on 'transactions', FoodTransaction on its own).
+ */
+export const Transaction = mongoose.models.QCEntityTransaction || mongoose.model('QCEntityTransaction', transactionSchema, 'qc_entity_transactions');
