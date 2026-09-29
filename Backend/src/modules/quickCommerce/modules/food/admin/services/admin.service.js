@@ -4443,6 +4443,20 @@ export async function approveRestaurant(id) {
     return updated;
 }
 
+/*
+ * Revoke an account's refresh tokens. Never throws. A rejected seller or rider
+ * otherwise kept minting access tokens from the refresh token it already held
+ * (refreshAccessToken checks only the session version), so the rejection did
+ * not sign it out (Food's 22 Sep rule, missed here).
+ */
+async function revokeRefreshTokens(id) {
+    try {
+        await FoodRefreshToken.deleteMany({ userId: id });
+    } catch (err) {
+        console.error('revokeRefreshTokens failed:', err?.message || err);
+    }
+}
+
 export async function rejectRestaurant(id, reason) {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
 
@@ -4483,6 +4497,7 @@ export async function rejectRestaurant(id, reason) {
     ).lean();
 
     if (updated) {
+        await revokeRefreshTokens(updated._id);
         try {
             const { notifyOwnersSafely } = await import('../../../../core/notifications/firebase.service.js');
             await notifyOwnersSafely(
@@ -5841,6 +5856,7 @@ export async function rejectDeliveryPartner(id, reason) {
     ).lean();
 
     if (updated) {
+        await revokeRefreshTokens(updated._id);
         try {
             const { notifyOwnerSafely } = await import('../../../../core/notifications/firebase.service.js');
             await notifyOwnerSafely(
