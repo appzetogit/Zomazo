@@ -3,8 +3,6 @@ import { FoodOrder } from '../models/order.model.js';
 import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
 import { FoodTransaction } from '../models/foodTransaction.model.js';
 import { FoodDeliveryPartner } from '../../delivery/models/deliveryPartner.model.js';
-import { FoodDeliveryWallet } from '../../delivery/models/deliveryWallet.model.js';
-import { FoodDeliveryCashLimit } from '../../admin/models/deliveryCashLimit.model.js';
 import {
   ValidationError,
   ForbiddenError,
@@ -418,25 +416,30 @@ export async function listOrdersAvailableDelivery(deliveryPartnerId, query) {
  *
  * Prepaid orders are unaffected: they add nothing to the rider's float.
  *
- * A limit of 0 means no limit, matching the schema default, so installs that never
- * configured this are untouched.
+ * The cash figure is riderFinance's -- food, quick commerce and taxi together,
+ * against the limit the admin set for this rider or zone -- not the QC wallet
+ * alone against the old global setting, which missed cash from other verticals
+ * and never applied per-rider limits. The order's own cash counts too.
+ *
+ * A limit of 0 means no limit, as everywhere else in riderFinance, so installs
+ * that never configured this are untouched.
  */
 async function assertCashLimitAllows(deliveryPartnerId, order) {
   const method = String(order?.payment?.method || order?.paymentMethod || '').toLowerCase();
   if (method !== 'cash' && method !== 'razorpay_qr') return;
 
-  const [settings, wallet] = await Promise.all([
-    FoodDeliveryCashLimit.findOne({ isActive: true }).select('deliveryCashLimit').lean(),
-    FoodDeliveryWallet.findOne({ deliveryPartnerId }).select('cashInHand').lean(),
-  ]);
-
-  const limit = Number(settings?.deliveryCashLimit) || 0;
+  const { getRiderFinance } = await import('../../../../../../core/finance/riderFinance.service.js');
+  const f = await getRiderFinance(deliveryPartnerId);
+  // Not f.isBlocked: that is the taxi wallet rule, which blocks every
+  // delivery-only rider; only the cash ceiling applies to a delivery order.
+  const limit = Number(f?.cashLimit) || 0;
   if (limit <= 0) return;
 
-  const inHand = Number(wallet?.cashInHand) || 0;
-  if (inHand >= limit) {
+  const inHand = Number(f?.cashInHand) || 0;
+  const orderCash = Math.max(0, Number(order?.pricing?.total) || 0);
+  if (inHand + orderCash > limit) {
     throw new ValidationError(
-      `You are holding Rs.${inHand} in cash, which is at your Rs.${limit} limit. ` +
+      `You are holding Rs.${inHand} in cash; this order would take you past your Rs.${limit} limit. ` +
         'Deposit your cash to keep accepting cash orders.',
     );
   }
@@ -559,7 +562,7 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
   // cash ceiling must not end up holding a cash trip they cannot be given.
   {
     const pending = await FoodOrder.findOne(identity)
-      .select('payment paymentMethod')
+      .select('payment paymentMethod pricing')
       .lean();
     if (pending) await assertCashLimitAllows(partnerId, pending);
   }

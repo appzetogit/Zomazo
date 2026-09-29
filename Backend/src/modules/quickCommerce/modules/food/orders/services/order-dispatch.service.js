@@ -2,8 +2,6 @@ import mongoose from 'mongoose';
 import { FoodOrder, FoodSettings } from '../models/order.model.js';
 import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
 import { FoodDeliveryPartner } from '../../delivery/models/deliveryPartner.model.js';
-import { FoodDeliveryWallet } from '../../delivery/models/deliveryWallet.model.js';
-import { FoodDeliveryCashLimit } from '../../admin/models/deliveryCashLimit.model.js';
 import { ValidationError, NotFoundError } from '../../../../core/auth/errors.js';
 import { logger } from '../../../../utils/logger.js';
 import { config } from '../../../../config/env.js';
@@ -239,28 +237,38 @@ function buildPushItems(items) {
  * order adds nothing to their float, so blocking those would idle riders for no
  * reason.
  *
- * A limit of 0 means "no limit" â€” that is the schema default, so an install that has
- * never configured this must not have every rider silently excluded.
+ * The rider's cash, as the rider app and the withdrawal check see it:
+ * riderFinance sums food, quick commerce and taxi, and resolves the limit the
+ * admin set for this rider or zone. This read only the QC wallet against the old
+ * global setting, so cash from food orders and taxi fares was invisible and
+ * per-rider limits never applied. The order's own cash counts too: a rider just
+ * under the limit could otherwise take a large cash order well past it.
+ *
+ * A limit of 0 means "no limit", as everywhere else in riderFinance, so an
+ * install that has never configured this must not have every rider excluded.
  *
  * @returns {Promise<Set<string>>} partner ids to skip
  */
-async function getCashBlockedPartnerIds(partnerIds) {
+async function getCashBlockedPartnerIds(partnerIds, order = null) {
   if (!partnerIds.length) return new Set();
 
-  const settings = await FoodDeliveryCashLimit.findOne({ isActive: true })
-    .select('deliveryCashLimit')
-    .lean();
-  const limit = Number(settings?.deliveryCashLimit) || 0;
-  if (limit <= 0) return new Set();
+  const orderCash = Math.max(0, Number(order?.pricing?.total) || 0);
+  const { getRiderFinance } = await import('../../../../../../core/finance/riderFinance.service.js');
+  const blocked = await Promise.all(partnerIds.map(async (partnerId) => {
+    try {
+      const f = await getRiderFinance(partnerId);
+      // Not f.isBlocked: that is the TAXI wallet rule (a delivery-only rider with
+      // no taxi balance reads as blocked). Only the cash ceiling applies here.
+      const limit = Number(f?.cashLimit) || 0;
+      if (limit <= 0) return false;
+      return (Number(f?.cashInHand) || 0) + orderCash > limit;
+    } catch (err) {
+      logger.warn(`COD cash-limit check failed for partner ${partnerId}: ${err?.message || err}`);
+      return true;
+    }
+  }));
 
-  const wallets = await FoodDeliveryWallet.find({
-    deliveryPartnerId: { $in: partnerIds },
-    cashInHand: { $gte: limit },
-  })
-    .select('deliveryPartnerId cashInHand')
-    .lean();
-
-  return new Set(wallets.map((w) => String(w.deliveryPartnerId)));
+  return new Set(partnerIds.filter((_, i) => blocked[i]).map(String));
 }
 
 /** Cash the rider has to physically collect, so it counts against their float. */
@@ -533,7 +541,7 @@ export async function tryAutoAssign(orderId, options = {}) {
 
     // Riders at their cash ceiling are skipped for cash-collect orders only.
     const cashBlockedIds = orderCollectsCash(order)
-      ? await getCashBlockedPartnerIds(partners.map((p) => p.partnerId))
+      ? await getCashBlockedPartnerIds(partners.map((p) => p.partnerId), order)
       : new Set();
 
     const eligible = partners.filter((partner) => {
@@ -550,7 +558,7 @@ export async function tryAutoAssign(orderId, options = {}) {
     if (cashBlockedIds.size > 0) {
       logger.warn(
         `[Dispatch] ${cashBlockedIds.size} rider(s) skipped for order ${order._id}: ` +
-          `cash-in-hand at or above the configured limit.`,
+          `cash-in-hand plus this order would pass their cash limit.`,
       );
     }
 
