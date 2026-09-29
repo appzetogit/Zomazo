@@ -290,7 +290,15 @@ export async function recordReturnRefund(orderId, {
         if (sellerFault && Number(subtotal) > 0) {
             const originalShareP = toP(a.restaurantShare) + toP(a.sellerReturnDebit);
             const earnedByGoodsP = Math.round((originalShareP * Number(goods)) / Number(subtotal));
-            sellerP = Math.max(0, Math.min(earnedByGoodsP, toP(a.restaurantShare), amountP - taxBackP));
+            // Not capped by what is left of THIS refund after GST. Two returns on one
+            // order are each quoted the order's fees; whichever is paid second is
+            // trimmed to what the order has left, and that trim is fee money the
+            // first already refunded -- platform money. Capping the seller's debit
+            // by it left the seller holding part of its payout for goods it never
+            // supplied (Rs 5.40 in qc-return-payout, whenever the fee-carrying
+            // return was booked first). The platform line absorbs the trim instead,
+            // and may go below zero on that refund: the order still balances.
+            sellerP = Math.max(0, Math.min(earnedByGoodsP, toP(a.restaurantShare)));
         }
         const platformP = amountP - taxBackP - sellerP;
 
