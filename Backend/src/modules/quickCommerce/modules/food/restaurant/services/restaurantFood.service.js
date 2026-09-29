@@ -571,7 +571,27 @@ export async function updateRestaurantFood(restaurantId, foodId, body = {}) {
         'name', 'description', 'image', 'images', 'price', 'variants',
         'foodType', 'categoryId', 'categoryName', 'preparationTime'
     ];
-    const shouldResubmitForApproval = Object.keys(update).some(key => CRITICAL_APPROVAL_FIELDS.includes(key));
+    /*
+     * Approval is re-opened by a real change to one of these, not by its mere
+     * presence in the payload (Food's 12 Sep fix, missed here). The item editor
+     * posts the whole product on every save, so flipping the in-stock switch
+     * arrived as name + price + image + isAvailable, sent the product back to
+     * pending and pulled it off the store until an admin approved it again.
+     * A value that only looks changed (a re-serialised variant array) still
+     * counts as changed, so this can only spare an approval, never skip one.
+     */
+    const asComparable = (value) => {
+        // '' and absent are the same: re-resolving the category writes '' for a
+        // product that never had a category name.
+        if (value === undefined || value === null || value === '') return null;
+        if (value instanceof Date) return value.toISOString();
+        if (mongoose.Types.ObjectId.isValid(value) && typeof value !== 'object') return String(value);
+        if (typeof value === 'object') return JSON.stringify(value, (k, v) => (v && v._bsontype === 'ObjectId' ? String(v) : v));
+        return value;
+    };
+    const shouldResubmitForApproval = CRITICAL_APPROVAL_FIELDS.some(
+        (key) => key in update && asComparable(update[key]) !== asComparable(existing[key])
+    );
 
     if (shouldResubmitForApproval) {
         update.approvalStatus = 'pending';
