@@ -6012,24 +6012,42 @@ export async function getWithdrawals(query = {}) {
     return { requests, total, page, limit };
 }
 
+/*
+ * A seller withdrawal is decided once: pending -> approved or rejected, and
+ * never again (Food's 11 Sep rule, missed here). Any status was written as
+ * sent, so an approved (paid) request could be flipped to rejected -- which
+ * the seller's balance reads as money never paid out, letting them withdraw
+ * it a second time. The move is a compare-and-set on 'pending', so two admins
+ * deciding at once cannot both win. Re-saving the same status only edits the
+ * notes.
+ */
 export async function updateWithdrawalStatus(id, { status, adminNote, rejectionReason, transactionId }) {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) throw new ValidationError('Invalid withdrawal ID');
-    
-    const update = {
-        status: String(status).toLowerCase(),
-        adminNote,
-        rejectionReason,
-        transactionId,
-        processedAt: new Date()
-    };
 
-    const updated = await FoodRestaurantWithdrawal.findByIdAndUpdate(
-        id,
-        { $set: update },
-        { new: true }
+    const raw = String(status || '').trim().toLowerCase();
+    const nextStatus = raw === 'processed' ? 'approved' : raw;
+    if (!['pending', 'approved', 'rejected'].includes(nextStatus)) throw new ValidationError('Invalid withdrawal status');
+
+    const existing = await FoodRestaurantWithdrawal.findById(id).lean();
+    if (!existing) throw new ValidationError('Withdrawal request not found');
+
+    const previousStatus = String(existing.status || '').toLowerCase();
+    if (previousStatus !== 'pending' && previousStatus !== nextStatus) {
+        throw new ValidationError(`Cannot change a ${previousStatus} withdrawal request`);
+    }
+
+    const notes = { adminNote, rejectionReason, transactionId };
+    const updated = await FoodRestaurantWithdrawal.findOneAndUpdate(
+        { _id: id, status: previousStatus },
+        {
+            $set: previousStatus === nextStatus
+                ? notes
+                : { status: nextStatus, ...notes, processedAt: new Date() }
+        },
+        { new: true, runValidators: true }
     ).populate('restaurantId', 'restaurantName').lean();
 
-    if (!updated) throw new ValidationError('Withdrawal request not found');
+    if (!updated) throw new ValidationError('This withdrawal request was changed by someone else. Refresh and retry.');
     return updated;
 }
 
