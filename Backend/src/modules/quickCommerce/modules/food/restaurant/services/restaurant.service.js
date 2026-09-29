@@ -2760,6 +2760,28 @@ export async function updateRestaurantOfferStatus(restaurantId, offerId, status)
 /**
  * Delete a restaurant and all associated data (menu, wallet, items, timings) permanently.
  */
+/**
+ * Everything keyed to a store that becomes meaningless once it is gone:
+ * configuration and presentation, not history. Left behind, a commission row
+ * shows in the admin panel with no name and a null id, and a dining or gourmet
+ * slot keeps advertising a store nobody can order from. Collection names rather
+ * than models, so the list stays one place to extend.
+ *
+ * Deliberately NOT deleted: qc_orders, qc_transactions and withdrawals. A
+ * delivered order still happened; those rows keep a restaurantId that no longer
+ * resolves, which is a true fact about a store that used to exist.
+ */
+const RESTAURANT_SCOPED_CONFIG = [
+    'qc_restaurant_commissions',
+    'qc_categories',
+    'qc_offers',
+    'qc_bogo_offers',
+    'qc_freebie_offers',
+    'qc_dining_restaurants',
+    'qc_gourmet_restaurants',
+    'qc_user_carts',
+];
+
 export const deleteCurrentRestaurantAccount = async (restaurantId) => {
     // Dynamic imports to avoid issues
     const { FoodRestaurantMenu } = await import('../models/restaurantMenu.model.js');
@@ -2778,8 +2800,37 @@ export const deleteCurrentRestaurantAccount = async (restaurantId) => {
     await FoodItem.deleteMany({ restaurantId });
     await FoodAddon.deleteMany({ restaurantId });
 
+    // The rest of the configuration, which this used to leave behind. Matched
+    // on the ObjectId and its string form: carts store the id as a string.
+    const asId = mongoose.Types.ObjectId.isValid(String(restaurantId))
+        ? new mongoose.Types.ObjectId(String(restaurantId))
+        : null;
+    const idMatch = { $in: [asId, String(restaurantId)].filter((v) => v !== null) };
+
+    for (const collection of RESTAURANT_SCOPED_CONFIG) {
+        try {
+            await mongoose.connection.collection(collection)
+                .deleteMany({ restaurantId: idMatch });
+        } catch (err) {
+            // Logged, not thrown: a stray config row is cosmetic, a half-deleted
+            // store is not.
+            console.error(`Failed clearing ${collection} for restaurant ${restaurantId}:`, err?.message || err);
+        }
+    }
+
     // Remove Restaurant
     await FoodRestaurant.findByIdAndDelete(restaurantId);
+
+    // Listing, detail, menu and search responses cache; a deleted store must
+    // not keep being served from one.
+    try {
+        const { invalidateCache } = await import('../../../../middleware/cache.js');
+        for (const pattern of ['restaurants:*', 'restaurant_detail:*', 'restaurant_menu:*', 'public_foods:*', 'search_products:*']) {
+            await invalidateCache(pattern);
+        }
+    } catch (err) {
+        console.error('Failed to invalidate caches after deleting a restaurant:', err?.message || err);
+    }
 
     return { success: true };
 };
