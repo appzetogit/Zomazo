@@ -107,6 +107,20 @@ await check('an abandoned unpaid order is kept cancelled, so a late payment on i
     assert.equal(await deletePendingPaymentOrder(kept), false, 'a second abandon is a no-op');
 });
 
+await check('an admin cannot delete a delivered or paid order, only an unpaid one', async () => {
+    const { deleteOrderAdmin } = await import('../src/modules/ecommerce/modules/commerce/orders/services/order.service.js');
+    const delivered = oid();
+    const unpaid = oid();
+    await Order.collection.insertMany([
+        { _id: delivered, orderId: 'DEL1', orderStatus: 'delivered', items: [], payment: { method: 'cash', status: 'paid' } },
+        { _id: unpaid, orderId: 'DEL2', orderStatus: 'cancelled_by_user', items: [], payment: { method: 'razorpay', status: 'failed' } },
+    ]);
+    await assert.rejects(deleteOrderAdmin(String(delivered), String(oid())), /cannot be deleted/);
+    assert.ok(await Order.collection.findOne({ _id: delivered }));
+    await deleteOrderAdmin(String(unpaid), String(oid()));
+    assert.equal(await Order.collection.findOne({ _id: unpaid }), null);
+});
+
 await mongoose.disconnect();
 await mongo.stop();
 if (failed) {
