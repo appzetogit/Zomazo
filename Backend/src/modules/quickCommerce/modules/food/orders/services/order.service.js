@@ -2031,6 +2031,30 @@ export async function reviewOrderPrescription(orderId, restaurantId, decision, r
   };
 }
 
+/**
+ * No cancelling once the rider has the goods.
+ *
+ * isStatusAdvance treats a cancel as valid from anywhere short of delivered,
+ * including picked_up and reached_drop. But a rider is only ever paid for a
+ * DELIVERED order, and an online customer is refunded in full, so a cancel at
+ * this stage leaves the rider unpaid for a trip already made. Refused for
+ * support as well as the store: a problem this late is handled by completing
+ * the delivery, or by a refund and payout through support.
+ */
+function assertNotCancelledAfterPickup(order, orderStatus, { isAdmin }) {
+  const prio = STATUS_PRIORITY[order.orderStatus] || 0;
+  const riderHasIt =
+    (prio >= STATUS_PRIORITY.picked_up && prio < STATUS_PRIORITY.delivered) ||
+    ["en_route_to_delivery", "at_drop"].includes(order.deliveryState?.currentPhase);
+  if (String(orderStatus).startsWith("cancelled") && riderHasIt) {
+    throw new ValidationError(
+      isAdmin
+        ? "This order has already been picked up by the delivery partner, so it can no longer be cancelled: the partner would go unpaid for the trip. Let the delivery complete, or resolve it through a refund."
+        : "This order has already been picked up by the delivery partner and can no longer be cancelled."
+    );
+  }
+}
+
 export async function updateOrderStatusRestaurant(
   orderId,
   restaurantId,
@@ -2088,6 +2112,7 @@ export async function updateOrderStatusRestaurant(
     }
   }
   const from = order.orderStatus;
+  assertNotCancelledAfterPickup(order, orderStatus, { isAdmin: false });
   if (!isStatusAdvance(from, orderStatus)) {
     throw new ValidationError(
       `Current order status '${from}' is further ahead than '${orderStatus}'. Order cannot be moved backwards.`
@@ -2869,6 +2894,7 @@ export async function updateOrderStatusAdmin(orderId, orderStatus, note = "", ad
     if (order.orderStatus === "pending_payment" && !target.startsWith("cancelled")) {
         throw new ValidationError("This order is still waiting for the customer's payment.");
     }
+    assertNotCancelledAfterPickup(order, orderStatus, { isAdmin: true });
     if (!isStatusAdvance(order.orderStatus, orderStatus)) {
         throw new ValidationError(
             `Cannot change order status from '${order.orderStatus}' to '${orderStatus}'`,
