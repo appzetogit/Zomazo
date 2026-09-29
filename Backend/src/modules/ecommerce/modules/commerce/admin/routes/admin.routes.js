@@ -1,5 +1,7 @@
 import express from 'express';
 import { requireFinancePermission } from '../../../../../../core/admin/requireFinancePermission.middleware.js';
+import { enforceAdminAccess } from '../../../../../../core/admin/enforceAdminAccess.middleware.js';
+import { resolveShopAdminResource } from './shopAdminAccess.js';
 import * as paymentController from '../../../../core/payments/payment.controller.js';
 import * as attributeController from '../controllers/attribute.controller.js';
 import { AuthError } from '../../../../core/auth/errors.js';
@@ -52,6 +54,9 @@ const requireAdmin = (req, _res, next) => {
 };
 
 router.use(requireAdmin);
+// Platform sub-admins get only the sections they were given (see shopAdminAccess.js);
+// superadmins and Shop-native admins pass through to the checks below.
+router.use(enforceAdminAccess('ecommerce', resolveShopAdminResource));
 router.use(async (req, _res, next) => {
     try {
         const admin = await Admin.findById(req.user?.userId)
