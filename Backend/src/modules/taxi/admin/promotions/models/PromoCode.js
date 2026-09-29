@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { couponCodePlugin } from '../../../../../core/promotions/couponCodeRegistry.js';
 
 const promoCodeSchema = new mongoose.Schema(
   {
@@ -122,5 +123,8 @@ const promoCodeSchema = new mongoose.Schema(
 
 promoCodeSchema.index({ service_location_id: 1, transport_type: 1, active: 1, createdAt: -1 });
 promoCodeSchema.index({ service_location_ids: 1, transport_type: 1, active: 1, createdAt: -1 });
+
+// A code another service's coupon holds is refused (core/promotions/couponCodeRegistry.js).
+promoCodeSchema.plugin(couponCodePlugin, { field: 'code', collection: 'taxipromocodes' });
 
 export const PromoCode = mongoose.models.TaxiPromoCode || mongoose.model('TaxiPromoCode', promoCodeSchema);

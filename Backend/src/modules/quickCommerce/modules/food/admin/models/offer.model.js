@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { couponCodePlugin } from '../../../../../../core/promotions/couponCodeRegistry.js';
 
 const foodOfferSchema = new mongoose.Schema(
     {
@@ -28,5 +29,8 @@ const foodOfferSchema = new mongoose.Schema(
 
 foodOfferSchema.index({ restaurantId: 1, createdAt: -1 });
 foodOfferSchema.index({ restaurantIds: 1, createdAt: -1 });
+
+// A code another service's coupon holds is refused (core/promotions/couponCodeRegistry.js).
+foodOfferSchema.plugin(couponCodePlugin, { field: 'couponCode', collection: 'qc_offers' });
 
 export const FoodOffer = mongoose.models.QCOffer || mongoose.model('QCOffer', foodOfferSchema, 'qc_offers');

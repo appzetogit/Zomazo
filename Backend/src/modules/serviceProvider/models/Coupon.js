@@ -55,4 +55,20 @@ couponSchema.pre('validate', function checkPercentage(next) {
   next();
 });
 
+// A code another service's coupon holds is refused. The registry is ESM, so
+// it is loaded when first needed (core/promotions/couponCodeRegistry.js).
+const loadCouponRegistry = () => import('../../../core/promotions/couponCodeRegistry.js');
+couponSchema.pre('validate', async function checkCouponCode() {
+  if (!this.isNew && !this.isModified('couponCode')) return;
+  const { assertCouponCodeFree } = await loadCouponRegistry();
+  await assertCouponCodeFree(this.couponCode, 'sp_coupons');
+});
+couponSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], async function checkCouponCodeUpdate() {
+  const update = this.getUpdate() || {};
+  const code = update.couponCode ?? update.$set?.couponCode;
+  if (code === undefined) return;
+  const { assertCouponCodeFree } = await loadCouponRegistry();
+  await assertCouponCodeFree(code, 'sp_coupons');
+});
+
 module.exports = mongoose.models.SPCoupon || mongoose.model('SPCoupon', couponSchema, 'sp_coupons');

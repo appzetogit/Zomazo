@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { couponCodePlugin } from '../../../../../../core/promotions/couponCodeRegistry.js';
 
 import { ecomModel } from '../../../../config/ecomModel.js';
 const offerSchema = new mongoose.Schema(
@@ -29,5 +30,8 @@ const offerSchema = new mongoose.Schema(
 
 offerSchema.index({ sellerId: 1, createdAt: -1 });
 offerSchema.index({ sellerIds: 1, createdAt: -1 });
+
+// A code another service's coupon holds is refused (core/promotions/couponCodeRegistry.js).
+offerSchema.plugin(couponCodePlugin, { field: 'couponCode', collection: 'ecom_offers' });
 
 export const Offer = ecomModel('Offer', offerSchema);
