@@ -1280,7 +1280,8 @@ function buildSellerFinanceViewSync(order, tx = null) {
       commission: Number(tx.amounts.sellerCommission) || 0,
       sellerDiscountShare: Number(tx.amounts.sellerDiscountShare) || 0,
       discount: Number(pricing.discount) || 0,
-      taxAmount: Number(tx.amounts.taxAmount ?? pricing.tax) || 0,
+      // The items' GST: the ledger's taxAmount also holds the delivery fee's.
+      taxAmount: Number(pricing.tax ?? tx.amounts.taxAmount) || 0,
       totalCustomerPaid: Number(tx.amounts.totalCustomerPaid ?? pricing.total) || 0,
       netPayout: Number(tx.amounts.sellerShare) || 0,
       isSettled: Boolean(tx.settlement?.isSellerSettled),

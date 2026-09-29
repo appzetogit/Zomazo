@@ -61,7 +61,8 @@ const orderTransactionSchema = new mongoose.Schema({
     // Financial Breakdown (The Split)
     amounts: {
         totalCustomerPaid: { type: Number, required: true, min: 0 },
-        sellerShare: { type: Number, required: true, min: 0 },
+        // Negative when a seller-funded coupon exceeds the seller's take: the real value.
+        sellerShare: { type: Number, required: true },
         sellerCommission: { type: Number, required: true, min: 0 },
         riderShare: { type: Number, required: true, min: 0 },
         // Can be negative when discounts/rider pay exceed platform income; store the real value.

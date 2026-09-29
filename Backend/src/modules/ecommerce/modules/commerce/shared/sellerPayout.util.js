@@ -30,5 +30,7 @@ export function computeSellerOrderShare(order, tx = null, offers = [], sellerId 
         ? storedSellerShare
         : subtotal + packagingFee - commission - sellerDiscountShare;
 
-    return Math.max(0, payout);
+    // Not floored: a seller-funded coupon bigger than the seller's take is a
+    // loss the seller carries, and a payout total must reduce by it.
+    return payout;
 }

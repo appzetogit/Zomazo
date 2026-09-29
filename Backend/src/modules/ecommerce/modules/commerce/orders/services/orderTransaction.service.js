@@ -159,8 +159,22 @@ export async function createInitialTransaction(order) {
     const deliveryFeeGst = Number(order.pricing?.deliveryFeeGst) || 0;
     const tax = Number(order.pricing?.tax) || 0;
 
+    const coinsDiscount = Number(order.pricing?.coinsDiscount) || 0;
+
+    /*
+     * Every rupee the customer pays lands with exactly one party: seller,
+     * rider, platform or the government. Three leaks, all fixed in Food and
+     * Quick (7 and 11 Sep) and missed here:
+     *   - the 18% GST on the delivery fee was booked as platform profit; it is
+     *     owed to the government, so it joins taxAmount;
+     *   - coins come off what the customer pays but were charged to nobody --
+     *     the platform issues them, so the platform wears them;
+     *   - the seller's share was floored at zero, so a seller-funded coupon
+     *     bigger than the seller's take vanished instead of showing the loss.
+     * sellerShare + riderShare + platformNetProfit + taxAmount === total.
+     */
     let sellerNet = subtotal + packagingFee - sellerCommission;
-    let platformNetProfit = platformFee + deliveryFee + deliveryFeeGst + sellerCommission - riderShare;
+    let platformNetProfit = platformFee + deliveryFee + sellerCommission - riderShare - coinsDiscount;
     let adminDiscountShare = 0;
     let sellerDiscountShare = 0;
     let discountAdminBearPercentage = 0;
@@ -222,11 +236,11 @@ export async function createInitialTransaction(order) {
         },
         amounts: {
             totalCustomerPaid: totalCustomerPaid,
-            sellerShare: Math.max(0, sellerNet),
+            sellerShare: sellerNet,
             sellerCommission: sellerCommission,
             riderShare: riderShare,
             platformNetProfit: platformNetProfit,
-            taxAmount: tax,
+            taxAmount: Math.round((tax + deliveryFeeGst) * 100) / 100,
             adminDiscountShare,
             sellerDiscountShare,
             discountAdminBearPercentage,
