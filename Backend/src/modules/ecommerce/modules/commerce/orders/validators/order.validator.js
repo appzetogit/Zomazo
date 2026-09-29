@@ -16,7 +16,8 @@ const orderItemSchema = z.object({
 });
 
 const addressSchema = z.object({
-    label: z.enum(['Home', 'Office', 'Other']).optional(),
+    // Any label the app sends ("Current Location", "home") maps onto the three kept.
+    label: z.preprocess((v) => (v == null || v === '' ? v : ({ home: 'Home', office: 'Office', work: 'Office' }[String(v).trim().toLowerCase()] || 'Other')), z.enum(['Home', 'Office', 'Other'])).optional(),
     name: z.string().optional(),
     fullName: z.string().optional(),
     street: z.string().min(1, 'Street required'),

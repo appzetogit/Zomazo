@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { ValidationError } from '../../../../core/auth/errors.js';
 
-const labelSchema = z.enum(['Home', 'Office', 'Other']).default('Home');
+// Any label the app sends maps onto the three kept; unknown ones become Other.
+const labelSchema = z.preprocess((v) => (v == null || v === '' ? v : ({ home: 'Home', office: 'Office', work: 'Office' }[String(v).trim().toLowerCase()] || 'Other')), z.enum(['Home', 'Office', 'Other'])).default('Home');
 
 const coordSchema = z
     .number()
