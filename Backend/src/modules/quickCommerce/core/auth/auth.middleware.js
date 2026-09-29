@@ -41,7 +41,7 @@ const SESSION_SCOPED_MODELS = {
  * what an unresolvable token deserves and what it did before.
  */
 const resolveSessionAccount = async (model, decoded) => {
-    const select = 'isActive tokenVersion';
+    const select = 'isActive tokenVersion status';
     // The id under whichever name the issuer used (taxi signs `sub`). With no
     // id at all, `findOne({ platformUserId: undefined })` became `findOne({})`
     // -- mongoose drops undefined keys -- and returned the FIRST customer, so a
@@ -199,6 +199,15 @@ export const authMiddleware = (req, res, next) => {
                 // Food tokens carry no version of their own; the grocery row's
                 // counter belongs to QC's own login, so it is not compared.
                 return next();
+            }
+
+            // Stores and riders are re-checked on every request, as in Food since
+            // 22 Sep: approval was only checked at login, so an account an admin
+            // rejected kept full access until its token ran out. Pending ones keep
+            // access to finish onboarding.
+            if (['RESTAURANT', 'DELIVERY_PARTNER'].includes(normalizedDecoded.role)
+                && ['rejected', 'deactivated'].includes(String(doc.status || ''))) {
+                return sendError(res, 403, 'This account is no longer active. Contact support.');
             }
 
             // A token minted before the latest login belongs to a device that has

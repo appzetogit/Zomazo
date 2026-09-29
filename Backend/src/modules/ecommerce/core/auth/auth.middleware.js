@@ -40,7 +40,7 @@ const SESSION_SCOPED_MODELS = {
  * Never throws: any failure returns null and the caller answers 401.
  */
 const resolveSessionAccount = async (model, decoded) => {
-    const select = 'isActive tokenVersion';
+    const select = 'isActive tokenVersion status';
     // The id under whichever name the issuer used (taxi signs `sub`). With no id
     // at all, findOne({ platformUserId: undefined }) becomes findOne({}) --
     // mongoose drops undefined keys -- and returns the FIRST customer.
@@ -152,6 +152,13 @@ export const authMiddleware = (req, res, next) => {
             }
             if (normalizedDecoded.role === 'USER' && doc.isActive === false) {
                 return sendError(res, 401, 'User account is deactivated');
+            }
+
+            // A seller is re-checked on every request, as Food's stores are since
+            // 22 Sep: a rejected seller kept full access until the token ran out.
+            // A pending one keeps access to finish onboarding.
+            if (normalizedDecoded.role === 'SELLER' && String(doc.status || '') === 'rejected') {
+                return sendError(res, 403, 'This seller account is no longer active. Contact support.');
             }
 
             // A token minted before the latest login belongs to a replaced device.
