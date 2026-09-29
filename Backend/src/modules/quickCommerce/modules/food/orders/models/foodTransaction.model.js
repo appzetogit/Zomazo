@@ -62,7 +62,8 @@ const foodTransactionSchema = new mongoose.Schema({
     // Financial Breakdown (The Split)
     amounts: {
         totalCustomerPaid: { type: Number, required: true, min: 0 },
-        restaurantShare: { type: Number, required: true, min: 0 },
+        // Negative when a store-funded coupon exceeds the store's take: the real value.
+        restaurantShare: { type: Number, required: true },
         restaurantCommission: { type: Number, required: true, min: 0 },
         riderShare: { type: Number, required: true, min: 0 },
         // Can be negative when discounts/rider pay exceed platform income; store the real value.

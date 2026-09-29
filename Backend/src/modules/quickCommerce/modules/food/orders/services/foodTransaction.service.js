@@ -181,7 +181,9 @@ export async function createInitialTransaction(order) {
         },
         amounts: {
             totalCustomerPaid: totalCustomerPaid,
-            restaurantShare: Math.max(0, restaurantNet),
+            // Not floored: a store-funded coupon bigger than the store's take is a
+            // loss the store carries (Food's 7 Sep fix, missed in this copy).
+            restaurantShare: restaurantNet,
             restaurantCommission: restaurantCommission,
             riderShare: riderShare,
             platformNetProfit: platformNetProfit,
