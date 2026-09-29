@@ -310,14 +310,21 @@ router.post('/products/bulk-delete', adminController.bulkDeleteProducts);
  * customer was simply being served a stale copy. The seller-side menu routes
  * already do this; the admin ones were missed.
  */
-const invalidatePublicMenus = async (_req, _res, next) => {
-    try {
-        await invalidateCache('seller_menu:*');
-        await invalidateCache('public_products:*');
-    } catch (_) {
-        // A cache that will not clear must not fail the write itself; the entry
-        // expires on its own within the TTL.
-    }
+const invalidatePublicMenus = (_req, res, next) => {
+    // Cleared once the write has finished: clearing first let a customer's read
+    // between the clear and the save cache the old price again. The product page
+    // (public_product) shows the price too, and was never cleared.
+    res.on('finish', () => {
+        if (res.statusCode >= 400) return;
+        Promise.all([
+            invalidateCache('seller_menu:*'),
+            invalidateCache('public_products:*'),
+            invalidateCache('public_product:*'),
+        ]).catch(() => {
+            // A cache that will not clear must not fail the write itself; the entry
+            // expires on its own within the TTL.
+        });
+    });
     next();
 };
 
