@@ -165,6 +165,12 @@ its Quick and Shop twins. Ported, each with a smoke test:
 | ledger: delivery GST is tax, coins charged to the platform, no zero floor on the seller's share | Shop; Quick (floor) |
 | GST follows who funded the coupon | Shop |
 
+Note on the Shop's rider rows above (handover code, rider withdrawals, cash
+deposits, cash limit, rider accept and status): the Shop ships by courier only
+(`fulfilmentMode` is fixed to 'standard' in orderSplit.service.js) and its
+`/delivery` routes are not mounted, so that code is dormant today. The fixes
+keep it safe if the Shop ever gets riders; they closed nothing live.
+
 The Shop's per-customer coupon limit is now claimed atomically at placement
 (`ecommerce/.../orders/services/couponClaim.service.js`), stored on the order or
 checkout as `couponClaim`, and given back once when the unpaid order or
