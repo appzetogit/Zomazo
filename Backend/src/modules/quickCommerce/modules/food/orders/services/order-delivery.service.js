@@ -821,7 +821,26 @@ export async function rejectOrderDelivery(orderId, deliveryPartnerId) {
   const order = await FoodOrder.findOne(identity).select('+deliveryOtp');
   if (!order) throw new NotFoundError('Order not found');
   if (order.dispatch.deliveryPartnerId?.toString() !== deliveryPartnerId.toString()) {
-    throw new ForbiddenError('Not your order');
+    // Offers go out as a broadcast: every nearby rider sees the order while
+    // nobody holds it, so a rider passing on one is not "the" assigned rider.
+    // Record the pass on their offer; once every rider it went to has passed,
+    // hunt again at once instead of letting the order sit out the re-check timer.
+    if (order.dispatch?.status !== 'unassigned') throw new ForbiddenError('Not your order');
+    const mine = (order.dispatch.offeredTo || []).filter(
+      (item) => String(item.partnerId) === String(deliveryPartnerId) && item.action === 'offered',
+    );
+    if (!mine.length) return sanitizeOrderForExternal(order);
+    for (const item of mine) item.action = 'rejected';
+    await order.save();
+    const stillOpen = order.dispatch.offeredTo.some((item) => item.action === 'offered');
+    if (!stillOpen) {
+      void dispatchService
+        .tryAutoAssign(order._id)
+        .catch((error) =>
+          logger.error(`SmartDispatch: Auto-assign after pass failed: ${error.message}`),
+        );
+    }
+    return sanitizeOrderForExternal(order);
   }
 
   // Only an order that hasn't been collected may be rejected. Without this a rider could
