@@ -798,14 +798,19 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
         }
       }
 
+      // The order may be populated here, so pass ids, not whole documents (the
+      // token lookup only worked because mongoose casts a document to its _id).
+      const ownerIdOf = (value) => (value && value._id ? value._id : value);
       await notifyOwnersSafely(
         [
-          { ownerType: 'USER', ownerId: order.userId },
-          { ownerType: 'RESTAURANT', ownerId: order.restaurantId },
-          { ownerType: 'DELIVERY_PARTNER', ownerId: deliveryPartnerId },
+          { ownerType: 'USER', ownerId: ownerIdOf(order.userId) },
+          { ownerType: 'RESTAURANT', ownerId: ownerIdOf(order.restaurantId) },
+          { ownerType: 'DELIVERY_PARTNER', ownerId: ownerIdOf(deliveryPartnerId) },
         ],
         {
-          title: `Order ${order._id.toString()} accepted`,
+          // order_id is the readable reference shown everywhere else; the
+          // customer was being shown a raw database id.
+          title: `Order ${order.order_id || order._id.toString()} accepted`,
           body: 'A delivery partner has accepted your order.',
           data: {
             type: 'delivery_accepted',
