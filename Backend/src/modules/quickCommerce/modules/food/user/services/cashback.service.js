@@ -93,20 +93,27 @@ export const awardOrderCashback = async (orderId) => {
             return { awarded: false, reason: 'per_user_limit_reached' };
         }
 
-        const target = wallet || (await FoodUserWallet.create({ userId: userOid, balance: 0, transactions: [] }));
-        target.transactions.unshift({
-            type: 'addition',
+        // One atomic move, guarded so the same order is never credited twice
+        // even by two deliveries confirmed together (the read above is only a
+        // fast path). A load-then-save could overwrite another service's move
+        // on the ONE wallet.
+        const { applyWalletMove } = await import('./userWallet.service.js');
+        const credited = await applyWalletMove(order.userId, {
             amount,
-            status: 'Completed',
-            description: `Cashback on order ${order.order_id || order._id}`,
-            metadata: {
-                source: 'cashback',
-                orderId: String(order._id),
-                orderDisplayId: order.order_id || String(order._id)
-            }
+            filter: { transactions: { $not: { $elemMatch: { 'metadata.source': 'cashback', 'metadata.orderId': String(order._id) } } } },
+            transaction: {
+                type: 'addition',
+                amount,
+                status: 'Completed',
+                description: `Cashback on order ${order.order_id || order._id}`,
+                metadata: {
+                    source: 'cashback',
+                    orderId: String(order._id),
+                    orderDisplayId: order.order_id || String(order._id)
+                }
+            },
         });
-        target.balance = round2(Number(target.balance || 0) + amount);
-        await target.save();
+        if (!credited) return { awarded: false, reason: 'already_awarded' };
 
         try {
             const { notifyOwnerSafely } = await import('../../orders/services/order.helpers.js');
@@ -163,16 +170,23 @@ export const reverseOrderCashback = async (orderId, { refundedAmount, orderTotal
         const amount = Math.max(0, Math.min(wanted, round2(Number(wallet.balance) || 0)));
         if (amount <= 0) return { reversed: 0 };
 
-        wallet.transactions.unshift({
-            type: 'deduction',
-            amount,
-            status: 'Completed',
-            description: `Cashback returned for refunded order ${order.order_id || order._id}`,
-            metadata: { source: 'cashback_reversal', orderId: String(order._id), key: reverseKey },
+        // Atomic: once per key, never below zero, never overwriting another move.
+        const { applyWalletMove } = await import('./userWallet.service.js');
+        const moved = await applyWalletMove(order.userId, {
+            amount: -amount,
+            filter: {
+                balance: { $gte: amount },
+                transactions: { $not: { $elemMatch: { 'metadata.source': 'cashback_reversal', 'metadata.orderId': String(order._id), 'metadata.key': reverseKey } } },
+            },
+            transaction: {
+                type: 'deduction',
+                amount,
+                status: 'Completed',
+                description: `Cashback returned for refunded order ${order.order_id || order._id}`,
+                metadata: { source: 'cashback_reversal', orderId: String(order._id), key: reverseKey },
+            },
         });
-        wallet.balance = round2(Number(wallet.balance || 0) - amount);
-        await wallet.save();
-        return { reversed: amount };
+        return { reversed: moved ? amount : 0 };
     } catch (e) {
         logger.warn(`reverseOrderCashback failed for ${orderId}: ${e?.message || e}`);
         return { reversed: 0 };

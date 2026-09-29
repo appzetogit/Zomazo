@@ -146,19 +146,11 @@ export async function listRefunds({ status, page = 1, limit = 20 } = {}) {
  */
 async function addRefundToLegacyWallet(userId, amount, orderId) {
     try {
-        const { FoodUserWallet } = await import('../../modules/food/user/models/userWallet.model.js');
-        const wallet = await FoodUserWallet.findOne({ userId: new mongoose.Types.ObjectId(userId) });
-        if (wallet) {
-            wallet.transactions.unshift({
-                type: 'refund',
-                amount,
-                status: 'Completed',
-                description: 'Order refund',
-                metadata: { source: 'order_refund', orderId: String(orderId) }
-            });
-            wallet.balance = (Number(wallet.balance) || 0) + amount;
-            await wallet.save();
-        }
+        // One atomic move on the customer's ONE wallet (shared with Food, Rides
+        // and the Shop): the old load-then-save could overwrite a move another
+        // service made at the same moment.
+        const { refundWalletBalance } = await import('../../modules/food/user/services/userWallet.service.js');
+        await refundWalletBalance(userId, amount, 'Order refund', { orderId: String(orderId) });
     } catch (err) {
         logger.warn(`addRefundToLegacyWallet failed: ${err.message}`);
     }

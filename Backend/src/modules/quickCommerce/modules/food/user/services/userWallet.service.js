@@ -3,17 +3,6 @@ import { ValidationError } from '../../../../core/auth/errors.js';
 import { FoodUserWallet } from '../models/userWallet.model.js';
 import { createRazorpayOrder, getRazorpayKeyId, isRazorpayConfigured, verifyPaymentSignature } from '../../orders/helpers/razorpay.helper.js';
 
-const ensureWallet = async (userId) => {
-    const id = String(userId || '');
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-        throw new ValidationError('User not found');
-    }
-    const oid = new mongoose.Types.ObjectId(id);
-    const existing = await FoodUserWallet.findOne({ userId: oid });
-    if (existing) return existing;
-    return FoodUserWallet.create({ userId: oid, balance: 0, transactions: [] });
-};
-
 /**
  * One wallet move, applied atomically.
  *
@@ -35,7 +24,7 @@ const ensureWallet = async (userId) => {
  * `{ balance: { $gte: amount } }` so an overdraft cannot happen between the
  * check and the write, which is exactly what a read-then-save allowed.
  */
-const applyWalletMove = async (userId, { amount, transaction, filter = {} }) => {
+export const applyWalletMove = async (userId, { amount, transaction, filter = {}, inc = {} }) => {
     const id = String(userId || '');
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
         throw new ValidationError('User not found');
@@ -54,8 +43,8 @@ const applyWalletMove = async (userId, { amount, transaction, filter = {} }) => 
     return FoodUserWallet.findOneAndUpdate(
         { userId: oid, ...filter },
         {
-            $inc: { balance: amount },
-            $push: { transactions: { $each: [transaction], $position: 0 } },
+            $inc: { balance: amount, ...inc },
+            $push: { transactions: { $each: [{ createdAt: new Date(), ...transaction }], $position: 0 } },
         },
         { new: true },
     );
@@ -66,17 +55,19 @@ export const creditReferralReward = async (userId, amountInr, metadata = {}) => 
     if (!Number.isFinite(amount) || amount <= 0) {
         return { wallet: await getUserWallet(userId) };
     }
-    const wallet = await ensureWallet(userId);
-    wallet.transactions.unshift({
-        type: 'addition',
+    // One atomic move on the ONE wallet: a load-then-save here could overwrite
+    // a Food or Rides move landing at the same moment (Food's 14 Sep fix).
+    await applyWalletMove(userId, {
         amount,
-        status: 'Completed',
-        description: 'Referral reward',
-        metadata: { source: 'referral_reward', ...(metadata || {}) }
+        inc: { referralEarnings: amount },
+        transaction: {
+            type: 'addition',
+            amount,
+            status: 'Completed',
+            description: 'Referral reward',
+            metadata: { source: 'referral_reward', ...(metadata || {}) }
+        },
     });
-    wallet.balance = Number(wallet.balance || 0) + amount;
-    wallet.referralEarnings = Number(wallet.referralEarnings || 0) + amount;
-    await wallet.save();
     return { wallet: await getUserWallet(userId) };
 };
 
