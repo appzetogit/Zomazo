@@ -176,3 +176,29 @@ The Shop's per-customer coupon limit is now claimed atomically at placement
 checkout as `couponClaim`, and given back once when the unpaid order or
 checkout is abandoned, swept or unwound. A customer's own unpaid order holding
 the coupon gives way to their retry, as in Food.
+
+### Missed fixes outside the money files (29 Sep 2026)
+
+The same scan without the money filter (every fix commit whose Food/core file
+changed but not the fork's twin) turned up ~70 candidates. Most are Food-only
+features Quick and the Shop do not have (formulation pricing, Rs 99 store,
+dish add-ons, availability schedules, the restaurant bill engine). Ported, each
+where the twin had the same bug in live code:
+
+- Quick: price changes, approvals, bulk uploads and deletes reach customers at
+  once; a deleted store leaves no configuration behind; the stock switch no
+  longer re-opens approval; a paid seller withdrawal is decided once; open
+  orders stop listing customer phones; a rider's pass is recorded; the admin
+  cannot confirm an unpaid order; no cancel after pickup; paid or delivered
+  orders cannot be deleted; dispatch uses the rider's real cash across
+  services against their own limit; a rider cannot delete their account with
+  cash or a delivery pending.
+- Shop: sub-admins get only the sections they were given (shared
+  `enforceAdminAccess`, paths in `admin/routes/shopAdminAccess.js`); admin
+  price edits clear the product page; one direct notification per customer
+  was capped (partial index -- the old sparse index on `ecom_notifications`
+  must be dropped once by hand); pushes use the Firebase project the database
+  names; any address label is accepted; logout always detaches the push token;
+  only Shop admins change its banners.
+- Both: a rejected store, rider or seller is refused on every request, not
+  only at sign-in.
