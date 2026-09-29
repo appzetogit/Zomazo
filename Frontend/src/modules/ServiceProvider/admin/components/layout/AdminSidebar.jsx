@@ -20,7 +20,8 @@ import {
   FiShield,
   FiTag,
 } from "react-icons/fi";
-import { UtensilsCrossed, Truck, Wrench, ShoppingBasket, Pill, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import AdminPanelSwitcher from "@/shared/superapp/AdminPanelSwitcher";
 import adminMenu from "../../config/adminMenu.json";
 import dashboardService from "../../services/dashboardService";
 import { getSettings } from "../../services/settingsService";
@@ -508,44 +509,10 @@ const AdminSidebar = ({ isOpen, onClose }) => {
           </h2>
         </div>
 
-        {/* Platform module switcher */}
-        <div className="flex p-1 bg-neutral-800/40 backdrop-blur-sm rounded-xl mb-1 border border-white/5 shadow-inner">
-          <button
-            type="button"
-            onClick={() => navigate("/admin/food")}
-            className="flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300 text-neutral-400 hover:text-neutral-200 hover:bg-white/5">
-            <UtensilsCrossed className="w-3.5 h-3.5 text-neutral-500" />
-            Food
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/taxi/admin/dashboard")}
-            className="flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300 text-neutral-400 hover:text-neutral-200 hover:bg-white/5">
-            <Truck className="w-3.5 h-3.5 text-neutral-500" />
-            Taxi
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/admin/sp/dashboard")}
-            className="flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300 bg-white text-black shadow-[0_4px_12px_rgba(255,255,255,0.15)]">
-            <Wrench className="w-3.5 h-3.5 text-black" />
-            Services
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/admin/quick-commerce")}
-            className="flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300 text-neutral-400 hover:text-neutral-200 hover:bg-white/5">
-            <ShoppingBasket className="w-3.5 h-3.5 text-neutral-500" />
-            Quick
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/admin/medical")}
-            className="flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300 text-neutral-400 hover:text-neutral-200 hover:bg-white/5">
-            <Pill className="w-3.5 h-3.5 text-neutral-500" />
-            Medical
-          </button>
-        </div>
+        {/* Platform module switcher: the shared list and access rule
+            (shared/superapp/adminPanels.js), so this panel offers the same
+            services as every other -- and only the ones this admin may open. */}
+        <AdminPanelSwitcher current="serviceProvider" onNavigate={navigate} />
       </div>
 
       {/* Navigation Menu */}

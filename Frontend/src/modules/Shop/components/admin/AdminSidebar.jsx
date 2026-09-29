@@ -67,6 +67,7 @@ import { getCachedSettings, loadBusinessSettings } from "@shop/utils/businessSet
 import { canAccessFeatureSettings, canAccessSuperPowers } from "@shop/utils/adminPermissions"
 import { canAdminAccess, isSuperAdmin, resolvePermissionSectionByPath } from "@shop/utils/adminRbac"
 import brandMark from "@shop/platform/config/brandMark"
+import AdminPanelSwitcher from "@/shared/superapp/AdminPanelSwitcher"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -984,6 +985,14 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
               <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wider text-left">
                 Admin Panel
               </h2>
+            </div>
+          )}
+
+          {/* The other panels, as in every admin (shared/superapp/adminPanels.js).
+              Plain links: they are outside this panel's own router. */}
+          {!isCollapsed && (
+            <div className="mb-3">
+              <AdminPanelSwitcher current="ecommerce" />
             </div>
           )}
 
