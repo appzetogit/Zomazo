@@ -354,11 +354,12 @@ export const verifyDeliveryCashDepositPayment = async (deliveryPartnerId, payloa
         return { deposit: existing, wallet: await getDeliveryPartnerWalletEnhanced(deliveryPartnerId) };
     }
 
-    const isValid = isRazorpayConfigured()
-        ? verifyPaymentSignature(orderId, paymentId, signature)
-        : true;
-
-    if (!isValid) {
+    // With no gateway the signature was skipped and the rider's own `amount`
+    // cleared their cash. Food refuses outright (11 Sep); so does this copy now.
+    if (!isRazorpayConfigured()) {
+        throw new ValidationError('Razorpay payment gateway is not configured');
+    }
+    if (!verifyPaymentSignature(orderId, paymentId, signature)) {
         throw new ValidationError('Payment verification failed');
     }
 

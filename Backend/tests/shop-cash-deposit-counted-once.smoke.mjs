@@ -1,7 +1,7 @@
 /**
- * The quick-commerce copy of the rider cash-deposit flow counts one payment once.
+ * The Shop's copy of the rider cash-deposit flow counts one payment once.
  *
- * Run: node tests/qc-cash-deposit-counted-once.smoke.mjs
+ * Run: node tests/shop-cash-deposit-counted-once.smoke.mjs
  *
  * Same race as cash-deposit-counted-once.smoke.mjs: look up, find nothing, create
  * a Completed row, with no unique index on razorpayPaymentId. This copy also wrote
@@ -47,17 +47,16 @@ const check = async (label, fn) => {
 
 const main = async () => {
     const mongo = await MongoMemoryServer.create();
-    await mongoose.connect(mongo.getUri(), { dbName: 'qc_cash_deposit_once' });
+    await mongoose.connect(mongo.getUri(), { dbName: 'shop_cash_deposit_once' });
 
-    const { FoodDeliveryPartner: QCPartner } = await import('../src/modules/quickCommerce/modules/food/delivery/models/deliveryPartner.model.js');
-    const { FoodOrder } = await import('../src/modules/food/orders/models/order.model.js');
-    const { FoodDeliveryCashDeposit: QCDeposit } = await import('../src/modules/quickCommerce/modules/food/delivery/models/foodDeliveryCashDeposit.model.js');
-    const finance = await import('../src/modules/quickCommerce/modules/food/delivery/services/deliveryFinance.service.js');
+    const { DeliveryPartner: QCPartner } = await import('../src/modules/ecommerce/modules/commerce/delivery/models/deliveryPartner.model.js');
+    const { Order: FoodOrder } = await import('../src/modules/ecommerce/modules/commerce/orders/models/order.model.js');
+    const { DeliveryCashDeposit: QCDeposit } = await import('../src/modules/ecommerce/modules/commerce/delivery/models/deliveryCashDeposit.model.js');
+    const finance = await import('../src/modules/ecommerce/modules/commerce/delivery/services/deliveryFinance.service.js');
     await QCDeposit.syncIndexes();
 
     const rider = new mongoose.Types.ObjectId();
     await QCPartner.collection.insertOne({ _id: rider, name: 'QC Rider', phone: '9000000011', status: 'approved' });
-    // Cash-in-hand is read from the unified rider finance, which reads food_orders.
     await FoodOrder.collection.insertOne({
         _id: new mongoose.Types.ObjectId(), orderStatus: 'delivered', dispatch: { deliveryPartnerId: rider },
         payment: { method: 'cash' }, pricing: { total: 302 }, riderEarning: 0, createdAt: new Date(),

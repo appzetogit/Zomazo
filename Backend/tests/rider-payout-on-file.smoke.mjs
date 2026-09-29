@@ -73,8 +73,12 @@ const qc = {
 const qcRider = new mongoose.Types.ObjectId();
 await qc.partner.collection.insertOne({ _id: qcRider, name: 'QC rider', phone: '9000000079', bankAccountNumber: '121212121212' });
 
-await check('Quick: a withdrawal to another account is refused, and a change pauses it', async () => {
+await check('Quick: no deposit without the gateway; a withdrawal to another account is refused, and a change pauses it', async () => {
     await assert.rejects(qc.finance.requestDeliveryWithdrawal(String(qcRider), { amount: 500, bankDetails: { accountNumber: '999' } }), /bank account in your profile/);
+    await assert.rejects(
+        qc.finance.verifyDeliveryCashDepositPayment(String(qcRider), { razorpayOrderId: 'order_q', razorpayPaymentId: 'pay_q', razorpaySignature: 'sig', amount: 5000 }),
+        /not configured/,
+    );
     await qc.profile.updateDeliveryPartnerBankDetails(String(qcRider), { documents: { bankDetails: { accountNumber: '343434343434' } } });
     await assert.rejects(qc.finance.requestDeliveryWithdrawal(String(qcRider), { amount: 500 }), /changed recently/);
 });
