@@ -291,9 +291,28 @@ export async function listOrdersAvailableDelivery(deliveryPartnerId, query) {
     : [];
   const txByOrderId = new Map(txRows.map((tx) => [String(tx.orderId), tx]));
 
+  /*
+   * An OFFER -- an order not yet assigned to this rider -- carries no customer
+   * contact details. Otherwise any rider could page through open orders and
+   * collect customers' phones and emails. Name, address and the drop point stay
+   * (they decide whether to take the job); once accepted, the order is theirs
+   * and this list returns it in full.
+   */
+  const withoutContact = (doc) => {
+    if (String(doc?.dispatch?.deliveryPartnerId || '') === String(deliveryPartnerId)) return doc;
+    const out = { ...doc, customerPhone: undefined };
+    if (doc?.userId && typeof doc.userId === 'object') {
+      out.userId = { _id: doc.userId._id, name: doc.userId.name };
+    }
+    if (doc?.deliveryAddress) {
+      out.deliveryAddress = { ...doc.deliveryAddress, phone: undefined };
+    }
+    return out;
+  };
+
   let enriched = docs.map((doc) =>
     sanitizeOrderForDeliveryPartner(
-      mergeTransactionIntoOrder(doc, txByOrderId.get(String(doc._id)) || null),
+      mergeTransactionIntoOrder(withoutContact(doc), txByOrderId.get(String(doc._id)) || null),
     ),
   );
 
