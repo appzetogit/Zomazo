@@ -155,7 +155,17 @@ async function enrichStoredCartPricing(cart, storedPricing) {
         );
         const tax = toNonNegativeNumber(storedPricing.tax, toNonNegativeNumber(recalc.tax, 0));
         const discount = toNonNegativeNumber(storedPricing.discount, 0);
-        const total = Math.max(0, subtotal + recalcDelivery + recalcDeliveryGst + platformFee + tax - discount);
+        /*
+         * The recalculated total, not a sum assembled here.
+         *
+         * We have just priced this cart for real, and that price accounts for
+         * lines this function never sees, packaging among them. Adding up the
+         * handful of fields in scope quotes a number checkout will not match.
+         */
+        const recalcTotal = Number(recalc.total);
+        const total = Number.isFinite(recalcTotal) && recalcTotal >= 0
+            ? recalcTotal
+            : Math.max(0, subtotal + recalcDelivery + recalcDeliveryGst + platformFee + tax - discount);
 
         return {
             ...storedPricing,
