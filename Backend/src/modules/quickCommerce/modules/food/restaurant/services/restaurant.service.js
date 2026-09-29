@@ -2093,6 +2093,22 @@ export const uploadRestaurantMenuImages = async (restaurantId, files = []) => {
     };
 };
 
+/**
+ * Stores with at least one product a customer could actually order.
+ *
+ * Approving a store and approving its products are separate steps, and only
+ * the first gated the Quick Shop list -- so a store appeared the moment it was
+ * approved, with nothing approved to sell, and a customer tapped through to an
+ * empty shelf. Food applies the same second gate since 11 Sep. One distinct()
+ * per listing; the set is bounded by the number of stores, not products.
+ */
+const storeIdsWithSellableProducts = async () =>
+    FoodItem.distinct('restaurantId', {
+        approvalStatus: 'approved',
+        isAvailable: { $ne: false },
+        price: { $gt: 0 },
+    });
+
 export const listApprovedRestaurants = async (query = {}) => {
     const limit = Math.min(Math.max(parseInt(query.limit, 10) || 100, 1), 1000);
     const page = Math.max(parseInt(query.page, 10) || 1, 1);
@@ -2119,6 +2135,8 @@ export const listApprovedRestaurants = async (query = {}) => {
         filter.storeType = normalizeStoreTypeInput(query.storeType);
     } else {
         Object.assign(filter, QUICK_SHOP_SELLER_FILTER);
+        // Not for pharmacies: one with nothing listed still fills prescriptions.
+        filter._id = { $in: await storeIdsWithSellableProducts() };
     }
     if (query.cuisine && String(query.cuisine).trim()) {
         const cuisine = normalizeCuisine(query.cuisine);

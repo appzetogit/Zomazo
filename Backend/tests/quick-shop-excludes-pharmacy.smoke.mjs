@@ -44,7 +44,7 @@ const kirana = await seller('Corner Kirana', 'kirana');
 const legacy = await FoodRestaurant.collection.insertOne({
     restaurantName: 'Old Shop', status: 'approved', email: 'old@example.com', phone: String(phone++),
 });
-for (const [r, name] of [[chemist, 'Paracetamol'], [kirana, 'Rice 5kg']]) {
+for (const [r, name] of [[chemist, 'Paracetamol'], [kirana, 'Rice 5kg'], [{ _id: legacy.insertedId }, 'Old Tea']]) {
     await FoodItem.create({ restaurantId: r._id, name, price: 50, basePrice: 50, approvalStatus: 'approved' });
 }
 
@@ -56,6 +56,13 @@ await check('Quick Shop seller list has no pharmacy (and keeps sellers saved bef
     assert.deepEqual(names, ['Corner Kirana', 'Old Shop']);
 });
 
+await check('an approved store with nothing approved to sell is not listed', async () => {
+    const empty = await seller('Empty Shelf', 'kirana');
+    await FoodItem.create({ restaurantId: empty._id, name: 'Pending jam', price: 40, basePrice: 40, approvalStatus: 'pending' });
+    const names = namesOf(sellersIn(await listApprovedRestaurants({})));
+    assert.ok(!names.includes('Empty Shelf'), names.join(', '));
+});
+
 await check('Medical tab still lists the pharmacy, and only it', async () => {
     const names = namesOf(sellersIn(await listApprovedRestaurants({ storeType: 'pharmacy' })));
     assert.deepEqual(names, ['City Chemist']);
@@ -63,14 +70,14 @@ await check('Medical tab still lists the pharmacy, and only it', async () => {
 
 await check('Quick Shop product search has no medicine', async () => {
     const { products } = await searchProducts({});
-    assert.deepEqual(products.map((p) => p.name).sort(), ['Rice 5kg']);
+    assert.deepEqual(products.map((p) => p.name).sort(), ['Old Tea', 'Rice 5kg']);
     const { products: hits } = await searchProducts({ q: 'para' });
     assert.equal(hits.length, 0);
 });
 
 await check('public product list has no medicine', async () => {
     const { foods } = await listPublicFoods({});
-    assert.deepEqual(foods.map((f) => f.name).sort(), ['Rice 5kg']);
+    assert.deepEqual(foods.map((f) => f.name).sort(), ['Old Tea', 'Rice 5kg']);
 });
 
 void legacy;
