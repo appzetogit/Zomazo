@@ -141,3 +141,32 @@ Merge projects, not collapses: `notifications/firebase.service.js`,
 
 Genuinely vertical-specific, keep: `roles/adminPermission.middleware.js`,
 `notifications/models/notificationBroadcast.model.js`.
+
+### Missed money fixes, second pass (29 Sep 2026)
+
+Every fix commit that touched Food's or core's money files was checked against
+its Quick and Shop twins. Ported, each with a smoke test:
+
+| fix | where it was missing |
+| --- | --- |
+| a partly paid payment link is not paid | Services (`razorpayService.paymentLinkPayments`) |
+| 5 wrong handover codes replace the code | Shop |
+| a late capture on a cancelled order is refunded, not kept; only `pending_payment` orders advance | Shop (orders and split checkouts) |
+| abandoned unpaid orders are kept cancelled, not deleted | Shop (`abandonedAt`; hidden from sellers) |
+| stores cannot mark their own orders picked up / delivered | Shop |
+| one order per double tap (implicit idempotency, 10 s) | Shop orders and checkouts |
+| rider payouts only to the account on file, paused 24 h after it changes | Shop, Quick |
+| rider cash deposit: gateway required, captured amount, counted once | Shop (all three), Quick (gateway) |
+| a return takes back the order's cashback, pro rata | Shop |
+| a cash order counts against the rider's cash limit | Shop |
+| withdrawals decided once, with `WITHDRAWAL_DECIDE` | Shop (seller and rider) |
+| delivered or paid orders cannot be deleted | Shop |
+| a wallet-paid checkout that fails refunds the wallet | Shop |
+| ledger: delivery GST is tax, coins charged to the platform, no zero floor on the seller's share | Shop; Quick (floor) |
+| GST follows who funded the coupon | Shop |
+
+Still open: the Shop's per-customer coupon limit is checked by a read at
+pricing and counted after placement, so parallel orders can each use a
+one-per-customer coupon. Food claims it atomically at placement and releases
+it when an unpaid order is given up; the Shop needs the same claim/release on
+every abandon, sweep and unwind path before it can be switched on.
