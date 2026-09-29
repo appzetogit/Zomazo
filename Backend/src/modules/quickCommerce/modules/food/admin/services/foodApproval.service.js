@@ -116,7 +116,9 @@ export async function approveFoodItem(id) {
         
         try {
             const { invalidateCache } = await import('../../../../middleware/cache.js');
-            await invalidateCache(`restaurant_menu:${updated.restaurantId}`);
+            // Keys are prefix:METHOD:url, so a bare id matched nothing; only the
+            // wildcard clears the menu (Food's a486f992, missed here).
+            await invalidateCache('restaurant_menu:*');
         } catch (cacheErr) {
             console.error('Failed to invalidate cache after food approval:', cacheErr);
         }
@@ -161,7 +163,9 @@ export async function rejectFoodItem(id, reason) {
         
         try {
             const { invalidateCache } = await import('../../../../middleware/cache.js');
-            await invalidateCache(`restaurant_menu:${updated.restaurantId}`);
+            // Keys are prefix:METHOD:url, so a bare id matched nothing; only the
+            // wildcard clears the menu (Food's a486f992, missed here).
+            await invalidateCache('restaurant_menu:*');
         } catch (cacheErr) {
             console.error('Failed to invalidate cache after food rejection:', cacheErr);
         }

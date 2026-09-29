@@ -4151,7 +4151,7 @@ export async function deleteFood(id) {
     if (deleted?.restaurantId) {
         try {
             const { invalidateCache } = await import('../../../../middleware/cache.js');
-            await invalidateCache(`restaurant_menu:${deleted.restaurantId}`);
+            await invalidateCache('restaurant_menu:*');
         } catch (cacheErr) {
             console.error('Failed to invalidate cache after food delete:', cacheErr);
         }
@@ -4194,7 +4194,9 @@ export async function bulkDeleteFoods({ restaurantId, foodIds = [], selectAll = 
     if (result.deletedCount > 0) {
         try {
             const { invalidateCache } = await import('../../../../middleware/cache.js');
-            await invalidateCache(`restaurant_menu:${restaurantId}`);
+            // Keys are prefix:METHOD:url, so a bare id matched nothing; only the
+            // wildcard clears the menu (Food's a486f992, missed here).
+            await invalidateCache('restaurant_menu:*');
         } catch (cacheErr) {
             console.error('Failed to invalidate cache after bulk food delete:', cacheErr);
         }
@@ -6454,7 +6456,9 @@ export async function bulkApproveFoodItems(restaurantId) {
     if (restaurantId && mongoose.Types.ObjectId.isValid(restaurantId)) {
         try {
             const { invalidateCache } = await import('../../../../middleware/cache.js');
-            await invalidateCache(`restaurant_menu:${restaurantId}`);
+            // Keys are prefix:METHOD:url, so a bare id matched nothing; only the
+            // wildcard clears the menu (Food's a486f992, missed here).
+            await invalidateCache('restaurant_menu:*');
         } catch (cacheErr) {
             console.error('Failed to invalidate cache after bulk approval:', cacheErr);
         }
