@@ -19,7 +19,7 @@ import {
     incrementCouponUsageForOrder,
     releasePaidOrder,
 } from './order.service.js';
-import { deductWalletBalance } from '../../user/services/userWallet.service.js';
+import { deductWalletBalance, refundWalletBalance } from '../../user/services/userWallet.service.js';
 import {
     createRazorpayOrder,
     fetchRazorpayOrder,
@@ -340,6 +340,7 @@ export async function createSplitCheckout(userId, dto = {}) {
     checkout.childOrderCodes = orders.map((o) => o.order_id || o.orderId || String(o._id));
 
     let razorpay = null;
+    let walletDebited = false;
     try {
         if (paymentMethod === 'cash') {
             checkout.status = 'confirmed';
@@ -348,6 +349,7 @@ export async function createSplitCheckout(userId, dto = {}) {
         } else if (paymentMethod === 'wallet') {
             await checkout.save();
             await deductWalletBalance(userId, grandTotal, `Payment for checkout ${checkoutId}`, { checkoutId });
+            walletDebited = true;
             await finalizeCheckoutPaid(checkout._id, { byRole: 'USER', byId: userId });
         } else {
             const rzOrder = await createRazorpayOrder(Math.round(grandTotal * 100), 'INR', checkoutId, {
@@ -369,6 +371,12 @@ export async function createSplitCheckout(userId, dto = {}) {
         }
     } catch (err) {
         await unwindCheckout(checkout, await Order.find({ checkoutId: checkout._id }));
+        // Paid from the wallet but the checkout could not be completed: the
+        // orders are gone, so the money comes back (Food's 11 Sep rule).
+        if (walletDebited) {
+            await refundWalletBalance(userId, grandTotal, `Refund for checkout ${checkoutId} that could not be placed`, { checkoutId, reason: 'checkout_failed' })
+                .catch((refundErr) => logger.error(`[CRITICAL] Wallet refund for failed checkout ${checkoutId} failed: ${refundErr?.message || refundErr}. Refund manually.`));
+        }
         throw err;
     }
 
