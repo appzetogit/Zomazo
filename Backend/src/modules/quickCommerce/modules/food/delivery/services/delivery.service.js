@@ -963,6 +963,34 @@ export const deleteDeliveryPartnerAccount = async (partnerId) => {
     const partner = await FoodDeliveryPartner.findById(partnerId);
     if (!partner) throw new ValidationError('Delivery partner not found');
 
+    /*
+     * Not with a job in hand or money owed (Food's 22 Sep rule, missed here).
+     * Deleting removed the partner and the wallet outright, so a rider holding
+     * COD cash erased the record of what they owed, and an active order was
+     * left pointing at nobody.
+     */
+    const active = await FoodOrder.exists({
+        'dispatch.deliveryPartnerId': partner._id,
+        'dispatch.status': 'accepted',
+        orderStatus: { $nin: ['delivered', 'cancelled_by_user', 'cancelled_by_restaurant', 'cancelled_by_admin'] },
+    });
+    if (active) {
+        throw new ValidationError('Finish or hand back your current delivery before deleting your account.');
+    }
+    try {
+        const { getRiderFinance } = await import('../../../../../../core/finance/riderFinance.service.js');
+        const finance = await getRiderFinance(partner._id);
+        if (Number(finance?.cashInHand || 0) > 0) {
+            throw new ValidationError(`Deposit the Rs ${finance.cashInHand} cash you are holding before deleting your account.`);
+        }
+        if (Number(finance?.breakdown?.delivery?.pendingWithdrawals || 0) > 0) {
+            throw new ValidationError('Wait for your pending withdrawal to finish before deleting your account.');
+        }
+    } catch (err) {
+        if (err instanceof ValidationError) throw err;
+        throw new ValidationError('Could not check your balance right now. Please try again.');
+    }
+
     // Remove associated documents
     await FoodDeliveryWallet.findOneAndDelete({ deliveryPartnerId: partnerId });
     await DeliverySupportTicket.deleteMany({ deliveryPartnerId: partnerId });

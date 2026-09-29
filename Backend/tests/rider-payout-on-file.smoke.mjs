@@ -83,6 +83,15 @@ await check('Quick: no deposit without the gateway; a withdrawal to another acco
     await assert.rejects(qc.finance.requestDeliveryWithdrawal(String(qcRider), { amount: 500 }), /changed recently/);
 });
 
+await check('Quick: a rider on an active delivery cannot delete their account', async () => {
+    const { FoodOrder } = await import('../src/modules/quickCommerce/modules/food/orders/models/order.model.js');
+    const rider = new mongoose.Types.ObjectId();
+    await qc.partner.collection.insertOne({ _id: rider, name: 'Busy', phone: '9000000081' });
+    await FoodOrder.collection.insertOne({ _id: new mongoose.Types.ObjectId(), orderStatus: 'picked_up', dispatch: { deliveryPartnerId: rider, status: 'accepted' } });
+    await assert.rejects(qc.profile.deleteDeliveryPartnerAccount(String(rider)), /current delivery/);
+    assert.ok(await qc.partner.collection.findOne({ _id: rider }));
+});
+
 await mongoose.disconnect();
 await mongo.stop();
 if (failed) {
