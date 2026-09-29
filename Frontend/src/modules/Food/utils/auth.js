@@ -2,6 +2,7 @@
  * JWT Token Utilities
  * Decode and extract information from JWT tokens
  */
+import { forgetActiveSlotBusiness, rememberActiveSlotBusiness } from "@/shared/partner/businesses"
 
 /**
  * Decode JWT token without verification (client-side only)
@@ -146,6 +147,9 @@ export function isModuleAuthenticated(module) {
  * @param {string} module - Module name (admin, restaurant, delivery, user)
  */
 export function clearModuleAuth(module) {
+  // Signing out of a restaurant or Quick store forgets it in the business
+  // switcher too (read before the token below is gone).
+  if (module === "restaurant") forgetActiveSlotBusiness();
   localStorage.removeItem(`${module}_accessToken`);
   localStorage.removeItem(`${module}_refreshToken`);
   localStorage.removeItem(`${module}_authenticated`);
@@ -257,6 +261,9 @@ export function setAuthData(module, token, user, refreshToken = null) {
 
     // Prevent stale restaurant profile data from previous account after re-login.
     if (module === "restaurant") {
+      // Keep the business this sign-in replaces, so the owner can switch back
+      // to it (shared/partner/businesses.js) rather than sign in again.
+      rememberActiveSlotBusiness();
       clearRestaurantSessionCache();
       // A fresh restaurant login is a food restaurant unless the caller says
       // otherwise straight after (the /partner sign-in does, for stores and

@@ -4,6 +4,7 @@ import { Search, ChevronRight, MapPin, X, Bell } from "lucide-react"
 import { sellerAPI } from "@shop/api"
 import { getCachedSettings, getModuleLogoUrl, loadBusinessSettings } from "@shop/utils/businessSettings"
 import useNotificationInbox from "@shop/hooks/useNotificationInbox"
+import BusinessSwitcher from "@/shared/partner/BusinessSwitcher"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -343,6 +344,7 @@ export default function SellerNavbar({
             </h1>
 
           </div>
+          <BusinessSwitcher current="shop" className="-ml-2 mt-0.5 md:hidden" />
           {!loading && location && location.trim() !== "" && (
             <div className="flex items-center gap-1 mt-1 opacity-70">
               <MapPin className="w-2 h-2 text-gray-400 shrink-0" />

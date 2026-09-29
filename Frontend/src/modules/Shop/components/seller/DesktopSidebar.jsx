@@ -26,6 +26,7 @@ import {
 import { sellerAPI } from "@shop/api"
 import { getCompanyName, getModuleLogoUrl, getCachedSettings, loadBusinessSettings } from "@shop/utils/businessSettings"
 import { logoutSellerSession } from "@shop/utils/sellerLogout"
+import BusinessSwitcher from "@/shared/partner/BusinessSwitcher"
 
 const BASE = "/seller"
 
@@ -234,6 +235,7 @@ export default function DesktopSidebar() {
           <div className="flex flex-col min-w-0">
             <span className="font-bold text-gray-900 text-sm truncate">{sellerName}</span>
             <span className="text-xs text-gray-500 truncate">Seller panel</span>
+            <BusinessSwitcher current="shop" className="-ml-2 mt-0.5" />
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@
  * - On 401: attempts refresh, retries once; on refresh failure logs out
  */
 
+import { forgetActiveSlotBusiness } from "@/shared/partner/businesses"
 import axios from "axios";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -229,6 +230,8 @@ function getRefreshToken(module) {
 
 function clearModuleAuth(module) {
   try {
+    // A dead restaurant/store session leaves the business switcher too.
+    if (module === "restaurant") forgetActiveSlotBusiness();
     localStorage.removeItem(`${module}_accessToken`);
     localStorage.removeItem(`${module}_refreshToken`);
     localStorage.removeItem(`${module}_authenticated`);
@@ -356,6 +359,7 @@ const currentQcBase = () => {
  * (setAuthData), as does signing out.
  */
 export const RESTAURANT_VERTICAL_KEY = "restaurant_vertical"
+const RESTAURANT_SIGN_IN = /\/auth\/restaurant\/(request-otp|verify-otp|login|register|signup|google)/
 const restaurantOnQc = () => {
   try {
     return localStorage.getItem(RESTAURANT_VERTICAL_KEY) === "qc"
@@ -440,7 +444,16 @@ apiClient.interceptors.request.use(
     // After the rewrite, so the path it matches is the one actually being sent.
     applyZoneVertical(config);
     config.contextModule = getModuleFromConfig(config);
-    if (config.contextModule === "restaurant" && restaurantOnQc() && typeof config.url === "string") {
+    if (
+      config.contextModule === "restaurant" &&
+      restaurantOnQc() &&
+      typeof config.url === "string" &&
+      // Signing in on the restaurant login page is a FOOD sign-in even while a
+      // Quick store is the active session (stores sign in through /partner).
+      // Redirected, it signed the store in again and the restaurant was never
+      // reached -- which also left the partner switcher showing the store twice.
+      !RESTAURANT_SIGN_IN.test(config.url)
+    ) {
       config.url = config.url.replace(/(^|\/)food\//, "$1qc/");
     }
 

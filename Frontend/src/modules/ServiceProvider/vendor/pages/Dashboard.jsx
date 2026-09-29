@@ -5,6 +5,7 @@ import { Card, Empty, Shell, Spinner, Stat, inr } from "../../components/partner
 import BookingRow from "../components/BookingRow"
 import RequestCard from "../components/RequestCard"
 import { vendorNav } from "../nav"
+import BusinessSwitcher from "@/shared/partner/BusinessSwitcher"
 import useVendorLive from "../useVendorLive"
 import { BASE, storedVendor, vendorApi } from "../vendorApi"
 
@@ -47,15 +48,18 @@ export default function Dashboard() {
       subtitle={vendor?.businessName || "Service vendor"}
       nav={vendorNav(requests.length)}
       right={
-        <span
-          title={connected ? "Live updates on" : "Reconnecting; checking every 20 seconds"}
-          className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
-            connected ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
-          }`}
-        >
-          {connected ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
-          {connected ? "Live" : "Offline"}
-        </span>
+        <div className="flex items-center gap-1">
+          <BusinessSwitcher current="services" align="right" />
+          <span
+            title={connected ? "Live updates on" : "Reconnecting; checking every 20 seconds"}
+            className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${
+              connected ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+            }`}
+          >
+            {connected ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
+            {connected ? "Live" : "Offline"}
+          </span>
+        </div>
       }
     >
       <section>

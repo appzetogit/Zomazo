@@ -5,6 +5,8 @@ import { restaurantAPI } from "@food/api"
 import { getCachedSettings, loadBusinessSettings } from "@food/utils/businessSettings"
 import useNotificationInbox from "@food/hooks/useNotificationInbox"
 import { useSettings } from "../../../Taxi/shared/context/SettingsContext"
+import BusinessSwitcher from "@/shared/partner/BusinessSwitcher"
+import { activeSlotBusiness } from "@/shared/partner/businesses"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -332,6 +334,7 @@ export default function RestaurantNavbar({
             </h1>
 
           </div>
+          <BusinessSwitcher current={activeSlotBusiness()} className="-ml-2 mt-0.5 lg:hidden" />
           {!loading && location && location.trim() !== "" && (
             <div className="flex items-center gap-1 mt-1 opacity-70">
               <MapPin className="w-2 h-2 text-gray-400 shrink-0" />

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { BarChart3, Boxes, Building2, ChevronLeft, ChevronRight, Clock, Compass, Copy, Download, FileText, Gift, Landmark, LifeBuoy, Map, Package, Star, Store, Tag, Utensils, Wallet } from "lucide-react"
 import { isFoodOnlySellerRoute, isQcSeller } from "@food/utils/sellerVertical"
+import BusinessSwitcher from "@/shared/partner/BusinessSwitcher"
+import { activeSlotBusiness } from "@/shared/partner/businesses"
 
 /**
  * Desktop sidebar for the restaurant dashboard.
@@ -117,6 +119,7 @@ export default function RestaurantSidebar({ collapsed, onToggleCollapse, restaur
               {name}
             </p>
             <p className="truncate text-[11px] text-neutral-500">Partner dashboard</p>
+            <BusinessSwitcher current={activeSlotBusiness()} tone="dark" className="-ml-2 mt-0.5" />
           </div>
         )}
       </div>
