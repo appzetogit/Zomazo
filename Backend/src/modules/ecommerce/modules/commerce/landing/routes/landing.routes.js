@@ -2,6 +2,7 @@ import express from 'express';
 import { upload } from '../../../../middleware/upload.js';
 import { authMiddleware } from '../../../../core/auth/auth.middleware.js';
 import { requireRoles } from '../../../../core/roles/role.middleware.js';
+import { requireServiceAccess } from '../../../../../../core/roles/serviceAccess.middleware.js';
 import {
     listHeroBannersController,
     uploadHeroBannersController,
@@ -70,7 +71,12 @@ const requireAdminForLandingWrites = (req, res, next) => {
 
     return authMiddleware(req, res, (err) => {
         if (err) return next(err);
-        return requireRoles('ADMIN')(req, res, next);
+        return requireRoles('ADMIN')(req, res, (roleErr) => {
+            if (roleErr) return next(roleErr);
+            // The Shop's own admins only, as on the Shop's admin router: any
+            // service's admin token used to be enough to change its storefront.
+            return requireServiceAccess('ecommerce')(req, res, next);
+        });
     });
 };
 

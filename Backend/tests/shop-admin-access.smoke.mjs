@@ -1,7 +1,7 @@
 /**
- * Only the Shop's admins reach the Shop's payment admin routes.
+ * Only the Shop's admins reach its payment admin routes and change its banners.
  *
- * Run: node tests/shop-payout-access.smoke.mjs
+ * Run: node tests/shop-admin-access.smoke.mjs
  */
 import assert from 'node:assert/strict';
 import express from 'express';
@@ -68,6 +68,13 @@ await check('the platform owner still reaches them', async () => {
     const status = await call('GET', '/v1/ecom/payments/admin/settlements', owner);
     assert.notEqual(status, 403, `got ${status}`);
     assert.notEqual(status, 401, `got ${status}`);
+});
+
+await check("a Food-only admin cannot change the Shop's banners; the owner can", async () => {
+    const id = String(new mongoose.Types.ObjectId());
+    assert.equal(await call('DELETE', `/v1/ecom/content/hero-banners/${id}`, foodOnly), 403);
+    const status = await call('DELETE', `/v1/ecom/content/hero-banners/${id}`, owner);
+    assert.ok(![401, 403].includes(status), `owner got ${status}`);
 });
 
 server.close();
