@@ -540,9 +540,8 @@ export const verifyDeliveryOtpAndLogin = async (phone, otp, fcmToken, platform) 
 };
 
 export const logout = async (refreshToken, fcmToken, platform) => {
-  if (!refreshToken) {
-    throw new ValidationError("Refresh token is required");
-  }
+  // No refresh token is a valid way to log out (logout.dto.js): fall through so
+  // the FCM token is still detached, then report nothing was invalidated.
 
   // 1. Remove specific FCM token from ALL collections if provided
   if (fcmToken) {
@@ -555,7 +554,11 @@ export const logout = async (refreshToken, fcmToken, platform) => {
     }
   }
 
-  // 2. Invalidate the refresh token (standard logout procedure)
+  // 2. Invalidate the refresh token (standard logout procedure). Guarded:
+  // deleteOne({ token: undefined }) would match a row with no token field.
+  if (!refreshToken) {
+    return { invalidated: false };
+  }
   const deleted = await RefreshToken.deleteOne({ token: refreshToken });
   return { invalidated: deleted.deletedCount > 0 };
 };
