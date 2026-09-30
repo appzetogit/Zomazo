@@ -33,10 +33,10 @@ export async function platformAccountOf(customerId) {
 }
 
 /** The platform coupon with this code, whatever its state, or null. */
-export async function findPlatformCoupon(code) {
+export async function findPlatformCoupon(code, { session } = {}) {
     const wanted = normalize(code);
     if (!wanted) return null;
-    return PlatformCoupon.findOne({ code: wanted }).lean();
+    return PlatformCoupon.findOne({ code: wanted }).session(session || null).lean();
 }
 
 /** The coupon's limits with the service's Master ceiling applied (0 = unlimited). */
@@ -113,8 +113,11 @@ export async function quotePlatformCoupon(code, { service, platformUserId, subto
  * platform cannot now refuse (the services count their own coupons the same way).
  * Returns { taken, exhausted, perUser, overLimit }.
  */
-export async function claimPlatformCoupon(code, { service, platformUserId, enforce = true } = {}) {
-    const coupon = await findPlatformCoupon(code);
+export async function claimPlatformCoupon(code, { service, platformUserId, enforce = true, session = null } = {}) {
+    // `session`: inside a caller's transaction (Taxi books a ride in one), so an
+    // aborted booking takes its claim back with it and a retry does not claim twice.
+    const coupon = await findPlatformCoupon(code, { session });
+    const opts = session ? { session } : {};
     if (!coupon) return { taken: false, exhausted: false, perUser: false, overLimit: false };
     const limits = await effectiveLimits(coupon, service);
     const userOid = toOid(platformUserId);
@@ -126,11 +129,11 @@ export async function claimPlatformCoupon(code, { service, platformUserId, enfor
             const use = await PlatformCouponUse.findOneAndUpdate(
                 { couponId: coupon._id, platformUserId: userOid },
                 { $inc: { count: 1 }, ...stamp },
-                { upsert: true, new: true },
+                { upsert: true, new: true, ...opts },
             ).lean();
             if (limits.perUser > 0 && use.count > limits.perUser) overLimit = true;
         }
-        const after = await PlatformCoupon.findOneAndUpdate({ _id: coupon._id }, { $inc: { usedCount: 1 } }, { new: true }).lean();
+        const after = await PlatformCoupon.findOneAndUpdate({ _id: coupon._id }, { $inc: { usedCount: 1 } }, { new: true, ...opts }).lean();
         if (limits.total > 0 && after.usedCount > limits.total) overLimit = true;
         return { taken: true, exhausted: false, perUser: false, overLimit };
     }
@@ -143,7 +146,7 @@ export async function claimPlatformCoupon(code, { service, platformUserId, enfor
                     ? { couponId: coupon._id, platformUserId: userOid, count: { $lt: limits.perUser } }
                     : { couponId: coupon._id, platformUserId: userOid },
                 { $inc: { count: 1 }, ...stamp },
-                { upsert: true },
+                { upsert: true, ...opts },
             );
             userClaimed = r.matchedCount === 1 || r.upsertedCount === 1;
         } catch (err) {
@@ -157,12 +160,14 @@ export async function claimPlatformCoupon(code, { service, platformUserId, enfor
     const total = await PlatformCoupon.updateOne(
         limits.total > 0 ? { _id: coupon._id, usedCount: { $lt: limits.total } } : { _id: coupon._id },
         { $inc: { usedCount: 1 } },
+        opts,
     );
     if (total.matchedCount === 0) {
         if (userClaimed) {
             await PlatformCouponUse.updateOne(
                 { couponId: coupon._id, platformUserId: userOid, count: { $gt: 0 } },
                 { $inc: { count: -1 } },
+                opts,
             );
         }
         return { taken: false, exhausted: true, perUser: false, overLimit: false };

@@ -5,6 +5,7 @@ import { PromoRedemption } from '../admin/promotions/models/PromoRedemption.js';
 import { PromoUserCounter } from '../admin/promotions/models/PromoUserCounter.js';
 import { Ride } from '../user/models/Ride.js';
 import { effectivePromoLimits } from '../../../core/finance/promoLimits.service.js';
+import { claimPlatformCoupon, quotePlatformCoupon } from '../../../core/promotions/platformCoupon.service.js';
 
 const normalizeText = (value) => String(value ?? '').trim();
 
@@ -113,6 +114,46 @@ export const computePromoDiscount = ({ fare, promo, userCounter }) => {
   };
 };
 
+/**
+ * A platform coupon (made in Master for several services) as a Taxi discount
+ * breakdown, or null when no platform coupon has this code. Rides customers are
+ * platform accounts already (users), so their id counts the uses directly; their
+ * first ride is their first order.
+ */
+const quotePlatformPromo = async ({ code, userId, fare, session = null }) => {
+  const safeFare = Number(fare);
+  const validUser = userId && mongoose.isValidObjectId(userId);
+  const isFirstOrder = validUser
+    ? (await Ride.countDocuments({ userId: new mongoose.Types.ObjectId(String(userId)), status: { $ne: 'cancelled' } }).session(session)) === 0
+    : null;
+  const quoted = await quotePlatformCoupon(code, {
+    service: 'taxi',
+    platformUserId: validUser ? userId : null,
+    subtotal: Number.isFinite(safeFare) ? safeFare : 0,
+    isFirstOrder,
+  });
+  if (!quoted.coupon) return null;
+  const coupon = quoted.coupon;
+  const discount = Number(quoted.discount) || 0;
+  return {
+    quoted,
+    breakdown: {
+      fare_before_discount: safeFare,
+      raw_discount: discount,
+      capped_discount: discount,
+      discount_amount: discount,
+      fare_after_discount: Math.max(0, safeFare - discount),
+      caps: {
+        maximum_discount_amount: Number(coupon.maxDiscount) || 0,
+        cumulative_max_discount_amount: 0,
+        cumulative_used: 0,
+        cumulative_remaining: null,
+      },
+      discount_percentage: coupon.discountType === 'percentage' ? Number(coupon.discountValue) || 0 : 0,
+    },
+  };
+};
+
 export const validatePromoForContext = async ({
   code,
   userId,
@@ -128,7 +169,30 @@ export const validatePromoForContext = async ({
 
   const promo = await PromoCode.findOne({ code: normalizedCode }).lean();
   if (!promo) {
-    return { eligible: false, reason: 'NOT_FOUND', message: 'Promo code not found' };
+    const platform = await quotePlatformPromo({ code: normalizedCode, userId, fare });
+    if (!platform) return { eligible: false, reason: 'NOT_FOUND', message: 'Promo code not found' };
+    if (!(platform.breakdown.discount_amount > 0)) {
+      return { eligible: false, reason: 'PLATFORM_COUPON', message: platform.quoted.reason || 'Promo code cannot be used here' };
+    }
+    const coupon = platform.quoted.coupon;
+    return {
+      eligible: true,
+      promo: {
+        _id: coupon._id,
+        code: coupon.code,
+        platform: true,
+        minimum_trip_amount: Number(coupon.minOrderValue) || 0,
+        maximum_discount_amount: Number(coupon.maxDiscount) || 0,
+        discount_percentage: platform.breakdown.discount_percentage,
+        uses_per_user: Number(coupon.perUserLimit) || 0,
+        max_uses_total: Number(coupon.usageLimit) || 0,
+        usage_count: Number(coupon.usedCount) || 0,
+        active: coupon.status === 'active',
+        from_date: coupon.startDate,
+        to_date: coupon.endDate,
+      },
+      breakdown: platform.breakdown,
+    };
   }
 
   const transportType = normalizeTransportType(transport_type);
@@ -263,7 +327,31 @@ export const applyPromoToRideInTransaction = async ({
 
   const promo = await PromoCode.findOne({ code: normalizedCode }).session(session);
   if (!promo) {
-    throw new ApiError(404, 'Promo code not found');
+    // A platform coupon: priced like a Taxi promo, claimed inside this booking's
+    // transaction so an aborted or retried booking never keeps a claim.
+    const platform = await quotePlatformPromo({ code: normalizedCode, userId, fare, session });
+    if (!platform) throw new ApiError(404, 'Promo code not found');
+    if (!(platform.breakdown.discount_amount > 0)) {
+      throw new ApiError(400, platform.quoted.reason || 'Promo code cannot be used here');
+    }
+    const claim = await claimPlatformCoupon(normalizedCode, { service: 'taxi', platformUserId: userObjectId, session });
+    if (!claim.taken) {
+      throw new ApiError(409, claim.perUser ? 'Promo code usage limit reached for user' : 'Promo code usage limit reached');
+    }
+    const breakdown = platform.breakdown;
+    ride.promo = {
+      code: normalizedCode,
+      promo_id: null,
+      discount_amount: breakdown.discount_amount,
+      fare_before_discount: breakdown.fare_before_discount,
+      fare_after_discount: breakdown.fare_after_discount,
+      service_location_id: serviceLocationId,
+      transport_type: transportType,
+      applied_at: new Date(),
+    };
+    ride.fare = breakdown.fare_after_discount + Math.max(0, Number(surgeAmount || 0));
+    await ride.save({ session });
+    return { promo: { code: normalizedCode, platform: true }, breakdown };
   }
 
   const now = new Date();
