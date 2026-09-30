@@ -90,13 +90,22 @@ async function applyReferralAtSignup({ refereeId, refereePhone, code }) {
     if (!(limit > 0)) return reject('limit_disabled');
     if (await ReferralLog.exists({ refereePhone, status: 'credited' })) return reject('phone_already_rewarded');
 
+    // One reward per person across every service. The claim register is ESM
+    // (core/referral/referralClaim.service.js), loaded when first needed.
+    const { claimReferralForPhone, releaseReferralClaim } = await import('../../../core/referral/referralClaim.service.js');
+    const platformClaim = await claimReferralForPhone({ phone: refereePhone, programme: 'serviceProvider', referrerId: referrer._id, refereeId });
+    if (!platformClaim.claimed) return reject('rewarded_in_other_service');
+
     // Claim a slot under the limit atomically: two sign-ups at once cannot both
     // take the last one.
     const claimed = await User.updateOne(
       { _id: referrer._id, $or: [{ referralCount: { $lt: limit } }, { referralCount: { $exists: false } }] },
       { $inc: { referralCount: 1 } }
     );
-    if (claimed.modifiedCount !== 1) return reject('limit_reached');
+    if (claimed.modifiedCount !== 1) {
+      await releaseReferralClaim({ phone: refereePhone, programme: 'serviceProvider' });
+      return reject('limit_reached');
+    }
 
     // Through the shared-wallet bridge: a linked customer is credited in their
     // one platform wallet, anyone else on their Services balance.

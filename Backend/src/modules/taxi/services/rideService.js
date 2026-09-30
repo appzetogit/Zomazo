@@ -288,6 +288,15 @@ const processCompletedRideReferralReward = async (ride) => {
     return;
   }
 
+  // One reward per person across every service. `referredBy` is on the one
+  // account and Food sets it too, so this paid again for a customer Food had
+  // already rewarded; the claim register decides (core/referral/referralClaim.service.js).
+  const { claimReferralForPhone } = await import('../../../core/referral/referralClaim.service.js');
+  const claim = await claimReferralForPhone({
+    phone: referredUser.phone, programme: 'taxi', referrerId: referredUser.referredBy, refereeId: ride.userId,
+  });
+  if (!claim.claimed) return;
+
   const rewardBaseKey = `user-referral:completed:${String(ride.userId)}:${requiredRideCount}`;
   const referrerResult = await creditUserWalletByReference({
     userId: referredUser.referredBy,

@@ -50,6 +50,7 @@ import {
 } from "../notifications/firebase.service.js";
 
 import { referralSettingsFor } from '../../../../core/referral/referralSettings.service.js';
+import { claimReferralForPhone, releaseReferralClaim } from '../../../../core/referral/referralClaim.service.js';
 const ROLES = {
   USER: "USER",
   RESTAURANT: "RESTAURANT",
@@ -256,12 +257,19 @@ export const verifyUserOtpAndLogin = async (
             const phoneAlreadyRewarded = refereePhone
               ? await FoodReferralLog.exists({ refereePhone, role: "USER", status: "credited" })
               : false;
-            const claimed = reward > 0 && limit > 0 && !phoneAlreadyRewarded
+            // One reward per person across every service (core/referral/referralClaim.service.js).
+            const platformClaim = reward > 0 && limit > 0 && !phoneAlreadyRewarded
+              ? await claimReferralForPhone({ phone: refereePhone, programme: 'quickCommerce', referrerId, refereeId: userDoc._id })
+              : null;
+            const claimed = platformClaim?.claimed
               ? await FoodUser.updateOne(
                   { _id: referrerId, $or: [{ referralCount: { $lt: limit } }, { referralCount: { $exists: false } }] },
                   { $inc: { referralCount: 1 } },
                 )
               : null;
+            if (platformClaim?.claimed && claimed?.modifiedCount !== 1) {
+              await releaseReferralClaim({ phone: refereePhone, programme: 'quickCommerce' });
+            }
 
             if (claimed?.modifiedCount === 1) {
               userDoc.referredBy = referrerId;
@@ -292,6 +300,8 @@ export const verifyUserOtpAndLogin = async (
                 reason:
                   phoneAlreadyRewarded
                     ? "phone_already_rewarded"
+                    : platformClaim && !platformClaim.claimed
+                    ? "rewarded_in_other_service"
                     : reward <= 0
                     ? "reward_disabled"
                     : limit <= 0

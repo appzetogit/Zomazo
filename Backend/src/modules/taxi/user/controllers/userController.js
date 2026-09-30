@@ -1237,6 +1237,15 @@ export const processSignupReferralRewards = async ({ user, referrer }) => {
   const referralType = settings.type;
   const rewardBaseKey = `user-referral:signup:${String(user._id)}`;
 
+  // One reward per person across every service: a customer another service
+  // already paid a referral for earns nothing here (core/referral/referralClaim.service.js).
+  // The after-N-rides kinds claim when they pay (rideService.js).
+  if (['instant_referrer', 'instant_referrer_new'].includes(referralType)) {
+    const { claimReferralForPhone } = await import('../../../../core/referral/referralClaim.service.js');
+    const claim = await claimReferralForPhone({ phone: user.phone, programme: 'taxi', referrerId: referrer._id, refereeId: user._id });
+    if (!claim.claimed) return;
+  }
+
   if (referralType === 'instant_referrer' || referralType === 'instant_referrer_new') {
     await creditUserWalletByReference({
       userId: referrer._id,

@@ -7,6 +7,7 @@ import { ReferralLog } from '../../admin/models/referralLog.model.js';
 import { buildReferralLinkFromTemplate } from '../../delivery/services/deliveryReferral.service.js';
 import { creditReferralReward } from './userWallet.service.js';
 import { referralSettingsFor } from '../../../../../../core/referral/referralSettings.service.js';
+import { claimReferralForPhone, releaseReferralClaim } from '../../../../../../core/referral/referralClaim.service.js';
 
 // What the Shop pays: its own settings, with Master > Referral's values in place.
 const shopReferralSettings = () => referralSettingsFor('ecommerce', ReferralSettings);
@@ -183,6 +184,15 @@ export const creditShopSignupReferral = async ({ refereeId, ref } = {}) => {
         return { credited: false, reason: 'phone_already_rewarded' };
     }
 
+    // One reward per person across every service (core/referral/referralClaim.service.js).
+    const platformClaim = reward > 0 && limit > 0
+        ? await claimReferralForPhone({ phone: refereePhone, programme: 'ecommerce', referrerId: referrer._id, refereeId: referee._id })
+        : null;
+    if (platformClaim && !platformClaim.claimed) {
+        await ReferralLog.updateOne({ _id: log._id }, { $set: { status: 'rejected', reason: 'rewarded_in_other_service' } });
+        return { credited: false, reason: 'rewarded_in_other_service' };
+    }
+
     const claimed = reward > 0 && limit > 0
         ? await User.updateOne(
             { _id: referrer._id, $or: [{ referralCount: { $lt: limit } }, { referralCount: { $exists: false } }] },
@@ -190,6 +200,7 @@ export const creditShopSignupReferral = async ({ refereeId, ref } = {}) => {
         )
         : null;
     if (claimed?.modifiedCount !== 1) {
+        if (platformClaim?.claimed) await releaseReferralClaim({ phone: refereePhone, programme: 'ecommerce' });
         const reason = reward <= 0 ? 'reward_disabled' : limit <= 0 ? 'limit_disabled' : 'limit_reached';
         await ReferralLog.updateOne({ _id: log._id }, { $set: { status: 'rejected', reason } });
         return { credited: false, reason };
