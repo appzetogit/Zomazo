@@ -451,6 +451,15 @@ export const verifyRestaurantOtpAndLogin = async (phone, otp, fcmToken, platform
     };
   }
 
+  return issueFoodRestaurantSession(restaurantDoc);
+};
+
+/**
+ * Sign a restaurant in: access and refresh tokens, and the refresh token
+ * recorded. The caller decides whether the restaurant may sign in (an OTP
+ * login, or a partner handoff -- core/partner/partnerHandoff.service.js).
+ */
+export const issueFoodRestaurantSession = async (restaurantDoc) => {
   const payload = { userId: restaurantDoc._id.toString(), role: ROLES.RESTAURANT };
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);

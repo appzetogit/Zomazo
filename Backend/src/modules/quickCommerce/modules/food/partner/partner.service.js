@@ -19,6 +19,7 @@
  * inside it is the one the OTP proved, which is why the application never
  * trusts a phone number from the request body.
  */
+import { issuePartnerPass } from '../../../../../core/partner/partnerHandoff.service.js';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import { config } from '../../../config/env.js';
@@ -163,7 +164,9 @@ export async function verifyPartnerOtp({ phone, otp, type: rawType }) {
     };
 
     if (state === 'approved') {
-        return { ...base, session: await issueRestaurantSession(seller) };
+        // With a pass to find and open the partner's other businesses
+        // (core/partner/partnerHandoff.service.js); the OTP was just verified.
+        return { ...base, session: await issueRestaurantSession(seller), partnerPass: issuePartnerPass(phone) };
     }
     return { ...base, onboardingToken: signOnboardingToken({ phone, type }) };
 }

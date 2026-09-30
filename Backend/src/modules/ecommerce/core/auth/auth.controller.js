@@ -1,3 +1,4 @@
+import { issuePartnerPass } from '../../../../core/partner/partnerHandoff.service.js';
 import {
   requestUserOtp,
   verifyUserOtpAndLogin,
@@ -98,6 +99,9 @@ export const verifySellerOtpController = async (req, res, next) => {
   try {
     const { phone, otp, fcmToken, platform } = validateSellerOtpVerifyDto(req.body);
     const result = await verifySellerOtpAndLogin(phone, otp, fcmToken, platform);
+    // The OTP was verified: a pass to find and open the partner's other
+    // businesses (core/partner/partnerHandoff.service.js).
+    result.partnerPass = issuePartnerPass(phone);
     return sendResponse(res, 200, "Login successful", result);
   } catch (error) {
     next(error);

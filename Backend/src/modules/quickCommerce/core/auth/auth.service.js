@@ -513,6 +513,19 @@ export const verifyRestaurantOtpAndLogin = async (phone, otp, fcmToken, platform
     });
   }
 
+  await assertRestaurantMaySignIn(restaurant);
+
+  // Postpaid subscription model: no onboarding payment or subscription purchase
+  // is required to use the platform — dues are billed at each month end.
+
+  return issueRestaurantSession(restaurant);
+};
+
+/**
+ * Whether this store may sign in (throws AuthError if not). Shared by the OTP
+ * login and the partner handoff (core/partner/partnerHandoff.service.js).
+ */
+export const assertRestaurantMaySignIn = async (restaurant) => {
   // Allow login for previously-operational restaurants even if they are temporarily
   // moved to "pending" due to profile-change review requests.
   if (restaurant.status && restaurant.status !== "approved") {
@@ -532,11 +545,6 @@ export const verifyRestaurantOtpAndLogin = async (phone, otp, fcmToken, platform
       );
     }
   }
-
-  // Postpaid subscription model: no onboarding payment or subscription purchase
-  // is required to use the platform — dues are billed at each month end.
-
-  return issueRestaurantSession(restaurant);
 };
 
 export const requestDeliveryOtp = async (phone) => {

@@ -400,6 +400,15 @@ export const verifySellerOtpAndLogin = async (phone, otp, fcmToken, platform) =>
     });
   }
 
+  await assertSellerMaySignIn(seller);
+  return issueSellerSession(seller);
+};
+
+/**
+ * Whether this seller may sign in (throws AuthError if not). Shared by the OTP
+ * login and the partner handoff (core/partner/partnerHandoff.service.js).
+ */
+export const assertSellerMaySignIn = async (seller) => {
   // Allow login for previously-operational sellers even if they are temporarily
   // moved to "pending" due to profile-change review requests.
   if (seller.status && seller.status !== "approved") {
@@ -419,10 +428,15 @@ export const verifySellerOtpAndLogin = async (phone, otp, fcmToken, platform) =>
       );
     }
   }
+};
 
+/**
+ * Sign a seller in: access and refresh tokens, and the refresh token recorded.
+ * The caller decides whether the seller may sign in.
+ */
+export const issueSellerSession = async (seller) => {
   // Postpaid subscription model: no onboarding payment or subscription purchase
   // is required to use the platform — dues are billed at each month end.
-
   const payload = {
     userId: seller._id.toString(),
     role: ROLES.SELLER,

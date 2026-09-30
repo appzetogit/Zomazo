@@ -1,4 +1,5 @@
 import express from 'express';
+import partnerHandoffRoutes from '../core/partner/partnerHandoff.routes.js';
 import authRoutes from '../core/auth/auth.routes.js';
 import deliveryRoutes from '../modules/food/delivery/routes/delivery.routes.js';
 import restaurantRoutes from '../modules/food/restaurant/routes/restaurant.routes.js';
@@ -133,6 +134,8 @@ router.use('/v1/platform/home-content', homeContentRoutes);
 // What the platform takes from every partner (Master > Commission Overview).
 router.use('/v1/platform/commission', commissionOverviewRoutes);
 // The customer's orders from every service, in one list (the app's My Orders).
+// A partner's businesses in every service, and opening one (core/partner).
+router.use('/v1/platform/partner', partnerHandoffRoutes);
 router.use('/v1/platform/me', authMiddleware, requireRoles('USER'), myOrdersRoutes);
 // The customer's help centre: tickets about any service (core/support).
 router.use('/v1/platform/me/support', authMiddleware, requireRoles('USER'), customerSupportRoutes);

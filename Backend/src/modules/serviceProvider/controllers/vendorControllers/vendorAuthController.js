@@ -9,6 +9,19 @@ const { validationResult } = require('express-validator');
 /**
  * Helper to save FCM token during auth (login/verifyLogin/register) if provided in req.body
  */
+/**
+ * A pass to find and open the vendor's businesses in other services, for a
+ * phone whose OTP was just verified (core/partner/partnerHandoff.service.js).
+ */
+const partnerPassFor = async (phone) => {
+  try {
+    const { issuePartnerPass } = await import('../../../../core/partner/partnerHandoff.service.js');
+    return issuePartnerPass(phone);
+  } catch {
+    return null;
+  }
+};
+
 const handleAuthFcmToken = async (Model, docId, req) => {
   try {
     const rawToken = req.body.fcmToken || req.body.fcmTokenMobile || req.body.deviceToken || req.body.fcm_token || req.body.mobileToken || req.body.pushToken || (req.body.token !== 'verification-pending' ? req.body.token : null);
@@ -169,6 +182,7 @@ const verifyLogin = async (req, res) => {
         success: true,
         isNewUser: false,
         message: 'Login successful',
+        partnerPass: await partnerPassFor(phone),
         vendor: {
           id: vendor._id,
           name: vendor.name,
@@ -404,6 +418,7 @@ const login = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Login successful',
+      partnerPass: await partnerPassFor(phone),
       vendor: {
         id: vendor._id,
         name: vendor.name,
