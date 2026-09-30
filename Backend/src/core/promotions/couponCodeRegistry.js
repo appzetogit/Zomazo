@@ -27,6 +27,8 @@ export const COUPON_CODE_HOLDERS = [
     { collection: 'ecom_offers', field: 'couponCode', label: 'Shop' },
     { collection: 'taxipromocodes', field: 'code', label: 'Rides' },
     { collection: 'sp_coupons', field: 'couponCode', label: 'Services' },
+    // Master's own coupons, honoured by several services (platformCoupon.model.js).
+    { collection: 'platform_coupons', field: 'code', label: 'platform-wide' },
 ];
 
 const normalize = (code) => String(code || '').trim().toUpperCase();
