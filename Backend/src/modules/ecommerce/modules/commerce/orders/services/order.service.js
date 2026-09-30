@@ -75,6 +75,7 @@ import {
 } from './order.helpers.js';
 import { getShippingProvider } from '../../delivery/services/shipping/index.js';
 import { COD_BLOCKED_MESSAGE, isBlockedFromCod } from '../../../../../../core/identity/codBlock.js';
+import { claimPlatformCoupon, platformAccountOf } from '../../../../../../core/promotions/platformCoupon.service.js';
 
 
 
@@ -122,6 +123,18 @@ export async function incrementCouponUsageForOrder(order, userId) {
 
   try {
     const offer = await Offer.findOne({ couponCode }).lean();
+    if (!offer) {
+      // A platform coupon is claimed whole at placement (couponClaim.service.js);
+      // one that somehow was not is counted now, since the order stands.
+      if (!order?.couponClaim?.platformCode) {
+        await claimPlatformCoupon(couponCode, {
+          service: "ecommerce",
+          platformUserId: await platformAccountOf(userId),
+          enforce: false,
+        });
+      }
+      return;
+    }
     if (offer) {
       // Conditional increment so concurrent orders cannot push usedCount past usageLimit.
       const incrementResult = await Offer.updateOne(
@@ -890,7 +903,7 @@ export async function createOrder(userId, dto, options = {}) {
         if (firstOrderClaimed) await releaseFirstOrderClaim({ orderId: order._id }).catch(() => {});
         throw err;
       }
-      if (couponClaim) order.couponClaim = { offerId: couponClaim.offerId, releasedAt: null };
+      if (couponClaim) order.couponClaim = { offerId: couponClaim.offerId || null, platformCode: couponClaim.platformCode || null, releasedAt: null };
     }
 
     try {

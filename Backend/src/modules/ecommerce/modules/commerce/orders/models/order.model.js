@@ -396,6 +396,8 @@ const orderSchema = new mongoose.Schema(
         /** The coupon use this held for its customer (couponClaim.service.js); released once if given up. */
         couponClaim: {
             offerId: { type: mongoose.Schema.Types.ObjectId, default: null },
+            // A platform coupon (core/promotions) is held by code instead.
+            platformCode: { type: String, default: null },
             releasedAt: { type: Date, default: null },
         },
         deliveryFleet: { type: String, default: 'standard', trim: true },

@@ -5,6 +5,7 @@ import { OfferUsage } from '../../admin/models/offerUsage.model.js';
 import { Order } from '../models/order.model.js';
 import { Checkout } from '../models/checkout.model.js';
 import { logger } from '../../../../utils/logger.js';
+import { claimPlatformCoupon, findPlatformCoupon, platformAccountOf, releasePlatformCoupon } from '../../../../../../core/promotions/platformCoupon.service.js';
 
 /*
  * A coupon's per-customer limit, claimed when the order is placed.
@@ -44,12 +45,12 @@ async function tryClaim(offer, userOid) {
  * the coupon "already used" by an order that will never be paid. If that order
  * is paid late after all, the webhook refunds it (it is cancelled by then).
  */
-async function supersedeUnpaidHolder(offerId, userOid) {
+async function supersedeUnpaidHolder(holding, userOid) {
     const order = await Order.findOne({
         userId: userOid,
         orderStatus: 'pending_payment',
         checkoutId: null,
-        'couponClaim.offerId': offerId,
+        ...holding,
         'couponClaim.releasedAt': null,
     }).lean();
     if (order) {
@@ -60,7 +61,7 @@ async function supersedeUnpaidHolder(offerId, userOid) {
         userId: userOid,
         status: 'pending',
         'payment.status': { $nin: ['paid', 'refunded', 'cod_pending'] },
-        'couponClaim.offerId': offerId,
+        ...holding,
         'couponClaim.releasedAt': null,
     }).lean();
     if (checkout) {
@@ -81,10 +82,26 @@ export async function claimCouponForCustomer({ couponCode, userId }) {
     const userOid = toOid(userId);
     if (!code || !userOid) return null;
     const offer = await Offer.findOne({ couponCode: code }).select('_id perUserLimit').lean();
-    if (!offer || !(Number(offer.perUserLimit) > 0)) return null;
+    if (!offer) {
+        // A platform coupon (made in Master for several services): claimed
+        // whole -- the customer's use and the coupon's total -- against their
+        // platform account, so a use on another service counts here too.
+        if (!(await findPlatformCoupon(code))) return null;
+        const platformUserId = await platformAccountOf(userOid);
+        const take = () => claimPlatformCoupon(code, { service: 'ecommerce', platformUserId });
+        let pc = await take();
+        if (pc.exhausted && pc.perUser && await supersedeUnpaidHolder({ 'couponClaim.platformCode': code }, userOid)) {
+            pc = await take();
+        }
+        if (pc.taken) return { platformCode: code };
+        throw new ValidationError(pc.perUser
+            ? `You have already used the coupon ${code}.`
+            : `The coupon ${code} has just been fully used.`);
+    }
+    if (!(Number(offer.perUserLimit) > 0)) return null;
 
     if (await tryClaim(offer, userOid)) return { offerId: offer._id };
-    if (await supersedeUnpaidHolder(offer._id, userOid) && await tryClaim(offer, userOid)) {
+    if (await supersedeUnpaidHolder({ 'couponClaim.offerId': offer._id }, userOid) && await tryClaim(offer, userOid)) {
         return { offerId: offer._id };
     }
     throw new ValidationError(`You have already used the coupon ${code}.`);
@@ -93,6 +110,11 @@ export async function claimCouponForCustomer({ couponCode, userId }) {
 /** Gives back a claim that was never attached to an order (placement failed). */
 export async function returnCouponClaim(claim, userId) {
     const userOid = toOid(userId);
+    if (claim?.platformCode && userOid) {
+        await releasePlatformCoupon(claim.platformCode, { platformUserId: await platformAccountOf(userOid) })
+            .catch((err) => logger.error(`[coupon] could not return a platform claim for ${userOid}: ${err?.message || err}`));
+        return;
+    }
     if (!claim?.offerId || !userOid) return;
     await OfferUsage.updateOne(
         { offerId: claim.offerId, userId: userOid, count: { $gt: 0 } },
@@ -107,11 +129,15 @@ export async function returnCouponClaim(claim, userId) {
  */
 export async function releaseCouponClaim(Model, id) {
     const doc = await Model.findOneAndUpdate(
-        { _id: id, 'couponClaim.offerId': { $ne: null }, 'couponClaim.releasedAt': null },
+        {
+            _id: id,
+            $or: [{ 'couponClaim.offerId': { $ne: null } }, { 'couponClaim.platformCode': { $nin: [null, ''] } }],
+            'couponClaim.releasedAt': null,
+        },
         { $set: { 'couponClaim.releasedAt': new Date() } },
         { new: false, projection: { couponClaim: 1, userId: 1 } },
     ).lean();
-    if (!doc?.couponClaim?.offerId) return false;
+    if (!doc?.couponClaim?.offerId && !doc?.couponClaim?.platformCode) return false;
     await returnCouponClaim(doc.couponClaim, doc.userId);
     return true;
 }

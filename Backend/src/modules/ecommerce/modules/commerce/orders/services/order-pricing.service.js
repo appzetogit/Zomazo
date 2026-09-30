@@ -29,6 +29,7 @@ import {
   resolveUserDeliveryFee,
   calculateRiderEarning,
 } from '../../../../../../core/pricing/deliveryMath.js';
+import { platformAccountOf, quotePlatformCoupon } from '../../../../../../core/promotions/platformCoupon.service.js';
 // One copy of the delivery and tax maths for Quick and the Shop
 // (core/pricing/deliveryMath.js); re-exported for this module's callers.
 export { DELIVERY_FEE_GST_RATE, computeDeliveryFeeGst, computeItemsTax, resolveUserDeliveryFee, calculateRiderEarning };
@@ -374,6 +375,28 @@ export async function resolveCoupon({ userId, codeRaw = '', subtotalsBySeller, p
     const why = {};
     if (offer && (await isOfferApplicable(offer, { userId, base: offerBase(offer, subtotalsBySeller), isFirstOrder, firstOrderGuard, why, now }))) {
       return pick(offer, false);
+    }
+    if (!offer) {
+      // Not a Shop coupon: a platform coupon made in Master for several
+      // services, on the whole cart, counted against the customer's one account.
+      const hasId = userId && mongoose.Types.ObjectId.isValid(String(userId));
+      const cartTotal = [...(subtotalsBySeller?.values?.() || [])].reduce((sum, v) => sum + (Number(v) || 0), 0);
+      const quoted = await quotePlatformCoupon(codeRaw, {
+        service: 'ecommerce',
+        platformUserId: hasId ? await platformAccountOf(userId) : null,
+        subtotal: cartTotal,
+        isFirstOrder: hasId ? await isFirstOrder() : null,
+        now,
+      });
+      if (quoted.coupon) {
+        if (quoted.discount > 0) {
+          return {
+            discount: quoted.discount,
+            appliedCoupon: { code: codeRaw, discount: quoted.discount, isAutoApplied: false, sellerIds: null, firstOrder: false, platform: true },
+          };
+        }
+        return { discount: 0, appliedCoupon: null, couponRefusal: { code: codeRaw, reason: quoted.reason, signal: null } };
+      }
     }
     // A refused first-order coupon says why, so checkout can show it.
     return {

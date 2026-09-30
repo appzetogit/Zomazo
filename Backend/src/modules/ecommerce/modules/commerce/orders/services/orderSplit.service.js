@@ -304,7 +304,7 @@ export async function createSplitCheckout(userId, dto = {}) {
             throw err;
         }
         if (couponClaim) {
-            checkout.couponClaim = { offerId: couponClaim.offerId, releasedAt: null };
+            checkout.couponClaim = { offerId: couponClaim.offerId || null, platformCode: couponClaim.platformCode || null, releasedAt: null };
             await checkout.save();
         }
     }
