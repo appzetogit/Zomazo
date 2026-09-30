@@ -31,7 +31,8 @@ const PER_SOURCE_LIMIT = 1000;
 const SOURCES = {
   // Master's own coupons, honoured by several services (platformCoupon.model.js).
   platform: {
-    label: 'All services',
+    // Not "All services": that is what the list's own filter says for no filter.
+    label: 'Platform-wide',
     service: null,
     vertical: null,
     load: async () => (await import('./platformCoupon.model.js')).PlatformCoupon,
@@ -216,7 +217,7 @@ function platformRow(doc, now) {
     key: `platform:${doc._id}`,
     id: String(doc._id),
     source: 'platform',
-    sourceLabel: 'All services',
+    sourceLabel: 'Platform-wide',
     code: doc.code,
     discount: doc.discountType === 'percentage'
       ? `${value}% off${Number(doc.maxDiscount) > 0 ? ` up to ${money(doc.maxDiscount)}` : ''}`

@@ -371,6 +371,10 @@ export const couponListAPI = {
   list: (params) => apiClient.get("/platform/coupons", { params, contextModule: "admin" }),
   setLive: (source, id, live) =>
     apiClient.patch(`/platform/coupons/${encodeURIComponent(source)}/${encodeURIComponent(id)}/live`, { live }, { contextModule: "admin" }),
+  // Coupons made here for several services (core/promotions/platformCoupon.model.js).
+  createPlatform: (body) => apiClient.post("/platform/coupons/platform", body, { contextModule: "admin" }),
+  getPlatform: (id) => apiClient.get(`/platform/coupons/platform/${encodeURIComponent(id)}`, { contextModule: "admin" }),
+  updatePlatform: (id, body) => apiClient.patch(`/platform/coupons/platform/${encodeURIComponent(id)}`, body, { contextModule: "admin" }),
 };
 
 // Master > Broadcast: one message sent through each service's own broadcast

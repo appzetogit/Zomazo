@@ -3,14 +3,17 @@ import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { Loader2, Search, Ticket, Plus, RefreshCw } from "lucide-react"
 import { couponListAPI } from "@food/api"
+import PlatformCouponForm from "./PlatformCouponForm"
 import { ECOMMERCE_ENABLED, SERVICE_PROVIDER_ENABLED } from "@/config/features"
 
 /**
  * Master > Coupons: every coupon on the platform in one list.
  *
  * Coupons stay in their own service (core/promotions/couponList.service.js).
- * Pause and resume work here for all of them; creating and editing open the
- * service's own screen, because each service's form asks for different things.
+ * Pause and resume work here for all of them; creating and editing a service's
+ * own coupon opens that service's screen, because each form asks for different
+ * things. Coupons for several services are made and edited here
+ * (PlatformCouponForm).
  */
 
 const STATES = [
@@ -66,6 +69,8 @@ export default function MasterCoupons() {
   const [query, setQuery] = useState("")
   const [page, setPage] = useState(1)
   const [busy, setBusy] = useState("")
+  // null: closed; "new": a new platform coupon; an id: editing that one.
+  const [platformForm, setPlatformForm] = useState(null)
   const limit = 50
 
   useEffect(() => {
@@ -121,7 +126,7 @@ export default function MasterCoupons() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold text-neutral-900">Coupons</h1>
-            <p className="mt-1 text-sm text-neutral-600">Every coupon and promo code in Food, Quick &amp; Medical and Taxi.</p>
+            <p className="mt-1 text-sm text-neutral-600">Every coupon and promo code, in every service, and coupons that work across several.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -137,7 +142,20 @@ export default function MasterCoupons() {
                 <Plus className="h-4 w-4" />
                 New coupon
               </summary>
-              <ul className="absolute right-0 z-10 mt-1 w-56 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+              <ul className="absolute right-0 z-10 mt-1 w-64 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+                <li>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.currentTarget.closest("details")?.removeAttribute("open")
+                      setPlatformForm("new")
+                    }}
+                    className="block w-full px-3 py-2 text-left text-sm font-medium text-neutral-900 hover:bg-neutral-50"
+                  >
+                    One coupon for several services
+                  </button>
+                </li>
+                <li className="my-1 border-t border-neutral-100" aria-hidden="true" />
                 {CREATE_LINKS.map((l) => (
                   <li key={l.path}>
                     <Link to={l.path} className="block px-3 py-2 text-sm text-neutral-800 hover:bg-neutral-50">{l.label}</Link>
@@ -257,9 +275,19 @@ export default function MasterCoupons() {
                               {r.state === "paused" ? "Resume" : "Pause"}
                             </button>
                           )}
-                          <Link to={EDIT_PATH[r.source]} className="rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900">
-                            Edit
-                          </Link>
+                          {r.source === "platform" ? (
+                            <button
+                              type="button"
+                              onClick={() => setPlatformForm(r.id)}
+                              className="rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                            >
+                              Edit
+                            </button>
+                          ) : (
+                            <Link to={EDIT_PATH[r.source]} className="rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900">
+                              Edit
+                            </Link>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -284,6 +312,16 @@ export default function MasterCoupons() {
           Limits shown are the ones checkout enforces, including the platform limits in Master Settings → Promo Limits.
         </p>
       </div>
+      {platformForm && (
+        <PlatformCouponForm
+          couponId={platformForm === "new" ? null : platformForm}
+          onClose={() => setPlatformForm(null)}
+          onSaved={() => {
+            setPlatformForm(null)
+            load()
+          }}
+        />
+      )}
     </div>
   )
 }
