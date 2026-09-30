@@ -22,7 +22,7 @@ const check = async (label, fn) => {
 const mongo = await MongoMemoryServer.create();
 await mongoose.connect(mongo.getUri(), { dbName: 'referral_activity' });
 const db = mongoose.connection;
-const { listReferralActivity } = await import('../src/core/referral/referralActivity.service.js');
+const { listReferralActivity, invitesOfPerson } = await import('../src/core/referral/referralActivity.service.js');
 
 const id = () => new mongoose.Types.ObjectId();
 const [ann, bob, qa, qb, sa, sb] = [id(), id(), id(), id(), id(), id()];
@@ -70,6 +70,19 @@ await check('Rides is listed from its own log', async () => {
   assert.equal(items[0].serviceLabel, 'Rides');
   assert.deepEqual([items[0].referrer.name, items[0].referee.name, items[0].status], ['Ann', 'Cara', 'pending']);
   assert.equal(summary[0].pending, 1);
+});
+
+await check('a customer sees the friends they invited in every service', async () => {
+  // Ann's Quick row is linked to her account; her Food and Rides invites are on it directly.
+  await db.collection('qc_users').updateOne({ _id: qa }, { $set: { platformUserId: ann } });
+  const friends = await invitesOfPerson(ann);
+  assert.deepEqual(friends.map((f) => f.serviceLabel), ['Rides', 'Food', 'Quick', 'Food']);
+  const quick = friends.find((f) => f.service === 'quick');
+  assert.deepEqual([quick.name, quick.phone, quick.status, quick.earnedAmount], ['Qb', '900*****04', 'credited', 30]);
+  // A refused invite has no earnings; an unknown friend shows the logged phone, masked.
+  const refused = friends.find((f) => f.status === 'rejected');
+  assert.deepEqual([refused.name, refused.phone, refused.earnedAmount], ['Friend', '900*****09', 0]);
+  assert.deepEqual(await invitesOfPerson(bob), []);
 });
 
 await mongoose.disconnect();

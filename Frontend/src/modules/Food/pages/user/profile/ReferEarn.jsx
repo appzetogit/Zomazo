@@ -221,7 +221,9 @@ export default function ReferEarn() {
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             {item?.phone || "Phone hidden"}
                           </p>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Invited on {dateText}</p>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                            {item?.serviceLabel ? `Joined ${item.serviceLabel} · ` : ""}Invited on {dateText}
+                          </p>
                         </div>
                         <div className="text-right">
                           <span

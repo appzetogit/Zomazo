@@ -7,6 +7,7 @@ import { ReferralLog } from '../../admin/models/referralLog.model.js';
 import { buildReferralLinkFromTemplate } from '../../delivery/services/deliveryReferral.service.js';
 import { creditReferralReward } from './userWallet.service.js';
 import { referralSettingsFor } from '../../../../../../core/referral/referralSettings.service.js';
+import { invitesOfPerson } from '../../../../../../core/referral/referralActivity.service.js';
 import { inviteCodeForRow, resolveInviter } from '../../../../../../core/referral/inviteCode.service.js';
 import { ensureShopCustomer } from '../../../../core/auth/auth.middleware.js';
 import { claimReferralForPhone, releaseReferralClaim } from '../../../../../../core/referral/referralClaim.service.js';
@@ -74,7 +75,7 @@ export const getUserReferralDetails = async (userId) => {
 
     const refereeMap = new Map(referees.map((entry) => [String(entry._id), entry]));
 
-    const invitedFriends = (Array.isArray(logs) ? logs : []).map((log) => {
+    const shopOnly = (Array.isArray(logs) ? logs : []).map((log) => {
         const referee = refereeMap.get(String(log?.refereeId || ''));
         const rawPhone = String(referee?.phone || '');
         const maskedPhone = rawPhone
@@ -94,6 +95,11 @@ export const getUserReferralDetails = async (userId) => {
             invitedAt: log?.createdAt || null
         };
     });
+
+    // A customer with a platform account has one code, so their friends may
+    // have joined through any service: list them all.
+    const platformId = (await User.findById(oid).select('platformUserId').lean())?.platformUserId;
+    const invitedFriends = platformId ? await invitesOfPerson(platformId) : shopOnly;
 
     const totalInvited = invitedFriends.length;
     const creditedCount = invitedFriends.filter((entry) => entry.status === 'credited').length;

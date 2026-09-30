@@ -136,7 +136,7 @@ export default function ReferEarn() {
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-wh-brand-50 text-[14px] font-black text-wh-brand-ink">{String(f.name || "F").charAt(0)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[14px] font-semibold text-wh-text">{f.name}</span>
-                    <span className="block text-[12px] text-wh-muted">{[f.phone, f.invitedAt ? new Date(f.invitedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : ""].filter(Boolean).join(" · ")}</span>
+                    <span className="block text-[12px] text-wh-muted">{[f.serviceLabel, f.phone, f.invitedAt ? new Date(f.invitedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : ""].filter(Boolean).join(" · ")}</span>
                   </span>
                   <span className={cx("shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold", s.cls)}>
                     {f.status === "credited" && f.earnedAmount ? `+₹${formatMoney(f.earnedAmount)}` : s.label}

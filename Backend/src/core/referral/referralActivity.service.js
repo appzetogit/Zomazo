@@ -112,3 +112,71 @@ export async function listReferralActivity(query = {}) {
     .slice(0, limit);
   return { items, summary: perSource.map((s) => s.summary) };
 }
+
+const maskPhone = (raw) => {
+  const p = String(raw || '');
+  return p ? `${p.slice(0, Math.min(3, p.length))}${'*'.repeat(Math.max(p.length - 5, 0))}${p.slice(-2)}` : '';
+};
+
+/** This person's customer rows in one service's collection. */
+async function rowsOfPerson(collection, platformId) {
+  if (collection === 'users') return [platformId];
+  const or = [{ platformUserId: platformId }];
+  const me = await coll('users').findOne({ _id: platformId }, { projection: { phone: 1 } });
+  const phone = String(me?.phone || '').replace(/\D/g, '').slice(-10);
+  // Services rows made before the link carry only the phone.
+  if (collection === 'sp_users' && phone.length === 10) or.push({ phone: { $in: [phone, `+91${phone}`, `91${phone}`] } });
+  const rows = await coll(collection).find({ $or: or }).project({ _id: 1 }).toArray();
+  return rows.map((r) => r._id);
+}
+
+/**
+ * The friends one person invited, in every service, newest first -- one code
+ * per person means an invite can land in any of them. Customer referrals only.
+ * Same entry shape as Food's own list (food/user/services/userReferral.service.js),
+ * plus the service it was in.
+ *
+ * @param {string|ObjectId} platformUserId  the person's `users` id
+ */
+export async function invitesOfPerson(platformUserId, { limit = 100 } = {}) {
+  if (!mongoose.Types.ObjectId.isValid(String(platformUserId || ''))) return [];
+  const platformId = new mongoose.Types.ObjectId(String(platformUserId));
+  const sources = await enabledSources('');
+  const perSource = await Promise.all(sources.map(async (src) => {
+    const mine = await rowsOfPerson(src.users, platformId);
+    if (!mine.length) return [];
+    const docs = await coll(src.logs)
+      .find({ referrerId: { $in: mine }, role: { $ne: 'DELIVERY_PARTNER' } })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .toArray();
+    const referees = await coll(src.users)
+      .find({ _id: { $in: docs.map((d) => d.refereeId).filter(Boolean) } })
+      .project({ name: 1, phone: 1, profileImage: 1 })
+      .toArray();
+    const byId = new Map(referees.map((r) => [String(r._id), r]));
+    return docs.map((d) => {
+      const friend = byId.get(String(d.refereeId)) || {};
+      const reward = Math.max(0, Number(d.rewardAmount ?? d.reward) || 0);
+      const status = String(d.status || 'pending');
+      return {
+        id: `${src.service}:${d._id}`,
+        refereeId: String(d.refereeId || ''),
+        name: String(friend.name || '').trim() || 'Friend',
+        phone: maskPhone(friend.phone || d.refereePhone),
+        profileImage: String(friend.profileImage || '').trim(),
+        status,
+        reason: String(d.reason || ''),
+        rewardAmount: reward,
+        earnedAmount: status === 'credited' ? reward : 0,
+        invitedAt: d.createdAt || null,
+        service: src.service,
+        serviceLabel: src.label,
+      };
+    });
+  }));
+  return perSource
+    .flat()
+    .sort((a, b) => new Date(b.invitedAt || 0) - new Date(a.invitedAt || 0))
+    .slice(0, limit);
+}
