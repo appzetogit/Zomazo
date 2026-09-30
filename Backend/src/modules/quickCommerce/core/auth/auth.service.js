@@ -51,6 +51,8 @@ import {
 
 import { referralSettingsFor } from '../../../../core/referral/referralSettings.service.js';
 import { claimReferralForPhone, releaseReferralClaim } from '../../../../core/referral/referralClaim.service.js';
+import { resolveInviter } from '../../../../core/referral/inviteCode.service.js';
+import { ensureQuickCustomer } from './auth.middleware.js';
 const ROLES = {
   USER: "USER",
   RESTAURANT: "RESTAURANT",
@@ -150,6 +152,119 @@ export const requestUserOtp = async (phone) => {
   return shouldExposeOtp ? { otp } : {};
 };
 
+/**
+ * A new Quick customer signed up with a friend's invite: pay the referrer by
+ * Quick's rules. Called by Quick's own sign-in and by the platform sign-in
+ * (core/referral/signupReferral.service.js, via=quick). `ref` is the friend's
+ * code: their Quick row id, or any code the platform knows them by
+ * (core/referral/inviteCode.service.js), which gives them a Quick row if they
+ * have none. Never throws: a referral problem must not fail a sign-in.
+ */
+export async function creditQuickSignupReferral({ refereeId, ref } = {}) {
+  try {
+    const userDoc = await FoodUser.findById(refereeId).select("_id phone referredBy").lean();
+    if (!userDoc || userDoc.referredBy) return { credited: false, reason: "no_referee" };
+    const referrerId = await quickReferrerFor(ref);
+    if (!referrerId) return { credited: false, reason: "unknown_referrer" };
+    if (String(referrerId) === String(userDoc._id)) return { credited: false, reason: "self_referral" };
+    const [referrer, settingsDoc] = await Promise.all([
+      FoodUser.findById(referrerId).select("_id referralCount").lean(),
+      referralSettingsFor('quickCommerce', FoodReferralSettings),
+    ]);
+
+    if (referrer && settingsDoc) {
+      const reward = Math.max(
+        0,
+        Number(settingsDoc.referralRewardUser) || 0,
+      );
+      const limit = Math.max(
+        0,
+        Number(settingsDoc.referralLimitUser) || 0,
+      );
+
+      /*
+       * One reward per phone number, ever, and the cap claimed atomically --
+       * the two fixes the platform sign-in (core/auth/auth.service.js) got
+       * and this fork never did. Without them, deleting the account and
+       * signing up again with the same phone paid the referrer again, and
+       * parallel sign-ups read the count, then incremented it, past the cap.
+       */
+      const refereePhone = String(userDoc.phone || "").replace(/\D/g, "").slice(-10);
+      const phoneAlreadyRewarded = refereePhone
+        ? await FoodReferralLog.exists({ refereePhone, role: "USER", status: "credited" })
+        : false;
+      // One reward per person across every service (core/referral/referralClaim.service.js).
+      const platformClaim = reward > 0 && limit > 0 && !phoneAlreadyRewarded
+        ? await claimReferralForPhone({ phone: refereePhone, programme: 'quickCommerce', referrerId, refereeId: userDoc._id })
+        : null;
+      const claimed = platformClaim?.claimed
+        ? await FoodUser.updateOne(
+            { _id: referrerId, $or: [{ referralCount: { $lt: limit } }, { referralCount: { $exists: false } }] },
+            { $inc: { referralCount: 1 } },
+          )
+        : null;
+      if (platformClaim?.claimed && claimed?.modifiedCount !== 1) {
+        await releaseReferralClaim({ phone: refereePhone, programme: 'quickCommerce' });
+      }
+
+      if (claimed?.modifiedCount === 1) {
+        await FoodUser.updateOne({ _id: userDoc._id }, { $set: { referredBy: referrerId } });
+
+        const log = await FoodReferralLog.create({
+          referrerId,
+          refereeId: userDoc._id,
+          role: "USER",
+          rewardAmount: reward,
+          status: "credited",
+          refereePhone,
+        });
+
+        await creditReferralReward(referrerId, reward, {
+          role: "USER",
+          refereeId: String(userDoc._id),
+          referralLogId: String(log._id),
+        });
+      } else {
+        await FoodReferralLog.create({
+          referrerId,
+          refereeId: userDoc._id,
+          role: "USER",
+          rewardAmount: reward,
+          status: "rejected",
+          refereePhone,
+          reason:
+            phoneAlreadyRewarded
+              ? "phone_already_rewarded"
+              : platformClaim && !platformClaim.claimed
+              ? "rewarded_in_other_service"
+              : reward <= 0
+              ? "reward_disabled"
+              : limit <= 0
+                ? "limit_disabled"
+                : "limit_reached",
+        });
+      }
+    }
+    const log = await FoodReferralLog.findOne({ refereeId: userDoc._id }).sort({ createdAt: -1 }).select("status reason").lean();
+    return { credited: log?.status === "credited", reason: log?.reason };
+  } catch (e) {
+    logger?.warn?.({ err: e }, "Referral crediting failed (user)");
+    return { credited: false, reason: "error" };
+  }
+}
+
+/** The friend's Quick row for an invite code (see creditQuickSignupReferral). */
+async function quickReferrerFor(ref) {
+  const code = String(ref || "").trim();
+  if (!code) return null;
+  if (mongoose.Types.ObjectId.isValid(code)) {
+    const own = await FoodUser.findById(code).select("_id").lean();
+    if (own) return own._id;
+  }
+  const platformId = await resolveInviter(code);
+  return platformId ? ensureQuickCustomer(platformId) : null;
+}
+
 export const verifyUserOtpAndLogin = async (
   phone,
   otp,
@@ -227,95 +342,7 @@ export const verifyUserOtpAndLogin = async (
   // Referral crediting: only for brand new accounts.
   const refRaw = typeof ref === "string" ? String(ref).trim() : "";
   if (isNewUser && refRaw) {
-    try {
-      if (mongoose.Types.ObjectId.isValid(refRaw)) {
-        const referrerId = new mongoose.Types.ObjectId(refRaw);
-        if (String(referrerId) !== String(userDoc._id)) {
-          const [referrer, settingsDoc] = await Promise.all([
-            FoodUser.findById(referrerId).select("_id referralCount").lean(),
-            referralSettingsFor('quickCommerce', FoodReferralSettings),
-          ]);
-
-          if (referrer && settingsDoc) {
-            const reward = Math.max(
-              0,
-              Number(settingsDoc.referralRewardUser) || 0,
-            );
-            const limit = Math.max(
-              0,
-              Number(settingsDoc.referralLimitUser) || 0,
-            );
-
-            /*
-             * One reward per phone number, ever, and the cap claimed atomically --
-             * the two fixes the platform sign-in (core/auth/auth.service.js) got
-             * and this fork never did. Without them, deleting the account and
-             * signing up again with the same phone paid the referrer again, and
-             * parallel sign-ups read the count, then incremented it, past the cap.
-             */
-            const refereePhone = String(userDoc.phone || "").replace(/\D/g, "").slice(-10);
-            const phoneAlreadyRewarded = refereePhone
-              ? await FoodReferralLog.exists({ refereePhone, role: "USER", status: "credited" })
-              : false;
-            // One reward per person across every service (core/referral/referralClaim.service.js).
-            const platformClaim = reward > 0 && limit > 0 && !phoneAlreadyRewarded
-              ? await claimReferralForPhone({ phone: refereePhone, programme: 'quickCommerce', referrerId, refereeId: userDoc._id })
-              : null;
-            const claimed = platformClaim?.claimed
-              ? await FoodUser.updateOne(
-                  { _id: referrerId, $or: [{ referralCount: { $lt: limit } }, { referralCount: { $exists: false } }] },
-                  { $inc: { referralCount: 1 } },
-                )
-              : null;
-            if (platformClaim?.claimed && claimed?.modifiedCount !== 1) {
-              await releaseReferralClaim({ phone: refereePhone, programme: 'quickCommerce' });
-            }
-
-            if (claimed?.modifiedCount === 1) {
-              userDoc.referredBy = referrerId;
-              await userDoc.save();
-
-              const log = await FoodReferralLog.create({
-                referrerId,
-                refereeId: userDoc._id,
-                role: "USER",
-                rewardAmount: reward,
-                status: "credited",
-                refereePhone,
-              });
-
-              await creditReferralReward(referrerId, reward, {
-                role: "USER",
-                refereeId: String(userDoc._id),
-                referralLogId: String(log._id),
-              });
-            } else {
-              await FoodReferralLog.create({
-                referrerId,
-                refereeId: userDoc._id,
-                role: "USER",
-                rewardAmount: reward,
-                status: "rejected",
-                refereePhone,
-                reason:
-                  phoneAlreadyRewarded
-                    ? "phone_already_rewarded"
-                    : platformClaim && !platformClaim.claimed
-                    ? "rewarded_in_other_service"
-                    : reward <= 0
-                    ? "reward_disabled"
-                    : limit <= 0
-                      ? "limit_disabled"
-                      : "limit_reached",
-              });
-            }
-          }
-        }
-      }
-    } catch (e) {
-      // Never fail login due to referral errors.
-      logger?.warn?.({ err: e }, "Referral crediting failed (user)");
-    }
+    await creditQuickSignupReferral({ refereeId: userDoc._id, ref: refRaw });
   }
 
   const user = userDoc.toObject();

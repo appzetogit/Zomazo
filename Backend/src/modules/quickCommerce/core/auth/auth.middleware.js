@@ -128,6 +128,16 @@ const resolveSessionAccount = async (model, decoded) => {
     }
 };
 
+/**
+ * This customer's Quick row, made on first use, for a platform account -- what
+ * the first signed-in request would make anyway. Lets an invite be credited in
+ * Quick at the one sign-in (core/referral/signupReferral.service.js).
+ */
+export const ensureQuickCustomer = async (platformUserId) => {
+    const row = await resolveSessionAccount(FoodUser, { userId: String(platformUserId || ''), role: 'USER' });
+    return row?._id || null;
+};
+
 export const authMiddleware = (req, res, next) => {
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;

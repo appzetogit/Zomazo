@@ -36,11 +36,11 @@ export const WALLET_PATH = '/account/wallet'
 export const LOGIN_PATH = '/login'
 
 /*
- * Whose referral programme an invite link credits. Food and Taxi customers are
- * one account, but each pays referrals by its own rules, and the Shop keeps its
- * own. Food is the default, so a bare ?ref= keeps crediting what it always did.
+ * Whose referral programme an invite link credits. A person has one invite code
+ * everywhere, but each service pays referrals by its own rules. Food is the
+ * default, so a bare ?ref= keeps crediting what it always did.
  */
-export const REFERRAL_VIA = ['food', 'taxi', 'shop']
+export const REFERRAL_VIA = ['food', 'taxi', 'shop', 'quick', 'services']
 
 /**
  * A friend's invite link: the platform sign-in with the code, and the service

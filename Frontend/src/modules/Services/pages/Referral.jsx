@@ -3,6 +3,7 @@ import { toast } from "sonner"
 import { Copy, Gift, Share2 } from "lucide-react"
 import { servicesAPI, errorMessage } from "../api"
 import { useLoad } from "../hooks"
+import { inviteLink } from "@/shared/superapp/services"
 import { EmptyState, Skeleton, cx, focusRing, formatMoney, isSignedIn, useRequireLogin } from "../helpers"
 
 /**
@@ -10,9 +11,9 @@ import { EmptyState, Skeleton, cx, focusRing, formatMoney, isSignedIn, useRequir
  * what a referral pays right now (Master > Referral decides), and -- for a
  * customer new to Services -- a box to enter the code a friend gave them.
  *
- * The invite goes to the platform sign-in (/login?ref=CODE), since one login
- * serves every app. That page does not carry a Services code through, so the
- * message also tells the friend where to enter it.
+ * The code is the customer's one invite code, the same in every service. The
+ * link is the platform sign-in marked for Services (/login?ref=CODE&via=services),
+ * which credits Services' programme when it creates the friend's account.
  */
 export default function Referral() {
   const requireLogin = useRequireLogin()
@@ -50,9 +51,9 @@ export default function Referral() {
 
   const d = summary.data || {}
   const code = d.code || ""
-  const link = code ? `${window.location.origin}/login?ref=${encodeURIComponent(code)}` : ""
+  const link = inviteLink(code, "services")
   const message = code
-    ? `Book trusted home services with me. Sign in here: ${link} then open Services > Refer and earn and enter my code ${code}.`
+    ? `Book trusted home services with me. Join here: ${link} (or enter my code ${code} under Refer and earn).`
     : ""
 
   const copy = async (text, what) => {

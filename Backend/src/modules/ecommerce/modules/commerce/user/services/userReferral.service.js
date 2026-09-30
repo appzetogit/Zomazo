@@ -7,6 +7,8 @@ import { ReferralLog } from '../../admin/models/referralLog.model.js';
 import { buildReferralLinkFromTemplate } from '../../delivery/services/deliveryReferral.service.js';
 import { creditReferralReward } from './userWallet.service.js';
 import { referralSettingsFor } from '../../../../../../core/referral/referralSettings.service.js';
+import { inviteCodeForRow, resolveInviter } from '../../../../../../core/referral/inviteCode.service.js';
+import { ensureShopCustomer } from '../../../../core/auth/auth.middleware.js';
 import { claimReferralForPhone, releaseReferralClaim } from '../../../../../../core/referral/referralClaim.service.js';
 
 // What the Shop pays: its own settings, with Master > Referral's values in place.
@@ -23,14 +25,12 @@ export const getUserReferralStats = async (userId) => {
         UserWallet.findOne({ userId: oid }).select('referralEarnings').lean(),
         shopReferralSettings()
     ]);
+    // The person's one invite code (core/referral/inviteCode.service.js), else this row's own.
+    const shareCode = String((await inviteCodeForRow('ecom_users', id).catch(() => null)) || user?.referralCode || user?._id || '');
 
     return {
-        referralCode: String(user?.referralCode || user?._id || ''),
-        referralLink: buildReferralLinkFromTemplate(
-            settingsDoc?.referralLinkUser,
-            user?.referralCode || user?._id,
-            ''
-        ),
+        referralCode: shareCode,
+        referralLink: buildReferralLinkFromTemplate(settingsDoc?.referralLinkUser, shareCode, ''),
         referralCount: Number(user?.referralCount) || 0,
         totalReferralEarnings: Number(wallet?.referralEarnings) || 0,
         rewardAmount: Math.max(0, Number(settingsDoc?.referralRewardUser) || 0),
@@ -54,6 +54,7 @@ export const getUserReferralDetails = async (userId) => {
             .limit(100)
             .lean()
     ]);
+    const shareCode = String((await inviteCodeForRow('ecom_users', id).catch(() => null)) || user?.referralCode || user?._id || '');
 
     const refereeIds = Array.from(
         new Set(
@@ -101,12 +102,8 @@ export const getUserReferralDetails = async (userId) => {
 
     return {
         stats: {
-            referralCode: String(user?.referralCode || user?._id || ''),
-            referralLink: buildReferralLinkFromTemplate(
-                settingsDoc?.referralLinkUser,
-                user?.referralCode || user?._id,
-                ''
-            ),
+            referralCode: shareCode,
+            referralLink: buildReferralLinkFromTemplate(settingsDoc?.referralLinkUser, shareCode, ''),
             referralCount: Number(user?.referralCount) || 0,
             totalReferralEarnings: Number(wallet?.referralEarnings) || 0,
             rewardAmount: Math.max(0, Number(settingsDoc?.referralRewardUser) || 0),
@@ -149,7 +146,14 @@ export const creditShopSignupReferral = async ({ refereeId, ref } = {}) => {
         const oid = new mongoose.Types.ObjectId(code);
         or.push({ _id: oid }, { platformUserId: oid });
     }
-    const referrer = await User.findOne({ $or: or }).select('_id platformUserId').lean();
+    let referrer = await User.findOne({ $or: or }).select('_id platformUserId').lean();
+    if (!referrer) {
+        // Any code the platform knows the friend by (one code per person,
+        // core/referral/inviteCode.service.js); they get a Shop row if they have none.
+        const platformId = await resolveInviter(code);
+        const rowId = platformId ? await ensureShopCustomer(String(platformId)) : null;
+        referrer = rowId ? await User.findById(rowId).select('_id platformUserId').lean() : null;
+    }
     if (!referrer) return { credited: false, reason: 'unknown_referrer' };
     const self = String(referrer._id) === String(referee._id)
         || (referrer.platformUserId && String(referrer.platformUserId) === String(referee.platformUserId));

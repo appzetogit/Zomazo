@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { inviteCodeFor } from '../../../../../../core/referral/inviteCode.service.js';
 import { ValidationError } from '../../../../core/auth/errors.js';
 import { FoodUser } from '../../../../core/users/user.model.js';
 import { FoodUserWallet } from '../models/userWallet.model.js';
@@ -32,10 +33,15 @@ const platformIdFor = async (oid) => {
 };
 
 const platformInvite = async (pid) => {
-    const settings = await referralSettingsFor('food', PlatformReferralSettings);
+    const [settings, code] = await Promise.all([
+        referralSettingsFor('food', PlatformReferralSettings),
+        inviteCodeFor(pid),
+    ]);
+    // The person's one invite code, the same on every service's screen.
+    const shared = String(code || pid);
     return {
-        referralCode: pid,
-        referralLink: `/login?ref=${encodeURIComponent(pid)}`,
+        referralCode: shared,
+        referralLink: `/login?ref=${encodeURIComponent(shared)}`,
         referralLimit: Math.max(0, Number(settings?.referralLimitUser) || 0),
     };
 };

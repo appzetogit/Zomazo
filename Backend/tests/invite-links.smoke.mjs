@@ -16,6 +16,9 @@
  *   - an existing customer signing in again redeems nothing; one's own code
  *     never pays; an unknown `refService` falls back to Food, and a bad code
  *     never fails the sign-in;
+ *   - one code per person: the friend's platform code pays Quick's and
+ *     Services' programmes too (via=quick, via=services), an old service code
+ *     still names its person anywhere, and every share screen shows one code;
  *   - Master > Referral lists the Shop only while its module is on.
  */
 import assert from 'node:assert/strict';
@@ -162,6 +165,65 @@ await check('one\'s own Shop code never pays', async () => {
   const { creditShopSignupReferral } = await import('../src/modules/ecommerce/modules/commerce/user/services/userReferral.service.js');
   const res = await creditShopSignupReferral({ refereeId: raviShop, ref: String(ravi) });
   assert.equal(res.credited, false);
+});
+
+console.log('\nOne code everywhere');
+const { FoodReferralSettings: QuickSettings } = await import('../src/modules/quickCommerce/modules/food/admin/models/referralSettings.model.js');
+const { FoodReferralLog: QuickLog } = await import('../src/modules/quickCommerce/modules/food/admin/models/referralLog.model.js');
+const { inviteCodeForRow, resolveInviter } = await import('../src/core/referral/inviteCode.service.js');
+const { createRequire } = await import('node:module');
+const requireCjs = createRequire(import.meta.url);
+const spReferral = requireCjs('../src/modules/serviceProvider/services/referralService.js');
+const resolver = await import('../src/core/config/resolver.service.js');
+await QuickSettings.create({ referralRewardUser: 20, referralLimitUser: 5, isActive: true });
+await resolver.set('referral.customerReward', { level: 'vertical', scopeId: 'serviceProvider', value: 50 });
+await resolver.set('referral.customerLimit', { level: 'vertical', scopeId: 'serviceProvider', value: 5 });
+await setModuleEnabled('quickCommerce', true).catch(() => {});
+await setModuleEnabled('serviceProvider', true).catch(() => {});
+
+// Meera shared a Services code before there was one code.
+const meera = new mongoose.Types.ObjectId();
+await db.collection('users').insertOne({ _id: meera, phone: '9000000002', name: 'Meera', isActive: true });
+await db.collection('sp_users').insertOne({ name: 'Meera', phone: '9000000002', platformUserId: meera, referralCode: 'SPABC123', referralCount: 0, wallet: { balance: 0 } });
+
+await check('Ravi\'s one code pays Quick\'s programme through the sign-in (via=quick)', async () => {
+  const me = await signUp({ ref: 'USR0001ABCDEF', refService: 'quick' });
+  const mine = await db.collection('qc_users').findOne({ platformUserId: me.id });
+  const his = await db.collection('qc_users').findOne({ platformUserId: ravi });
+  assert.ok(mine && his, 'both get a Quick row');
+  const log = await QuickLog.findOne({ refereeId: mine._id }).lean();
+  assert.equal(log?.status, 'credited');
+  assert.equal(String(log.referrerId), String(his._id));
+});
+
+await check('and Services\' programme (via=services)', async () => {
+  const me = await signUp({ ref: 'USR0001ABCDEF', refService: 'services' });
+  const mine = await db.collection('sp_users').findOne({ phone: me.phone });
+  const his = await db.collection('sp_users').findOne({ phone: '9000000001' });
+  assert.ok(mine && his, 'both get a Services record');
+  assert.equal(String(mine.referredBy), String(his._id));
+  const log = await db.collection('sp_referral_logs').findOne({ refereeId: mine._id });
+  assert.equal(log?.status, 'credited');
+});
+
+await check('an old Services code still names its person, in Food and in the Shop', async () => {
+  assert.equal(String(await resolveInviter('spabc123')), String(meera));
+  const viaFood = await signUp({ ref: 'SPABC123' });
+  assert.equal(String((await FoodReferralLog.findOne({ refereeId: viaFood.id }).lean())?.referrerId), String(meera));
+  await signUp({ ref: 'SPABC123', refService: 'shop' });
+  const meeraShop = await ShopUser.findOne({ platformUserId: meera }).lean();
+  assert.ok(meeraShop, 'Meera gets a Shop row');
+  const shopLog = await ShopReferralLog.findOne({ referrerId: meeraShop._id }).lean();
+  assert.equal(shopLog?.status, 'credited');
+});
+
+await check('every share screen shows the same code', async () => {
+  assert.equal(await inviteCodeForRow('ecom_users', String(raviShop)), 'USR0001ABCDEF');
+  const hisSp = await db.collection('sp_users').findOne({ phone: '9000000001' });
+  assert.equal((await spReferral.referralSummary(hisSp._id)).code, 'USR0001ABCDEF');
+  // An account with no code yet gets its id, as Food always shared.
+  const meeraSp = await db.collection('sp_users').findOne({ phone: '9000000002' });
+  assert.equal(await inviteCodeForRow('sp_users', String(meeraSp._id)), String(meera));
 });
 
 console.log('\nMaster > Referral');

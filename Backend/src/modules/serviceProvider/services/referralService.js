@@ -47,9 +47,34 @@ async function ensureReferralCode(userId) {
   throw new Error('Could not make a referral code');
 }
 
+/**
+ * The friend a code names, as a Services customer: their own SP code, else any
+ * code the platform knows them by (one code per person,
+ * core/referral/inviteCode.service.js), giving them a Services record if they
+ * have none. Null when no one matches.
+ */
+async function findReferrer(code) {
+  const referralCode = String(code || '').trim().toUpperCase();
+  if (!referralCode) return null;
+  const own = await User.findOne({ referralCode }).select('_id phone name').lean();
+  if (own) return own;
+  const { resolveInviter } = await import('../../../core/referral/inviteCode.service.js');
+  const platformId = await resolveInviter(String(code).trim());
+  if (!platformId) return null;
+  const { resolveSharedCustomer } = require('../utils/identityBridge');
+  const row = await resolveSharedCustomer(String(platformId));
+  return row ? { _id: row._id, phone: row.phone, name: row.name } : null;
+}
+
+/** The code to share: the person's one platform code, else this record's own. */
+async function shareCode(userId) {
+  const { inviteCodeForRow } = await import('../../../core/referral/inviteCode.service.js');
+  return (await inviteCodeForRow('sp_users', String(userId)).catch(() => null)) || ensureReferralCode(userId);
+}
+
 async function referralSummary(userId) {
   const [code, terms, user] = await Promise.all([
-    ensureReferralCode(userId),
+    shareCode(userId),
     referralTerms(),
     User.findById(userId).select('referralCount').lean()
   ]);
@@ -71,7 +96,7 @@ async function applyReferralAtSignup({ refereeId, refereePhone, code }) {
   const referralCode = String(code || '').trim().toUpperCase();
   if (!referralCode) return { status: 'none' };
   try {
-    const referrer = await User.findOne({ referralCode }).select('_id phone name').lean();
+    const referrer = await findReferrer(code);
     if (!referrer) return { status: 'unknown_code' };
     if (String(referrer._id) === String(refereeId) || (refereePhone && referrer.phone === refereePhone)) {
       return { status: 'self' };
@@ -151,5 +176,6 @@ module.exports = {
   referralTerms,
   ensureReferralCode,
   referralSummary,
+  findReferrer,
   applyReferralAtSignup
 };

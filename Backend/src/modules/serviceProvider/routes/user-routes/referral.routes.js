@@ -4,7 +4,7 @@ const { authenticate } = require('../../middleware/authMiddleware');
 const { isUser } = require('../../middleware/roleMiddleware');
 const User = require('../../models/User');
 const Booking = require('../../models/Booking');
-const { referralSummary, applyReferralAtSignup } = require('../../services/referralService');
+const { referralSummary, findReferrer, applyReferralAtSignup } = require('../../services/referralService');
 
 /*
  * A customer signed in on the platform never goes through the Services sign-up,
@@ -32,10 +32,10 @@ router.get('/referral', authenticate, isUser, async (req, res) => {
 // A friend's code, entered by a customer new to Services.
 router.post('/referral/apply', authenticate, isUser, async (req, res) => {
   try {
-    const code = String(req.body?.code || '').trim().toUpperCase();
+    const code = String(req.body?.code || '').trim();
     if (!code) return res.status(400).json({ success: false, message: 'Enter a referral code' });
 
-    const referrer = await User.findOne({ referralCode: code }).select('_id phone').lean();
+    const referrer = await findReferrer(code);
     if (!referrer) return res.status(400).json({ success: false, message: 'That referral code is not valid' });
     if (String(referrer._id) === String(req.user.id) || (req.user.phone && referrer.phone === req.user.phone)) {
       return res.status(400).json({ success: false, message: 'You cannot use your own code' });

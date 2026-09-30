@@ -33,7 +33,7 @@ export default function UnifiedOTPFastLogin({ viewType = "auth" }) {
   const submitting = useRef(false)
   const { activeLogo } = useSettings()
 
-  // A friend's invite: /login?ref=<code>[&via=food|taxi|shop]. Kept for the
+  // A friend's invite: /login?ref=<code>[&via=food|taxi|shop|quick|services]. Kept for the
   // whole visit, so going back to edit the number does not lose it; the
   // backend credits it only when this sign-in creates a new account.
   const [invite] = useState(() => {
@@ -44,7 +44,7 @@ export default function UnifiedOTPFastLogin({ viewType = "auth" }) {
   })
   // Where a new customer lands when nothing sent them here: the app they were
   // invited to.
-  const INVITE_HOME = { food: "/food/user", taxi: "/taxi/user", shop: "/shop" }
+  const INVITE_HOME = { food: "/food/user", taxi: "/taxi/user", shop: "/shop", quick: "/quick", services: "/services" }
   const landingPath = () => {
     const from = location.state?.from?.pathname
     if (from && from !== "/") return from
