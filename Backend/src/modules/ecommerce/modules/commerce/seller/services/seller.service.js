@@ -1,4 +1,5 @@
 import { Seller } from '../models/seller.model.js';
+import { contactNumberRefusal, signInPhoneChangeRefusal } from '../../../../../../core/partner/partnerPhoneRules.js';
 import { parseFulfilmentMode, fulfilmentModeProductFilter, fulfilmentModeSellerFilter } from '../../search/validators/storefront.validator.js';
 import { CHANNELS, emptySellerChannel, parseChannelList, serializeSellerChannels } from '../../shared/channels.js';
 import { uploadImageBuffer } from '../../../../services/cloudinary.service.js';
@@ -1232,23 +1233,12 @@ export const updateSellerProfile = async (sellerId, body = {}) => {
         }
     }
 
-    // Note: UI keeps phone read-only, but we accept it safely and normalize if sent.
+    // The sign-in number stays as it is: screens send it back unchanged, and a
+    // change would move the account to a number no OTP was sent to
+    // (core/partner/partnerPhoneRules.js).
     if (body.ownerPhone !== undefined) {
-        const { digits, last10 } = normalizePhone(body.ownerPhone);
-        if (!digits || digits.length < 8) {
-            throw new ValidationError('Owner phone is invalid');
-        }
-
-        const currentOwnerPhoneDigits =
-            currentSeller.ownerPhoneDigits ||
-            normalizePhone(currentSeller.ownerPhone).digits ||
-            '';
-
-        if (digits !== currentOwnerPhoneDigits) {
-            update.ownerPhone = digits;
-            update.ownerPhoneDigits = digits;
-            update.ownerPhoneLast10 = last10 || undefined;
-        }
+        const refusal = signInPhoneChangeRefusal(body.ownerPhone, currentSeller.ownerPhone);
+        if (refusal) throw new ValidationError(refusal);
     }
 
     if (body.primaryContactNumber !== undefined) {
@@ -1261,6 +1251,9 @@ export const updateSellerProfile = async (sellerId, body = {}) => {
                 : '';
 
         if (normalizedPrimaryContact !== currentPrimaryContact) {
+            // Not another business's number: sign-in matches this field too.
+            const refusal = await contactNumberRefusal(Seller, currentSeller._id, normalizedPrimaryContact);
+            if (refusal) throw new ValidationError(refusal);
             update.primaryContactNumber = normalizedPrimaryContact;
         }
     }

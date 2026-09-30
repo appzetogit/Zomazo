@@ -1,4 +1,5 @@
 import { FoodRestaurant } from '../models/restaurant.model.js';
+import { contactNumberRefusal, signInPhoneChangeRefusal } from '../../../../../../core/partner/partnerPhoneRules.js';
 import { uploadImageBuffer } from '../../../../services/cloudinary.service.js';
 import { normalizeMediaUrlForStorage } from '../../../../services/storage.service.js';
 import { ValidationError, NotFoundError } from '../../../../core/auth/errors.js';
@@ -1537,23 +1538,12 @@ export const updateRestaurantProfile = async (restaurantId, body = {}) => {
         }
     }
 
-    // Note: UI keeps phone read-only, but we accept it safely and normalize if sent.
+    // The sign-in number stays as it is: screens send it back unchanged, and a
+    // change would move the account to a number no OTP was sent to
+    // (core/partner/partnerPhoneRules.js).
     if (body.ownerPhone !== undefined) {
-        const { digits, last10 } = normalizePhone(body.ownerPhone);
-        if (!digits || digits.length < 8) {
-            throw new ValidationError('Owner phone is invalid');
-        }
-
-        const currentOwnerPhoneDigits =
-            currentRestaurant.ownerPhoneDigits ||
-            normalizePhone(currentRestaurant.ownerPhone).digits ||
-            '';
-
-        if (digits !== currentOwnerPhoneDigits) {
-            update.ownerPhone = digits;
-            update.ownerPhoneDigits = digits;
-            update.ownerPhoneLast10 = last10 || undefined;
-        }
+        const refusal = signInPhoneChangeRefusal(body.ownerPhone, currentRestaurant.ownerPhone);
+        if (refusal) throw new ValidationError(refusal);
     }
 
     if (body.primaryContactNumber !== undefined) {
@@ -1566,6 +1556,9 @@ export const updateRestaurantProfile = async (restaurantId, body = {}) => {
                 : '';
 
         if (normalizedPrimaryContact !== currentPrimaryContact) {
+            // Not another business's number: sign-in matches this field too.
+            const refusal = await contactNumberRefusal(FoodRestaurant, currentRestaurant._id, normalizedPrimaryContact);
+            if (refusal) throw new ValidationError(refusal);
             update.primaryContactNumber = normalizedPrimaryContact;
         }
     }
