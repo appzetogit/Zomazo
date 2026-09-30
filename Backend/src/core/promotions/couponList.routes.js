@@ -4,6 +4,7 @@ import { requireRoles } from '../roles/role.middleware.js';
 import { sendResponse, sendError } from '../../utils/response.js';
 import { loadAdminCached } from '../../modules/food/admin/middlewares/foodAdmin.middleware.js';
 import * as coupons from './couponList.service.js';
+import * as platformCoupons from './platformCouponAdmin.service.js';
 
 /**
  * Master > Coupons: /v1/platform/coupons.
@@ -41,6 +42,10 @@ const handle = (fn, message = 'OK') => async (req, res) => {
 };
 
 router.get('/', handle((req) => coupons.listCoupons(req.platformAdmin, req.query)));
+// Master's own coupons, honoured by the services they name (platformCoupon.model.js).
+router.post('/platform', handle((req) => platformCoupons.createPlatformCoupon(req.platformAdmin, req.body || {}), 'Coupon created'));
+router.get('/platform/:id', handle((req) => platformCoupons.getPlatformCoupon(req.platformAdmin, req.params.id)));
+router.patch('/platform/:id', handle((req) => platformCoupons.updatePlatformCoupon(req.platformAdmin, req.params.id, req.body || {}), 'Saved'));
 router.patch(
   '/:source/:id/live',
   handle((req) => coupons.setCouponLive(req.platformAdmin, req.params.source, req.params.id, req.body?.live), 'Saved'),

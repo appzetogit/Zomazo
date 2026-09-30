@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { ApiError } from '../../utils/ApiError.js';
 import { decideAdminAccess } from '../admin/adminAccessPolicy.js';
 import { resolvePromoCeiling, tighten } from '../finance/promoLimits.service.js';
+import { canManagePlatformCoupon, canSeePlatformCoupons, PLATFORM_SERVICE_LABELS } from './platformCouponAdmin.service.js';
 
 /**
  * One list of every coupon on the platform (Master > Coupons).
@@ -60,6 +61,16 @@ const SOURCES = {
     // ceiling, so its limits are shown as the coupon states them.
     noCeiling: true,
   },
+  // Master's own coupons, honoured by several services (platformCoupon.model.js).
+  platform: {
+    label: 'All services',
+    service: null,
+    vertical: null,
+    load: async () => (await import('./platformCoupon.model.js')).PlatformCoupon,
+    sellers: null,
+    // Its own limits are applied per service at redemption.
+    noCeiling: true,
+  },
   services: {
     label: 'Services',
     service: 'serviceProvider',
@@ -88,7 +99,11 @@ const asStoreOffer = (doc) => ({
 export const COUPON_SOURCES = Object.entries(SOURCES).map(([key, s]) => ({ key, label: s.label, service: s.service }));
 
 const canSee = (admin, source, write = false) =>
-  decideAdminAccess(admin, { service: SOURCES[source].service, resource: 'promotions', write }).allowed;
+  source === 'platform'
+    // Per coupon for changes (platformCouponAdmin.service.js); listed to anyone
+    // with offers access in at least one service.
+    ? canSeePlatformCoupons(admin)
+    : decideAdminAccess(admin, { service: SOURCES[source].service, resource: 'promotions', write }).allowed;
 
 const visibleSources = (admin) => Object.keys(SOURCES).filter((key) => canSee(admin, key));
 
@@ -191,6 +206,37 @@ function taxiRow(doc, ceiling, now) {
   };
 }
 
+function platformRow(doc, now) {
+  const limit = Number(doc.usageLimit) > 0 ? Number(doc.usageLimit) : null;
+  const used = Number(doc.usedCount) || 0;
+  const start = date(doc.startDate);
+  const end = date(doc.endDate);
+  const value = Number(doc.discountValue) || 0;
+  return {
+    key: `platform:${doc._id}`,
+    id: String(doc._id),
+    source: 'platform',
+    sourceLabel: 'All services',
+    code: doc.code,
+    discount: doc.discountType === 'percentage'
+      ? `${value}% off${Number(doc.maxDiscount) > 0 ? ` up to ${money(doc.maxDiscount)}` : ''}`
+      : `${money(value)} off`,
+    minOrder: Number(doc.minOrderValue) || 0,
+    audience: doc.audience === 'first_order' ? 'First order only' : 'Everyone',
+    where: (doc.services || []).map((sv) => PLATFORM_SERVICE_LABELS[sv] || sv).join(', '),
+    services: doc.services || [],
+    createdBy: 'admin',
+    used,
+    limit,
+    perUser: Number(doc.perUserLimit) > 0 ? Number(doc.perUserLimit) : null,
+    startDate: start,
+    endDate: end,
+    shownInCart: true,
+    state: stateOf({ paused: doc.status === 'paused', off: false, start, end, used, limit }, now),
+    createdAt: doc.createdAt || null,
+  };
+}
+
 async function sellerNames(collection, docs, nameField = 'restaurantName') {
   if (!collection) return new Map();
   const ids = new Set();
@@ -217,6 +263,7 @@ async function rowsFor(source, filter = {}) {
   ]);
   const now = new Date();
   if (source === 'taxi') return loaded.map((d) => taxiRow(d, ceiling, now));
+  if (source === 'platform') return loaded.map((d) => platformRow(d, now));
   const docs = source === 'shop' ? loaded.map(asStoreOffer) : loaded;
   const names = await sellerNames(def.sellers, docs, def.sellerNameField);
   return docs.map((d) => storeRow(source, d, names, ceiling, now));
@@ -277,6 +324,9 @@ export async function setCouponLive(admin, source, id, live) {
   const Model = await def.load();
   const doc = await Model.findById(id).lean();
   if (!doc) throw new ApiError(404, 'Coupon not found');
+  if (source === 'platform' && !canManagePlatformCoupon(admin, doc.services, true)) {
+    throw new ApiError(403, 'You need offers access in every service this coupon is for');
+  }
 
   const end = date(source === 'taxi' ? doc.to_date : doc.endDate);
   if (live && end && end <= new Date()) {
