@@ -471,7 +471,7 @@ const createBooking = async (req, res) => {
           return { booking: doc };
         });
         if (created.penaltyChanged) {
-          if (appliedCoupon) await couponService.unclaimCoupon(appliedCoupon._id);
+          if (appliedCoupon) await couponService.unclaimCoupon(appliedCoupon);
           return res.status(409).json({
             success: false,
             message: 'Your pending cancellation fee changed while booking. Please try again.'
@@ -482,7 +482,7 @@ const createBooking = async (req, res) => {
         booking = await Booking.create(bookingFields);
       }
     } catch (createErr) {
-      if (appliedCoupon) await couponService.unclaimCoupon(appliedCoupon._id).catch(() => {});
+      if (appliedCoupon) await couponService.unclaimCoupon(appliedCoupon).catch(() => {});
       throw createErr;
     }
     if (appliedCoupon) {

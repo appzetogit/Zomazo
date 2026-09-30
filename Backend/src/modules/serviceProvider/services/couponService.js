@@ -9,6 +9,10 @@ const CouponUsage = require('../models/CouponUsage');
  * floor overrule them, so a code either did nothing or was whatever the app said.
  */
 
+// Platform coupons (made in Master for several services) live in the ESM core;
+// loaded when first needed.
+const loadPlatformCoupons = () => import('../../../core/promotions/platformCoupon.service.js');
+
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const normalizeCode = (code) => String(code || '').trim().toUpperCase();
 
@@ -53,7 +57,7 @@ async function validateCoupon({ code, userId, amount }) {
   const couponCode = normalizeCode(code);
   if (!couponCode) throw new CouponError('Enter a coupon code');
   const coupon = await Coupon.findOne({ couponCode }).lean();
-  if (!coupon) throw new CouponError('This coupon code is not valid');
+  if (!coupon) return validatePlatformCoupon({ couponCode, userId, amount });
 
   const reason = unavailableReason(coupon);
   if (reason) throw new CouponError(reason);
@@ -82,18 +86,60 @@ async function validateCoupon({ code, userId, amount }) {
 }
 
 /**
+ * Not a Services coupon: a platform coupon, if there is one. Counted against
+ * the customer's platform account across every service it names. Returns the
+ * same { coupon, discount } shape, the coupon marked `platform`.
+ */
+async function validatePlatformCoupon({ couponCode, userId, amount }) {
+  const core = await loadPlatformCoupons();
+  const platformUserId = userId ? await core.platformAccountOf(userId) : null;
+  let isFirstOrder = null;
+  if (userId) {
+    const Booking = require('../models/Booking');
+    const { BOOKING_STATUS } = require('../utils/constants');
+    isFirstOrder = !(await Booking.exists({ userId, status: { $ne: BOOKING_STATUS.CANCELLED } }));
+  }
+  const quoted = await core.quotePlatformCoupon(couponCode, {
+    service: 'serviceProvider',
+    platformUserId,
+    subtotal: Number(amount) || 0,
+    isFirstOrder
+  });
+  if (!quoted.coupon) throw new CouponError('This coupon code is not valid');
+  if (!(quoted.discount > 0)) throw new CouponError(quoted.reason || 'This coupon cannot be used here');
+  return {
+    coupon: { ...quoted.coupon, couponCode, platform: true, platformUserId },
+    discount: round2(quoted.discount)
+  };
+}
+
+/**
  * Take one use of the coupon. Atomic against the total limit: two customers
  * racing for the last use cannot both get it. Returns false when it is gone.
  */
 async function claimCoupon(coupon) {
+  if (coupon?.platform) {
+    const core = await loadPlatformCoupons();
+    const claim = await core.claimPlatformCoupon(coupon.couponCode, { service: 'serviceProvider', platformUserId: coupon.platformUserId });
+    return claim.taken;
+  }
   const filter = { _id: coupon._id, status: 'active' };
   if (coupon.usageLimit != null) filter.usedCount = { $lt: coupon.usageLimit };
   const res = await Coupon.updateOne(filter, { $inc: { usedCount: 1 } });
   return res.modifiedCount === 1;
 }
 
-/** Give back a use taken by claimCoupon (the booking it was for was never made). */
-async function unclaimCoupon(couponId) {
+/**
+ * Give back a use taken by claimCoupon (the booking it was for was never made).
+ * Takes the coupon (or, for a Services coupon, its id).
+ */
+async function unclaimCoupon(couponOrId) {
+  if (couponOrId?.platform) {
+    const core = await loadPlatformCoupons();
+    await core.releasePlatformCoupon(couponOrId.couponCode, { platformUserId: couponOrId.platformUserId });
+    return;
+  }
+  const couponId = couponOrId?._id || couponOrId;
   await Coupon.updateOne({ _id: couponId, usedCount: { $gt: 0 } }, { $inc: { usedCount: -1 } });
 }
 
@@ -115,7 +161,16 @@ async function recordUsage({ coupon, userId, bookingId, discount }) {
 async function releaseCouponForBooking(bookingId) {
   try {
     const usage = await CouponUsage.findOneAndDelete({ bookingId });
-    if (usage) await unclaimCoupon(usage.couponId);
+    if (usage) {
+      // A platform coupon's use is given back to the customer's platform account.
+      const own = await Coupon.exists({ _id: usage.couponId });
+      if (own) {
+        await unclaimCoupon(usage.couponId);
+      } else {
+        const core = await loadPlatformCoupons();
+        await core.releasePlatformCoupon(usage.couponCode, { platformUserId: await core.platformAccountOf(usage.userId) });
+      }
+    }
     return Boolean(usage);
   } catch (err) {
     console.error(`[Coupon] Could not release the coupon of booking ${bookingId}:`, err.message);
