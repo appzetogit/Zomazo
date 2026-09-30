@@ -11,6 +11,7 @@
  */
 
 import axios from "axios";
+import { savePartnerPassFrom } from "@/shared/partner/partnerPass"
 
 // The platform API root (VITE_API_BASE_URL, or same-origin /api/v1 via proxy).
 const platformRoot =
@@ -187,7 +188,11 @@ apiClient.interceptors.request.use(
 );
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // A partner sign-in's pass, for the business switcher (shared/partner/partnerPass.js).
+    savePartnerPassFrom(response?.data);
+    return response;
+  },
   async (err) => {
     const original = err?.config;
     if (err?.response?.status === 429) {

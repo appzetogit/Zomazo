@@ -8,6 +8,7 @@
 
 import { forgetActiveSlotBusiness } from "@/shared/partner/businesses"
 import axios from "axios";
+import { savePartnerPassFrom } from "@/shared/partner/partnerPass"
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
@@ -474,7 +475,11 @@ apiClient.interceptors.request.use(
 );
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // A partner sign-in's pass, for the business switcher (shared/partner/partnerPass.js).
+    savePartnerPassFrom(response?.data);
+    return response;
+  },
   async (err) => {
     const original = err?.config;
     if (err?.response?.status === 429) {

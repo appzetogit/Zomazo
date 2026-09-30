@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { apiCache } from '../utils/apiCache';
+import { savePartnerPassFrom } from "@/shared/partner/partnerPass"
 
 // API Base URL.
 //
@@ -99,6 +100,8 @@ const processQueue = (error, token = null) => {
 // Response interceptor - Handle token refresh
 api.interceptors.response.use(
   (response) => {
+    // A partner sign-in's pass, for the business switcher (shared/partner/partnerPass.js).
+    savePartnerPassFrom(response?.data);
     return response;
   },
   async (error) => {

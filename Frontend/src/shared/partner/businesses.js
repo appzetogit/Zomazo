@@ -14,8 +14,15 @@
  * The slot stays the source of truth for whichever restaurant-side business is
  * active: its tokens refresh in place, so it is snapshotted back into the list
  * before anything replaces it.
+ *
+ * Businesses in other services this browser has no session for are found with
+ * the partner pass (partnerPass.js; Backend core/partner/partnerHandoff.service.js)
+ * and opened by a handoff: the server issues that service's own session, which
+ * is stored exactly where that service's sign-in would store it.
  */
+import axios from "axios"
 import { clearRestaurantSessionCache } from "@food/utils/auth"
+import { clearPartnerPass, getPartnerPass } from "./partnerPass"
 
 const STORE_KEY = "partner_businesses"
 const VERTICAL_KEY = "restaurant_vertical"
@@ -159,4 +166,109 @@ export const switchToBusiness = (key) => {
     return
   }
   window.location.assign(target.path)
+}
+
+
+// The server's kinds, and the keys this list uses for them.
+const KIND_KEY = { food: "food", quick: "qc", shop: "shop", services: "services" }
+const KEY_LABEL = { food: "Restaurant", qc: "Quick store", shop: "Shop seller", services: "Services" }
+
+/** The id of the business this browser holds for each key, or "". */
+const heldIds = () => {
+  const store = loadStore()
+  const active = activeSlotBusiness()
+  const idOf = (user) => String(user?._id || user?.id || "")
+  return {
+    food: idOf(active === "food" ? readJson(SLOT.user) : store.food?.user),
+    qc: idOf(active === "qc" ? readJson(SLOT.user) : store.qc?.user),
+    shop: read("seller_accessToken") ? idOf(readJson("seller_user")) : "",
+    services: read("vendorAccessToken") ? idOf(readJson("vendorData")) : "",
+  }
+}
+
+/*
+ * The pass endpoints, called with plain axios: the app's client treats a 401
+ * as its own session ending and would sign the partner out of this panel.
+ */
+const partnerApi = async (method, path, body) => {
+  const { default: apiClient } = await import("@/services/api/axios")
+  return axios({
+    method,
+    url: `${apiClient.defaults.baseURL || "/api/v1"}/platform/partner${path}`,
+    data: body,
+    headers: { "X-Partner-Pass": getPartnerPass() },
+  })
+}
+
+/**
+ * This browser's businesses, then the partner's others found with the pass:
+ * [{ key, label, name, path, active, remote?, state? }]. A business shown
+ * with `remote` is opened by openRemoteBusiness; one whose `state` is not
+ * 'approved' cannot be opened yet.
+ */
+export const discoverBusinesses = async (current) => {
+  const local = listBusinesses(current)
+  if (!getPartnerPass()) return local
+  // Signed out of every business here: the pass goes too.
+  if (!local.length) {
+    clearPartnerPass()
+    return local
+  }
+  let items = []
+  try {
+    items = (await partnerApi("get", "/businesses"))?.data?.data?.items || []
+  } catch (err) {
+    if (err?.response?.status === 401) clearPartnerPass()
+    return local
+  }
+  const held = heldIds()
+  const others = items
+    .filter((b) => KIND_KEY[b.kind] && held[KIND_KEY[b.kind]] !== b.id)
+    .map((b) => ({
+      key: `${b.kind}:${b.id}`,
+      label: KEY_LABEL[KIND_KEY[b.kind]],
+      name: b.name,
+      path: b.home,
+      active: false,
+      state: b.state,
+      remote: { kind: b.kind, id: b.id },
+    }))
+  return [...local, ...others]
+}
+
+/**
+ * Open a business this browser has no session for: the server signs it in by
+ * its service's own rules, and its session is stored where that service's
+ * sign-in keeps it. Throws with the server's message if it cannot be opened.
+ */
+export const openRemoteBusiness = async ({ kind, id }) => {
+  let data
+  try {
+    data = (await partnerApi("post", "/handoff", { kind, id }))?.data?.data
+  } catch (err) {
+    throw new Error(err?.response?.data?.message || "This business could not be opened")
+  }
+  const session = data?.session
+  if (!session?.accessToken) throw new Error("This business could not be opened")
+
+  if (kind === "food" || kind === "quick") {
+    // Into the restaurant slot, keeping whichever business was there.
+    rememberActiveSlotBusiness()
+    clearRestaurantSessionCache()
+    localStorage.setItem(SLOT.access, session.accessToken)
+    if (session.refreshToken) localStorage.setItem(SLOT.refresh, session.refreshToken)
+    else localStorage.removeItem(SLOT.refresh)
+    localStorage.setItem(SLOT.authenticated, "true")
+    if (session.user) localStorage.setItem(SLOT.user, JSON.stringify(session.user))
+    if (kind === "quick") localStorage.setItem(VERTICAL_KEY, "qc")
+    else localStorage.removeItem(VERTICAL_KEY)
+  } else if (kind === "shop") {
+    const { setAuthData } = await import("@/modules/Shop/utils/auth")
+    setAuthData("seller", session.accessToken, session.user, session.refreshToken)
+  } else if (kind === "services") {
+    localStorage.setItem("vendorAccessToken", session.accessToken)
+    localStorage.setItem("vendorRefreshToken", session.refreshToken)
+    localStorage.setItem("vendorData", JSON.stringify(session.vendor))
+  }
+  window.location.assign(data.home || "/")
 }
