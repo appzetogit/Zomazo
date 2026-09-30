@@ -32,6 +32,7 @@ import { applyBogoToItems } from '../../shared/bogoOffer.service.js';
 import { getOrderQuantityCeiling } from '../../shared/orderQuantityCeiling.js';
 import { FoodAddon } from '../../restaurant/models/foodAddon.model.js';
 import { loadSellableAddons, normalizeRequestedAddonIds, resolveLineAddons } from '../../shared/orderAddons.js';
+import { quotePlatformCoupon } from '../../../../core/promotions/platformCoupon.service.js';
 
 /**
  * Resolves order items against the restaurant's live menu and returns copies with
@@ -858,6 +859,30 @@ export async function calculateOrderPricing(userId, dto) {
         }
         appliedCoupon = { code: codeRaw, discount };
         discountFundedByPlatform = offer.createdByRole !== 'RESTAURANT';
+      }
+    } else {
+      /*
+       * Not one of Food's coupons: a platform coupon made in Master for
+       * several services, if there is one. It is platform-funded, and its
+       * limits count the customer's uses across every service it names.
+       */
+      const isFirstOrder = userId
+        ? (await FoodOrder.countDocuments({
+            userId: new mongoose.Types.ObjectId(userId),
+            orderStatus: { $nin: ORDER_STATUSES_NOT_COUNTED_FOR_COUPONS },
+          })) === 0
+        : null;
+      const quoted = await quotePlatformCoupon(codeRaw, {
+        service: 'food',
+        platformUserId: userId,
+        subtotal,
+        isFirstOrder,
+        now,
+      });
+      if (quoted.discount > 0) {
+        discount = quoted.discount;
+        appliedCoupon = { code: codeRaw, discount, platform: true };
+        discountFundedByPlatform = true;
       }
     }
   }

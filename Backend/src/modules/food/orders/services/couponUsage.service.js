@@ -4,6 +4,7 @@ import { FoodOrder } from '../models/order.model.js';
 import { FoodOffer } from '../../admin/models/offer.model.js';
 import { FoodOfferUsage } from '../../admin/models/offerUsage.model.js';
 import { logger } from '../../../../utils/logger.js';
+import { claimPlatformCoupon, releasePlatformCoupon } from '../../../../core/promotions/platformCoupon.service.js';
 
 /**
  * When a coupon counts as used, and when it stops counting.
@@ -69,7 +70,12 @@ const appliedCouponCode = (order) => {
  */
 export async function takeCouponUse(code, userId, { enforceLimit = true } = {}) {
     const offer = await FoodOffer.findOne({ couponCode: code }).select('_id usageLimit perUserLimit').lean();
-    if (!offer) return { taken: false, exhausted: false, overLimit: false };
+    // Not one of Food's own: a platform coupon (made in Master for several
+    // services) is counted against the customer's one account instead.
+    if (!offer) {
+        const pc = await claimPlatformCoupon(code, { service: 'food', platformUserId: userId, enforce: enforceLimit });
+        return { taken: pc.taken, exhausted: pc.exhausted, overLimit: pc.overLimit, perUser: pc.perUser };
+    }
 
     /*
      * The customer's own limit, claimed atomically first. It was only checked
@@ -132,7 +138,10 @@ export async function takeCouponUse(code, userId, { enforceLimit = true } = {}) 
 /** Undo one takeCouponUse. Never takes a counter below zero. */
 export async function giveBackCouponUse(code, userId) {
     const offer = await FoodOffer.findOne({ couponCode: code }).select('_id').lean();
-    if (!offer) return;
+    if (!offer) {
+        await releasePlatformCoupon(code, { platformUserId: userId });
+        return;
+    }
     await FoodOffer.updateOne({ _id: offer._id, usedCount: { $gt: 0 } }, { $inc: { usedCount: -1 } });
     const userObjectId = toObjectId(userId);
     if (userObjectId) {

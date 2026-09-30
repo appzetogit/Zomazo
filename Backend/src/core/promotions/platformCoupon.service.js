@@ -97,13 +97,33 @@ export async function quotePlatformCoupon(code, { service, platformUserId, subto
 /**
  * Take one use, atomically: the customer's own count (a unique index turns a
  * claim at the limit into the refusal) and the coupon's total. Both or neither.
- * Returns { taken, exhausted }.
+ *
+ * `enforce: false` counts the use whatever the limits say, and reports
+ * `overLimit` -- for an order already paid at the discounted price, which the
+ * platform cannot now refuse (the services count their own coupons the same way).
+ * Returns { taken, exhausted, perUser, overLimit }.
  */
-export async function claimPlatformCoupon(code, { service, platformUserId } = {}) {
+export async function claimPlatformCoupon(code, { service, platformUserId, enforce = true } = {}) {
     const coupon = await findPlatformCoupon(code);
-    if (!coupon) return { taken: false, exhausted: false };
+    if (!coupon) return { taken: false, exhausted: false, perUser: false, overLimit: false };
     const limits = await effectiveLimits(coupon, service);
     const userOid = toOid(platformUserId);
+    const stamp = { $set: { lastUsedAt: new Date(), lastService: String(service || '') } };
+
+    if (!enforce) {
+        let overLimit = false;
+        if (userOid) {
+            const use = await PlatformCouponUse.findOneAndUpdate(
+                { couponId: coupon._id, platformUserId: userOid },
+                { $inc: { count: 1 }, ...stamp },
+                { upsert: true, new: true },
+            ).lean();
+            if (limits.perUser > 0 && use.count > limits.perUser) overLimit = true;
+        }
+        const after = await PlatformCoupon.findOneAndUpdate({ _id: coupon._id }, { $inc: { usedCount: 1 } }, { new: true }).lean();
+        if (limits.total > 0 && after.usedCount > limits.total) overLimit = true;
+        return { taken: true, exhausted: false, perUser: false, overLimit };
+    }
 
     let userClaimed = false;
     if (userOid) {
@@ -112,16 +132,16 @@ export async function claimPlatformCoupon(code, { service, platformUserId } = {}
                 limits.perUser > 0
                     ? { couponId: coupon._id, platformUserId: userOid, count: { $lt: limits.perUser } }
                     : { couponId: coupon._id, platformUserId: userOid },
-                { $inc: { count: 1 }, $set: { lastUsedAt: new Date(), lastService: String(service || '') } },
+                { $inc: { count: 1 }, ...stamp },
                 { upsert: true },
             );
             userClaimed = r.matchedCount === 1 || r.upsertedCount === 1;
         } catch (err) {
             if (err?.code !== 11000) throw err;
         }
-        if (!userClaimed) return { taken: false, exhausted: true };
+        if (!userClaimed) return { taken: false, exhausted: true, perUser: true, overLimit: false };
     } else if (limits.perUser > 0) {
-        return { taken: false, exhausted: true };
+        return { taken: false, exhausted: true, perUser: true, overLimit: false };
     }
 
     const total = await PlatformCoupon.updateOne(
@@ -135,9 +155,9 @@ export async function claimPlatformCoupon(code, { service, platformUserId } = {}
                 { $inc: { count: -1 } },
             );
         }
-        return { taken: false, exhausted: true };
+        return { taken: false, exhausted: true, perUser: false, overLimit: false };
     }
-    return { taken: true, exhausted: false };
+    return { taken: true, exhausted: false, perUser: false, overLimit: false };
 }
 
 /** Give one use back (an order that claimed it was never placed or was given up). */

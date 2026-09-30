@@ -29,6 +29,16 @@ export const COUPON_STATES = ['live', 'scheduled', 'paused', 'used_up', 'expired
 const PER_SOURCE_LIMIT = 1000;
 
 const SOURCES = {
+  // Master's own coupons, honoured by several services (platformCoupon.model.js).
+  platform: {
+    label: 'All services',
+    service: null,
+    vertical: null,
+    load: async () => (await import('./platformCoupon.model.js')).PlatformCoupon,
+    sellers: null,
+    // Its own limits are applied per service at redemption.
+    noCeiling: true,
+  },
   food: {
     label: 'Food',
     service: 'food',
@@ -59,16 +69,6 @@ const SOURCES = {
     sellerNameField: 'sellerName',
     // The Shop's checkout applies its own coupon rules, not the Master promo
     // ceiling, so its limits are shown as the coupon states them.
-    noCeiling: true,
-  },
-  // Master's own coupons, honoured by several services (platformCoupon.model.js).
-  platform: {
-    label: 'All services',
-    service: null,
-    vertical: null,
-    load: async () => (await import('./platformCoupon.model.js')).PlatformCoupon,
-    sellers: null,
-    // Its own limits are applied per service at redemption.
     noCeiling: true,
   },
   services: {

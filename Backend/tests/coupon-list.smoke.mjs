@@ -81,8 +81,9 @@ console.log('\nThe list');
 await check('every service in one list', async () => {
   const res = await coupons.listCoupons(owner, {});
   assert.equal(res.total, 6);
-  // The Shop and Services are sources too; this fixture has none of theirs yet.
-  assert.deepEqual(res.sources.map((s) => s.key), ['food', 'quick', 'taxi', 'shop', 'services']);
+  // The Shop, Services and platform-wide coupons are sources too; this
+  // fixture has none of theirs yet.
+  assert.deepEqual(res.sources.map((s) => s.key), ['platform', 'food', 'quick', 'taxi', 'shop', 'services']);
 });
 
 await check('each coupon reads plainly', async () => {
