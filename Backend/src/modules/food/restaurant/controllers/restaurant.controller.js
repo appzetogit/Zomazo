@@ -1,3 +1,4 @@
+import { assertPassForRegistration } from '../../../../core/partner/partnerHandoff.service.js';
 import {
     registerRestaurant,
     listApprovedRestaurants,
@@ -30,6 +31,9 @@ export const uploadRestaurantAttachmentController = async (req, res, next) => {
 
 export const registerRestaurantController = async (req, res, next) => {
     try {
+        // Only on a number just verified by OTP (core/partner/partnerHandoff.service.js),
+        // checked before anything else about the form.
+        assertPassForRegistration(req.get('x-partner-pass'), req.body?.ownerPhone);
         const validated = validateRestaurantRegisterDto(req.body);
         const restaurant = await registerRestaurant(validated, req.files);
         return sendResponse(res, 201, 'Restaurant registered successfully', restaurant);

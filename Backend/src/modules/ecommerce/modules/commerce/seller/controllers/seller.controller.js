@@ -1,3 +1,4 @@
+import { assertPassForRegistration } from '../../../../../../core/partner/partnerHandoff.service.js';
 import {
     registerSeller,
     listApprovedSellers,
@@ -33,6 +34,9 @@ export const uploadSellerAttachmentController = async (req, res, next) => {
 
 export const registerSellerController = async (req, res, next) => {
     try {
+        // Only on a number just verified by OTP (core/partner/partnerHandoff.service.js),
+        // checked before anything else about the form.
+        assertPassForRegistration(req.get('x-partner-pass'), req.body?.ownerPhone);
         const validated = validateSellerRegisterDto(req.body);
         const seller = await registerSeller(validated, req.files);
         return sendResponse(res, 201, 'Store registered successfully', seller);

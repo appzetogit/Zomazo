@@ -2,6 +2,7 @@
  * API layer - auth connected to new backend; rest stubbed for UI compatibility.
  */
 
+import { getPartnerPass } from "@/shared/partner/partnerPass"
 import apiClient from "./axios.js";
 import { API_BASE_URL, API_ENDPOINTS } from "./config.js";
 import * as authService from "./auth.js";
@@ -1842,7 +1843,10 @@ export const sellerAPI = {
     if (!formData || !(formData instanceof FormData)) {
       return Promise.reject(new Error("FormData is required"));
     }
-    return apiClient.post("/seller/register", formData);
+    return apiClient.post("/seller/register", formData, {
+      // The pass from the OTP step: registration is only on a verified number.
+      headers: { "X-Partner-Pass": getPartnerPass() },
+    });
   },
   createOnboardingFeeOrder: (ownerPhone) =>
     apiClient.post("/seller/onboarding-fee/order", { ownerPhone }),

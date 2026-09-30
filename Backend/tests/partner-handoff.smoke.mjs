@@ -136,6 +136,30 @@ await check('an unknown kind or a bad id is simply not found', async () => {
   assert.equal((await open('food', 'nope')).status, 404);
 });
 
+console.log('\nRegistering a new business');
+const { setModuleEnabled } = await import('../src/core/modules/moduleState.service.js');
+await setModuleEnabled('ecommerce', true).catch(() => {});
+const root = `http://127.0.0.1:${server.address().port}/api/v1`;
+const register = (path, ownerPhone, p) => fetch(`${root}${path}`, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json', ...(p ? { 'x-partner-pass': p } : {}) },
+  body: JSON.stringify({ ownerPhone }),
+}).then(async (r) => ({ status: r.status, body: await r.json().catch(() => ({})) }));
+
+for (const [label, path] of [['Food restaurant', '/food/restaurant/register'], ['Shop seller', '/ecom/seller/register']]) {
+  await check(`${label}: only on the number the registrant verified`, async () => {
+    const none = await register(path, '9000000005');
+    assert.equal(none.status, 403);
+    assert.match(none.body.message, /OTP/);
+    // A pass for another number does not register this one.
+    assert.equal((await register(path, '9000000005', pass)).status, 403);
+    // The right pass gets past the check (the empty form then fails validation).
+    const mine = await register(path, `+91${MINE}`, pass);
+    assert.notEqual(mine.status, 403, JSON.stringify(mine.body));
+    assert.equal(mine.status, 400);
+  });
+}
+
 server.close();
 await mongoose.disconnect();
 await mongo.stop();

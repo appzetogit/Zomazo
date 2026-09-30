@@ -179,3 +179,22 @@ const SIGN_IN = {
         return issueVendorSession(doc);
     },
 };
+
+/**
+ * Registering a new business: the number it signs in with must be one the
+ * registrant just verified by OTP. The OTP step returns a pass even when the
+ * answer is "please register"; the onboarding form sends it back
+ * (X-Partner-Pass). Without this, anyone could register a business on anyone's
+ * number, and its owner signing in could land in it.
+ */
+export function assertPassForRegistration(pass, phone) {
+    let verified = null;
+    try {
+        verified = phoneFromPass(pass);
+    } catch {
+        verified = null;
+    }
+    if (!verified || verified !== tenDigits(phone)) {
+        throw new ApiError(403, 'Verify this mobile number with an OTP first, then submit again.');
+    }
+}

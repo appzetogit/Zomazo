@@ -2,6 +2,7 @@
  * API layer - auth connected to new backend; rest stubbed for UI compatibility.
  */
 
+import { getPartnerPass } from "@/shared/partner/partnerPass"
 import apiClient from "./axios.js";
 import { API_ENDPOINTS } from "./config.js";
 import * as authService from "./auth.js";
@@ -1925,7 +1926,10 @@ export const restaurantAPI = {
     if (!formData || !(formData instanceof FormData)) {
       return Promise.reject(new Error("FormData is required"));
     }
-    return apiClient.post("/food/restaurant/register", formData);
+    return apiClient.post("/food/restaurant/register", formData, {
+      // The pass from the OTP step: registration is only on a verified number.
+      headers: { "X-Partner-Pass": getPartnerPass() },
+    });
   },
   /** Upload a single attachment for background onboarding uploads */
   uploadAttachment: (formData) => {
