@@ -249,7 +249,8 @@ const creditDriverWalletByReference = async ({ driverId, amount, title, referenc
   return 'credited';
 };
 
-const processCompletedRideReferralReward = async (ride) => {
+// Exported for tests (tests/ride-referral-after-rides.smoke.mjs); called on ride completion below.
+export const processCompletedRideReferralReward = async (ride) => {
   if (!ride?.userId) {
     return;
   }
