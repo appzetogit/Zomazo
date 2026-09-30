@@ -77,6 +77,7 @@ import {
   STATUS_PRIORITY,
 } from './order.helpers.js';
 import { COD_BLOCKED_MESSAGE, isBlockedFromCod } from '../../../../../../core/identity/codBlock.js';
+import { claimPlatformCoupon, platformAccountOf, releasePlatformCoupon } from '../../../../../../core/promotions/platformCoupon.service.js';
 
 
 
@@ -127,8 +128,24 @@ async function claimCouponForCustomer(order, userId, awaitingOnline) {
   const couponCode = order?.pricing?.couponCode ? String(order.pricing.couponCode).trim().toUpperCase() : "";
   if (!couponCode || !(Number(order?.pricing?.discount) > 0)) return false;
   const offer = await FoodOffer.findOne({ couponCode }).select("_id perUserLimit").lean();
+  if (!offer) {
+    // A platform coupon: claimed whole (the customer's use and the coupon's
+    // total) for orders placed now; an online order counts on payment.
+    if (awaitingOnline) return false;
+    const pc = await claimPlatformCoupon(couponCode, {
+      service: "quickCommerce",
+      platformUserId: await platformAccountOf(userId),
+    });
+    if (pc.exhausted) {
+      throw new ValidationError(pc.perUser
+        ? `You have already used coupon ${couponCode} as many times as it allows.`
+        : `Coupon ${couponCode} has just reached its usage limit. Please remove it and check your total before ordering again.`);
+    }
+    if (order.$locals) order.$locals.platformCouponClaimed = pc.taken;
+    return pc.taken;
+  }
   const perUser = Number(offer?.perUserLimit) || 0;
-  if (!offer || perUser <= 0) return false;
+  if (perUser <= 0) return false;
   const uid = toObjectId(userId, "User ID");
 
   if (awaitingOnline) {
@@ -172,6 +189,20 @@ async function incrementCouponUsageForOrder(order, userId) {
 
   try {
     const offer = await FoodOffer.findOne({ couponCode }).lean();
+    if (!offer) {
+      // A platform coupon: already claimed whole at placement for cash and
+      // wallet orders; an online order, paid at the discounted price, is
+      // counted now whatever the limits say.
+      if (!order?.$locals?.platformCouponClaimed) {
+        const pc = await claimPlatformCoupon(couponCode, {
+          service: "quickCommerce",
+          platformUserId: await platformAccountOf(userId),
+          enforce: false,
+        });
+        if (pc.overLimit) logger.warn(`Platform coupon ${couponCode} went past a limit on paid order ${order?._id}; discount honoured.`);
+      }
+      return;
+    }
     if (offer) {
       // Conditional increment so concurrent orders cannot push usedCount past usageLimit.
       const incrementResult = await FoodOffer.updateOne(
@@ -885,6 +916,12 @@ export async function createOrder(userId, dto) {
     if (order.$locals) order.$locals.couponUserClaimed = couponUserClaimed;
     const giveBackCoupon = async () => {
       if (!couponUserClaimed) return;
+      if (order.$locals?.platformCouponClaimed) {
+        try {
+          await releasePlatformCoupon(String(order.pricing.couponCode).trim().toUpperCase(), { platformUserId: await platformAccountOf(userId) });
+        } catch { /* best effort */ }
+        return;
+      }
       try {
         const offer = await FoodOffer.findOne({ couponCode: String(order.pricing.couponCode).trim().toUpperCase() }).select("_id").lean();
         if (offer) await FoodOfferUsage.updateOne({ offerId: offer._id, userId: toObjectId(userId, "User ID"), count: { $gt: 0 } }, { $inc: { count: -1 } });

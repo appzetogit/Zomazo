@@ -15,12 +15,22 @@
 import mongoose from 'mongoose';
 import { PlatformCoupon, PlatformCouponUse } from './platformCoupon.model.js';
 import { resolvePromoCeiling, tighten } from '../finance/promoLimits.service.js';
+import { platformUserIdFor } from '../identity/platformUser.js';
 
 const normalize = (code) => String(code || '').trim().toUpperCase();
 const toOid = (id) => {
     const raw = String(id?._id ?? id ?? '');
     return mongoose.Types.ObjectId.isValid(raw) ? new mongoose.Types.ObjectId(raw) : null;
 };
+
+/**
+ * The customer's platform account (users._id) for any service's own customer
+ * id -- Quick, the Shop and Services keep their own rows linked to it -- or null.
+ */
+export async function platformAccountOf(customerId) {
+    if (!customerId) return null;
+    return (await platformUserIdFor(customerId))?.platformId || null;
+}
 
 /** The platform coupon with this code, whatever its state, or null. */
 export async function findPlatformCoupon(code) {

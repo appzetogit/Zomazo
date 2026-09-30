@@ -33,7 +33,13 @@ const otherId = new mongoose.Types.ObjectId();
 await db.collection('qc_restaurants').insertOne({ _id: storeId, restaurantName: 'Gone Mart' });
 const config = ['qc_restaurant_commissions', 'qc_categories', 'qc_offers', 'qc_dining_restaurants', 'qc_gourmet_restaurants'];
 for (const name of config) {
-    await db.collection(name).insertMany([{ restaurantId: storeId }, { restaurantId: otherId }]);
+    // Distinct values for fields some of these collections index as unique
+    // (qc_offers.couponCode): two rows with none of them collide once the index
+    // has been built, which made this test fail at random.
+    await db.collection(name).insertMany([
+        { restaurantId: storeId, couponCode: `GONE-${name}`, name: `gone-${name}`, slug: `gone-${name}` },
+        { restaurantId: otherId, couponCode: `KEPT-${name}`, name: `kept-${name}`, slug: `kept-${name}` },
+    ]);
 }
 await db.collection('qc_user_carts').insertMany([{ restaurantId: String(storeId) }, { restaurantId: String(otherId) }]);
 await db.collection('qc_orders').insertOne({ restaurantId: storeId });

@@ -33,6 +33,7 @@ import {
   resolveUserDeliveryFee,
   calculateRiderEarning,
 } from '../../../../../../core/pricing/deliveryMath.js';
+import { platformAccountOf, quotePlatformCoupon } from '../../../../../../core/promotions/platformCoupon.service.js';
 // One copy of the delivery and tax maths for Quick and the Shop
 // (core/pricing/deliveryMath.js); re-exported for this module's callers.
 export { DELIVERY_FEE_GST_RATE, computeDeliveryFeeGst, computeItemsTax, resolveUserDeliveryFee, calculateRiderEarning };
@@ -459,6 +460,25 @@ export async function calculateOrderPricing(userId, dto, options = {}) {
         }
         appliedCoupon = { code: codeRaw, discount };
         discountFundedByPlatform = offer.createdByRole !== 'RESTAURANT';
+      }
+    } else {
+      // Not one of Quick's coupons: a platform coupon made in Master for
+      // several services, counted against the customer's one account.
+      const hasId = userId && mongoose.Types.ObjectId.isValid(userId);
+      const isFirstOrder = hasId
+        ? (await FoodOrder.countDocuments({ userId: new mongoose.Types.ObjectId(userId) })) === 0
+        : null;
+      const quoted = await quotePlatformCoupon(codeRaw, {
+        service: 'quickCommerce',
+        platformUserId: hasId ? await platformAccountOf(userId) : null,
+        subtotal,
+        isFirstOrder,
+        now,
+      });
+      if (quoted.discount > 0) {
+        discount = quoted.discount;
+        appliedCoupon = { code: codeRaw, discount };
+        discountFundedByPlatform = true;
       }
     }
   }
