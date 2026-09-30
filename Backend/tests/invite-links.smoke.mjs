@@ -112,6 +112,11 @@ console.log('\nTaxi');
 await check('Taxi\'s code sets referredBy, counts for Ravi and pays Taxi\'s reward', async () => {
   const before = (await db.collection('users').findOne({ _id: ravi })).referralCount || 0;
   const me = await signUp({ ref: 'USR0001ABCDEF', refService: 'taxi' });
+  const log = await db.collection('taxi_referral_logs').findOne({ refereeId: me.id });
+  assert.equal(log?.status, 'credited');
+  assert.equal(log.kind, 'signup');
+  assert.equal(String(log.referrerId), String(ravi));
+  assert.equal(log.rewardAmount, 40);
   const doc = await db.collection('users').findOne({ _id: me.id });
   assert.equal(String(doc.referredBy), String(ravi));
   assert.equal((await db.collection('users').findOne({ _id: ravi })).referralCount, before + 1);

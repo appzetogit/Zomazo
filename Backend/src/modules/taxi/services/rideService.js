@@ -295,7 +295,15 @@ const processCompletedRideReferralReward = async (ride) => {
   const claim = await claimReferralForPhone({
     phone: referredUser.phone, programme: 'taxi', referrerId: referredUser.referredBy, refereeId: ride.userId,
   });
-  if (!claim.claimed) return;
+  const { recordRideReferral } = await import('../../../core/referral/rideReferralLog.js');
+  const logRow = (status, reason = '') => recordRideReferral({
+    referrerId: referredUser.referredBy, refereeId: ride.userId, refereePhone: referredUser.phone,
+    kind: 'after_rides', rewardAmount: settings.amount, status, reason,
+  });
+  if (!claim.claimed) {
+    await logRow('rejected', 'rewarded_in_other_service');
+    return;
+  }
 
   const rewardBaseKey = `user-referral:completed:${String(ride.userId)}:${requiredRideCount}`;
   const referrerResult = await creditUserWalletByReference({
@@ -324,6 +332,7 @@ const processCompletedRideReferralReward = async (ride) => {
       { _id: ride.userId },
       { $set: { referralRewardGrantedAt: new Date(), referredRideCompletionCount: completedRideCount } },
     );
+    await logRow('credited');
   }
 };
 

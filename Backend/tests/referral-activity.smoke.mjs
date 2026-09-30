@@ -61,6 +61,17 @@ await check('filters: service, status and date range', async () => {
   assert.equal((await listReferralActivity({ from })).items.length, 3);
 });
 
+await check('Rides is listed from its own log', async () => {
+  const cara = id();
+  await db.collection('users').insertOne({ _id: cara, name: 'Cara', phone: '9000000005' });
+  await db.collection('taxi_referral_logs').insertOne({ referrerId: ann, refereeId: cara, role: 'USER', kind: 'after_rides', rewardAmount: 40, status: 'pending', createdAt: t(0) });
+  const { items, summary } = await listReferralActivity({ service: 'rides' });
+  assert.equal(items.length, 1);
+  assert.equal(items[0].serviceLabel, 'Rides');
+  assert.deepEqual([items[0].referrer.name, items[0].referee.name, items[0].status], ['Ann', 'Cara', 'pending']);
+  assert.equal(summary[0].pending, 1);
+});
+
 await mongoose.disconnect();
 await mongo.stop();
 if (failed) {

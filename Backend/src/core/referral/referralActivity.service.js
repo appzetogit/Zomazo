@@ -11,8 +11,7 @@ import { MODULES } from '../modules/moduleRegistry.js';
  *   quick     qc_referral_logs    qc_users (riders: qc_delivery_partners)
  *   shop      ecom_referral_logs  ecom_users
  *   services  sp_referral_logs    sp_users (customers only)
- * Taxi keeps no log (its reward is paid off `referredBy` after rides); its
- * admin has its own referral dashboard.
+ *   rides     taxi_referral_logs  users (customers only; rideReferralLog.js)
  */
 
 const SOURCES = [
@@ -20,6 +19,7 @@ const SOURCES = [
   { service: 'quick', label: 'Quick', logs: 'qc_referral_logs', users: 'qc_users', riders: 'qc_delivery_partners', module: MODULES.QUICK_COMMERCE },
   { service: 'shop', label: 'Shop', logs: 'ecom_referral_logs', users: 'ecom_users', riders: 'ecom_delivery_partners', module: MODULES.ECOMMERCE },
   { service: 'services', label: 'Services', logs: 'sp_referral_logs', users: 'sp_users', module: MODULES.SERVICE_PROVIDER },
+  { service: 'rides', label: 'Rides', logs: 'taxi_referral_logs', users: 'users', module: MODULES.TAXI },
 ];
 
 const coll = (name) => mongoose.connection.collection(name);

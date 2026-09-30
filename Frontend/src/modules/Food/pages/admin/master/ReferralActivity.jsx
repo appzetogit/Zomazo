@@ -4,8 +4,7 @@ import { platformSettingsAPI } from "@food/api"
 
 /**
  * Who referred whom, what it paid and why a reward was refused, across the
- * services that log referrals (Backend core/referral/referralActivity.service.js).
- * Taxi keeps no log; its admin has its own referral dashboard.
+ * services (Backend core/referral/referralActivity.service.js), Rides included.
  */
 const STATUS_STYLE = {
   credited: "bg-green-50 text-green-700",

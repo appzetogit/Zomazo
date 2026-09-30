@@ -1229,21 +1229,36 @@ export const processSignupReferralRewards = async ({ user, referrer }) => {
     return;
   }
 
+  const { recordRideReferral } = await import('../../../../core/referral/rideReferralLog.js');
+  const logRow = (status, extra = {}) => recordRideReferral({
+    referrerId: referrer._id, refereeId: user._id, refereePhone: user.phone, kind: 'signup', status, ...extra,
+  });
+
   const settings = await getUserReferralProgramSettings();
   if (!settings.enabled || settings.amount <= 0) {
+    await logRow('rejected', { reason: 'reward_disabled' });
     return;
   }
 
   const referralType = settings.type;
   const rewardBaseKey = `user-referral:signup:${String(user._id)}`;
 
+  // The after-N-rides kinds pay later, and claim then (rideService.js).
+  if (!['instant_referrer', 'instant_referrer_new'].includes(referralType)) {
+    await recordRideReferral({
+      referrerId: referrer._id, refereeId: user._id, refereePhone: user.phone,
+      kind: 'after_rides', rewardAmount: settings.amount, status: 'pending',
+    });
+    return;
+  }
+
   // One reward per person across every service: a customer another service
   // already paid a referral for earns nothing here (core/referral/referralClaim.service.js).
-  // The after-N-rides kinds claim when they pay (rideService.js).
-  if (['instant_referrer', 'instant_referrer_new'].includes(referralType)) {
-    const { claimReferralForPhone } = await import('../../../../core/referral/referralClaim.service.js');
-    const claim = await claimReferralForPhone({ phone: user.phone, programme: 'taxi', referrerId: referrer._id, refereeId: user._id });
-    if (!claim.claimed) return;
+  const { claimReferralForPhone } = await import('../../../../core/referral/referralClaim.service.js');
+  const claim = await claimReferralForPhone({ phone: user.phone, programme: 'taxi', referrerId: referrer._id, refereeId: user._id });
+  if (!claim.claimed) {
+    await logRow('rejected', { rewardAmount: settings.amount, reason: 'rewarded_in_other_service' });
+    return;
   }
 
   if (referralType === 'instant_referrer' || referralType === 'instant_referrer_new') {
@@ -1265,6 +1280,7 @@ export const processSignupReferralRewards = async ({ user, referrer }) => {
     user.referralRewardGrantedAt = user.referralRewardGrantedAt || new Date();
     await user.save();
   }
+  await logRow('credited', { rewardAmount: settings.amount });
 };
 
 export const registerUser = async (req, res) => {
