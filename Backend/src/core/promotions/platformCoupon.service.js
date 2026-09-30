@@ -188,3 +188,38 @@ export async function releasePlatformCoupon(code, { platformUserId } = {}) {
         );
     }
 }
+
+/**
+ * The platform coupons a customer could use in `service` right now: active, in
+ * date, not used up -- and, with `platformUserId`, not used up by them. For the
+ * services' own "available coupons" lists, which add these in their own shape
+ * so a customer can find them without knowing the code.
+ */
+export async function listPlatformCouponsFor(service, { platformUserId = null, now = new Date() } = {}) {
+    const coupons = await PlatformCoupon.find({
+        services: service,
+        status: 'active',
+        $and: [
+            { $or: [{ startDate: null }, { startDate: { $lte: now } }] },
+            { $or: [{ endDate: null }, { endDate: { $gt: now } }] },
+        ],
+    }).sort({ createdAt: -1 }).limit(50).lean();
+
+    const open = [];
+    for (const coupon of coupons) {
+        const limits = await effectiveLimits(coupon, service);
+        if (limits.total > 0 && Number(coupon.usedCount || 0) >= limits.total) continue;
+        open.push({ coupon, perUser: limits.perUser });
+    }
+    const userOid = toOid(platformUserId);
+    if (!userOid || !open.length) return open.map((o) => o.coupon);
+
+    const uses = await PlatformCouponUse.find({
+        platformUserId: userOid,
+        couponId: { $in: open.map((o) => o.coupon._id) },
+    }).lean();
+    const usedBy = new Map(uses.map((u) => [String(u.couponId), Number(u.count) || 0]));
+    return open
+        .filter((o) => !(o.perUser > 0 && (usedBy.get(String(o.coupon._id)) || 0) >= o.perUser))
+        .map((o) => o.coupon);
+}

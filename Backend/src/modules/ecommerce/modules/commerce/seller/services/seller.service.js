@@ -25,6 +25,7 @@ import {
     isRazorpayConfigured,
     verifyPaymentSignature,
 } from '../../orders/helpers/razorpay.helper.js';
+import { listPlatformCouponsFor, platformAccountOf } from '../../../../../../core/promotions/platformCoupon.service.js';
 
 const normalizeName = (value) =>
     String(value || '')
@@ -2260,6 +2261,51 @@ export const listPublicOffers = async (query = {}) => {
             }
             return true;
         });
+    }
+
+    // Platform coupons made in Master for the Shop (and other services), in the
+    // same shape and by the same rules: the basket must reach their minimum,
+    // first-order ones only before a first order, and not used up by this customer.
+    {
+        const hasUser = userId && mongoose.Types.ObjectId.isValid(userId);
+        const platform = await listPlatformCouponsFor('ecommerce', {
+            platformUserId: hasUser ? await platformAccountOf(userId) : null,
+        });
+        const numericSubtotal = subtotal !== undefined && subtotal !== null && subtotal !== '' && !isNaN(Number(subtotal))
+            ? Number(subtotal)
+            : null;
+        const hasOrders = hasUser && platform.some((c) => c.audience === 'first_order')
+            ? (await Order.countDocuments({ userId: new mongoose.Types.ObjectId(userId) })) > 0
+            : false;
+        for (const c of platform) {
+            if (numericSubtotal !== null && Number(c.minOrderValue || 0) > numericSubtotal) continue;
+            if (c.audience === 'first_order' && hasOrders) continue;
+            const pct = c.discountType === 'percentage';
+            allOffers.push({
+                id: String(c._id),
+                offerId: String(c._id),
+                couponCode: c.code,
+                title: c.title || (pct ? `${Number(c.discountValue) || 0}% OFF` : `Flat ₹${Number(c.discountValue) || 0} OFF`),
+                discountType: pct ? 'percentage' : 'flat-price',
+                discountValue: c.discountValue,
+                maxDiscount: pct && Number(c.maxDiscount) > 0 ? c.maxDiscount : null,
+                perUserLimit: c.perUserLimit ?? null,
+                customerScope: c.audience === 'first_order' ? 'first-time' : 'all',
+                isFirstOrderOnly: c.audience === 'first_order',
+                sellerScope: 'all',
+                sellerId: null,
+                sellerIds: [],
+                sellerName: 'All Stores',
+                sellerSlug: undefined,
+                sellerImage: null,
+                deliveryTime: null,
+                sellerRating: 0,
+                endDate: c.endDate || null,
+                showInCart: true,
+                minOrderValue: c.minOrderValue ?? 0,
+                isPlatform: true,
+            });
+        }
     }
 
     return { allOffers, groupedByOffer: {} };

@@ -17,7 +17,9 @@ const toCard = (p) => ({
   id: String(p._id),
   code: p.code,
   percent: Number(p.discount_percentage) || 0,
-  maxOff: Number(p.maximum_discount_amount) || 0,
+  // A platform coupon can be a flat amount off; Rides' own promos never are.
+  flatOff: p.discount_type === 'flat' ? Number(p.flat_discount_amount) || 0 : 0,
+  maxOff: p.discount_type === 'flat' ? 0 : Number(p.maximum_discount_amount) || 0,
   minFare: Number(p.minimum_trip_amount) || 0,
   service: p.audience_type === 'new_users' ? 'First ride' : (TRANSPORT_LABEL[p.transport_type] || 'Rides'),
   expiry: fmtDate(p.to_date),
@@ -144,7 +146,7 @@ const PromoCodes = () => {
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-[18px] font-black text-slate-900">
-                    {`${promo.percent}%`}
+                    {promo.flatOff ? `₹${promo.flatOff}` : `${promo.percent}%`}
                     <span className="text-[11px] font-bold text-slate-400 ml-1">off</span>
                   </p>
                   {promo.expiry ? <p className="text-[9px] font-bold text-slate-400">Expires {promo.expiry}</p> : null}

@@ -33,6 +33,7 @@ import {
     isRazorpayConfigured,
     verifyPaymentSignature,
 } from '../../orders/helpers/razorpay.helper.js';
+import { listPlatformCouponsFor, platformAccountOf } from '../../../../../../core/promotions/platformCoupon.service.js';
 
 const normalizeName = (value) =>
     String(value || '')
@@ -2627,6 +2628,40 @@ export const listPublicOffers = async (query = {}) => {
                 return used < perUserLimit;
             }
             return true;
+        });
+    }
+
+    // Platform coupons made in Master for Quick (and other services), in the
+    // same shape; ones this customer has used up are left out, as above.
+    const hasUser = userId && mongoose.Types.ObjectId.isValid(userId);
+    const platform = await listPlatformCouponsFor('quickCommerce', {
+        platformUserId: hasUser ? await platformAccountOf(userId) : null,
+    });
+    for (const c of platform) {
+        const pct = c.discountType === 'percentage';
+        allOffers.push({
+            id: String(c._id),
+            offerId: String(c._id),
+            couponCode: c.code,
+            title: c.title || (pct ? `${Number(c.discountValue) || 0}% OFF` : `Flat ₹${Number(c.discountValue) || 0} OFF`),
+            discountType: pct ? 'percentage' : 'flat-price',
+            discountValue: c.discountValue,
+            maxDiscount: pct && Number(c.maxDiscount) > 0 ? c.maxDiscount : null,
+            perUserLimit: c.perUserLimit ?? null,
+            customerScope: c.audience === 'first_order' ? 'first-time' : 'all',
+            isFirstOrderOnly: c.audience === 'first_order',
+            restaurantScope: 'all',
+            restaurantId: null,
+            restaurantIds: [],
+            restaurantName: 'All Stores',
+            restaurantSlug: undefined,
+            restaurantImage: null,
+            deliveryTime: null,
+            restaurantRating: 0,
+            endDate: c.endDate || null,
+            showInCart: true,
+            minOrderValue: c.minOrderValue ?? 0,
+            isPlatform: true,
         });
     }
 

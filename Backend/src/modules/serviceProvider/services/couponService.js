@@ -190,14 +190,40 @@ async function listAvailableCoupons(userId) {
     ]
   }).sort({ createdAt: -1 }).limit(50).lean();
 
-  const open = coupons.filter((c) => !unavailableReason(c, now));
-  if (!userId || !open.length) return open;
+  const own = coupons.filter((c) => !unavailableReason(c, now));
+  // Platform coupons made in Master for Services, in this list's shape; the
+  // core leaves out any this customer has used up.
+  const core = await loadPlatformCoupons();
+  const platform = (await core.listPlatformCouponsFor('serviceProvider', {
+    platformUserId: userId ? await core.platformAccountOf(userId) : null,
+    now
+  })).map((c) => ({
+    _id: c._id,
+    couponCode: c.code,
+    title: c.title || '',
+    description: c.description || '',
+    discountType: c.discountType === 'percentage' ? 'percentage' : 'flat-price',
+    discountValue: c.discountValue,
+    maxDiscount: c.maxDiscount || 0,
+    minOrderValue: c.minOrderValue || 0,
+    customerScope: c.audience === 'first_order' ? 'first-time' : 'all',
+    startDate: c.startDate,
+    endDate: c.endDate,
+    showInCart: true,
+    status: 'active',
+    isPlatform: true
+  }));
+  const open = own;
+  if (!userId || !open.length) return [...open, ...platform];
   const usage = await CouponUsage.aggregate([
     { $match: { userId: new (require('mongoose').Types.ObjectId)(String(userId)), couponId: { $in: open.map((c) => c._id) } } },
     { $group: { _id: '$couponId', n: { $sum: 1 } } }
   ]);
   const usedBy = new Map(usage.map((u) => [String(u._id), u.n]));
-  return open.filter((c) => (usedBy.get(String(c._id)) || 0) < (Number(c.perUserLimit) || 1));
+  return [
+    ...open.filter((c) => (usedBy.get(String(c._id)) || 0) < (Number(c.perUserLimit) || 1)),
+    ...platform
+  ];
 }
 
 module.exports = {

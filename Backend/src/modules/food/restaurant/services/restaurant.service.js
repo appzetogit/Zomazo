@@ -6,6 +6,7 @@ import { FoodZone } from '../../admin/models/zone.model.js';
 import { FoodOffer } from '../../admin/models/offer.model.js';
 import { FoodItem } from '../../admin/models/food.model.js';
 import { attachOutletOpenState, describeOutletHours } from '../../shared/outletHours.js';
+import { listPlatformCouponsFor } from '../../../../core/promotions/platformCoupon.service.js';
 
 const normalizeName = (value) =>
     String(value || '')
@@ -1939,6 +1940,34 @@ export const listPublicOffers = async () => {
             minOrderValue: o.minOrderValue ?? 0
         };
     });
+
+    // Platform coupons made in Master for Food (and other services), in the same
+    // shape, so the cart and offers screens show them with Food's own.
+    const platform = await listPlatformCouponsFor('food', { now });
+    for (const c of platform) {
+        const pct = c.discountType === 'percentage';
+        allOffers.push({
+            id: String(c._id),
+            offerId: String(c._id),
+            couponCode: c.code,
+            title: c.title || (pct ? `${Number(c.discountValue) || 0}% OFF` : `Flat ₹${Number(c.discountValue) || 0} OFF`),
+            discountType: pct ? 'percentage' : 'flat-price',
+            discountValue: c.discountValue,
+            maxDiscount: pct && Number(c.maxDiscount) > 0 ? c.maxDiscount : null,
+            customerScope: c.audience === 'first_order' ? 'first-time' : 'all',
+            restaurantScope: 'all',
+            restaurantId: null,
+            restaurantName: 'All Restaurants',
+            restaurantSlug: undefined,
+            restaurantImage: null,
+            deliveryTime: null,
+            restaurantRating: 0,
+            endDate: c.endDate || null,
+            showInCart: true,
+            minOrderValue: c.minOrderValue ?? 0,
+            isPlatform: true,
+        });
+    }
 
     return { allOffers, groupedByOffer: {} };
 };

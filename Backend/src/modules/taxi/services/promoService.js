@@ -5,7 +5,7 @@ import { PromoRedemption } from '../admin/promotions/models/PromoRedemption.js';
 import { PromoUserCounter } from '../admin/promotions/models/PromoUserCounter.js';
 import { Ride } from '../user/models/Ride.js';
 import { effectivePromoLimits } from '../../../core/finance/promoLimits.service.js';
-import { claimPlatformCoupon, quotePlatformCoupon } from '../../../core/promotions/platformCoupon.service.js';
+import { claimPlatformCoupon, listPlatformCouponsFor, quotePlatformCoupon } from '../../../core/promotions/platformCoupon.service.js';
 
 const normalizeText = (value) => String(value ?? '').trim();
 
@@ -575,6 +575,43 @@ export const listAvailablePromosForUser = async ({
       max_uses_total: Number(promo.max_uses_total || 0),
       from_date: promo.from_date,
       to_date: promo.to_date,
-    }));
+    }))
+    .concat(await platformPromosFor(userObjectId, hasCompletedRide));
+};
+
+/**
+ * Platform coupons made in Master for Rides, in the Rides promo shape. They
+ * may be a flat amount, which Rides promos never are: `discount_type` and
+ * `flat_discount_amount` say so, and `maximum_discount_amount` carries the flat
+ * amount too so a screen that reads only the percentage fields still shows
+ * "up to Rs X" rather than nothing.
+ */
+const platformPromosFor = async (userObjectId, hasCompletedRide) => {
+  const coupons = await listPlatformCouponsFor('taxi', { platformUserId: userObjectId });
+  return coupons
+    .filter((c) => c.audience !== 'first_order' || (userObjectId && !hasCompletedRide))
+    .map((c) => {
+      const pct = c.discountType === 'percentage';
+      return {
+        _id: c._id,
+        code: c.code,
+        platform: true,
+        discount_type: pct ? 'percentage' : 'flat',
+        flat_discount_amount: pct ? 0 : Number(c.discountValue) || 0,
+        transport_type: 'all',
+        service_location_id: null,
+        service_location_ids: [],
+        user_specific: false,
+        audience_type: c.audience === 'first_order' ? 'new_users' : 'all',
+        minimum_trip_amount: Number(c.minOrderValue || 0),
+        maximum_discount_amount: pct ? Number(c.maxDiscount || 0) : Number(c.discountValue) || 0,
+        cumulative_max_discount_amount: 0,
+        discount_percentage: pct ? Number(c.discountValue) || 0 : 0,
+        uses_per_user: Number(c.perUserLimit || 0),
+        max_uses_total: Number(c.usageLimit || 0),
+        from_date: c.startDate,
+        to_date: c.endDate,
+      };
+    });
 };
 
