@@ -407,17 +407,25 @@ await check('the admin\'s range round-trips through the settings', async () => {
     await assert.rejects(() => requests.updateMedicalSettings({ requestRadiusKm: 5000 }), /between/);
 });
 
-await check('the pharmacy list a customer browses is the same set a broadcast reaches', async () => {
+await check('the pharmacy list marks exactly the shops a broadcast reaches', async () => {
+    // Since 19-20 Sep the list is every approved pharmacy in the zone, nearest
+    // first; shut or out-of-range shops are shown and labelled rather than
+    // hidden. What must still agree with the broadcast is the label.
     await setRadius(5);
     const listed = await requests.listNearbyPharmacies(String(userId), HERE);
     assert.equal(listed.radiusKm, 5);
-    const ids = listed.pharmacies.map((p) => p.id).sort();
-    assert.deepEqual(ids, [String(nearA), String(nearB)].sort(), `listed ${ids}`);
+    const reachable = listed.pharmacies.filter((p) => p.isWithinRequestRadius).map((p) => p.id).sort();
+    assert.deepEqual(reachable, [String(nearA), String(nearB)].sort(), `marked ${reachable}`);
+    assert.equal(listed.broadcastCount, 2, 'the count the app shows is the broadcast count');
+    assert.ok(listed.pharmacies.every((p) => p.id !== String(grocery)), 'a grocery is not a pharmacy');
+    const shut = listed.pharmacies.find((p) => p.id === String(offline));
+    assert.ok(shut && !shut.isWithinRequestRadius && shut.isAcceptingOrders === false, 'a shop not taking orders is labelled, not offered');
+    const far = listed.pharmacies.find((p) => p.id === String(farAway));
+    assert.ok(far && !far.isWithinRequestRadius, 'a shop past the radius is labelled, not offered');
     assert.ok(listed.pharmacies.every((p) => p.distanceKm !== null), 'no distance shown');
-    assert.ok(
-        listed.pharmacies[0].distanceKm <= listed.pharmacies[1].distanceKm,
-        'not nearest first',
-    );
+    for (let i = 1; i < listed.pharmacies.length; i += 1) {
+        assert.ok(listed.pharmacies[i - 1].distanceKm <= listed.pharmacies[i].distanceKm, 'not nearest first');
+    }
 });
 
 await check('each listed pharmacy carries what the customer needs to choose', async () => {
