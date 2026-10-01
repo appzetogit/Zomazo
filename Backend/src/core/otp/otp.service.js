@@ -7,9 +7,30 @@ import { logger } from '../../utils/logger.js';
 import { ValidationError } from '../auth/errors.js';
 import { consumeOtpQuota, otpRateLimitMessage, OTP_SERVICES } from './otpRateLimit.service.js';
 
+// How many digits a new code has. 6 is the target; it is a setting because every
+// web OTP screen still has four boxes, and flipping the backend alone would lock
+// everyone out. Verification does not care about length, so codes issued before a
+// flip keep working until they expire.
+const otpLength = () => (Number(config.otpLength) === 6 ? 6 : 4);
+
 const generateOtpCode = () => {
-    const code = crypto.randomInt(1000, 9999);
-    return String(code);
+    const len = otpLength();
+    return String(crypto.randomInt(10 ** (len - 1), 10 ** len));
+};
+
+// The code is a sign-in credential, so the row keeps only a keyed hash of it: a
+// database dump or a support query no longer hands out live codes. The phone and
+// scope are mixed in so a hash cannot be replayed onto another row.
+const hashOtp = (code, { phone, scope, salt }) =>
+    crypto
+        .createHmac('sha256', String(config.jwtAccessSecret || ''))
+        .update(`${phone}|${scope}|${salt}|${String(code ?? '').trim()}`)
+        .digest('hex');
+
+const sameHash = (a, b) => {
+    const x = Buffer.from(String(a || ''), 'hex');
+    const y = Buffer.from(String(b || ''), 'hex');
+    return x.length > 0 && x.length === y.length && crypto.timingSafeEqual(x, y);
 };
 
 const normalizeOtpPhone = (phone) => {
@@ -20,10 +41,9 @@ const normalizeOtpPhone = (phone) => {
     return digits.slice(-10);
 };
 
-const normalizeOtpScope = (scope) => {
-    const normalized = String(scope || '').trim().toLowerCase();
-    return normalized || 'default';
-};
+// No fallback scope: a code issued for one login (say a restaurant) must never
+// verify another (a customer), so a caller that forgets the scope is a bug.
+const normalizeOtpScope = (scope) => String(scope || '').trim().toLowerCase();
 
 /**
  * Sends SMS via SMS India Hub API
@@ -145,22 +165,27 @@ const sendSmsViaIndiaHub = async (phone, otp) => {
  *                            quick-commerce request logged as food is a support
  *                            question nobody can answer.
  */
-export const createOrUpdateOtp = async (phone, scope = 'default', { service = OTP_SERVICES.FOOD } = {}) => {
+export const createOrUpdateOtp = async (phone, scope, { service = OTP_SERVICES.FOOD } = {}) => {
     const normalizedPhone = normalizeOtpPhone(phone);
     const normalizedScope = normalizeOtpScope(scope);
     if (!normalizedPhone || normalizedPhone.length < 8) {
         throw new ValidationError('A valid phone number is required');
     }
-
-    let existing = await FoodOtp.findOne({
-        phone: normalizedPhone,
-        $or: [{ scope: normalizedScope }, { scope: { $exists: false } }]
-    }).sort({ createdAt: -1 });
-
-    if (existing && String(existing.scope || '') !== normalizedScope) {
-        existing.scope = normalizedScope;
+    if (!normalizedScope) {
+        throw new Error('createOrUpdateOtp needs a scope');
     }
+
+    const existing = await FoodOtp.findOne({ phone: normalizedPhone, scope: normalizedScope })
+        .sort({ createdAt: -1 });
     const now = new Date();
+
+    // A code that took too many wrong guesses stays locked until it expires.
+    // Without this, asking for a new code would reset the counter and hand a
+    // guesser a fresh set of tries every time.
+    if (existing && existing.attempts >= config.otpMaxAttempts && existing.expiresAt > now) {
+        const minutes = Math.max(1, Math.ceil((existing.expiresAt - now) / 60000));
+        throw new ValidationError(`Too many wrong OTP attempts. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`);
+    }
 
     // Platform-wide rate limit. Replaces the old per-scope counter below: that let one
     // phone pull a full quota from each scope (user / restaurant / delivery), and did
@@ -179,7 +204,7 @@ export const createOrUpdateOtp = async (phone, scope = 'default', { service = OT
 
     let otp;
     if (config.useDefaultOtp) {
-        otp = '1234';
+        otp = otpLength() === 6 ? '123456' : '1234';
         logger.info(`Default OTP mode enabled – OTP is ${otp} for phone ${normalizedPhone}`);
     } else {
         otp = generateOtpCode();
@@ -209,8 +234,13 @@ export const createOrUpdateOtp = async (phone, scope = 'default', { service = OT
     }
     const expiresAt = new Date(now.getTime() + ttlMs);
 
+    const salt = crypto.randomBytes(16).toString('hex');
+    const otpHash = hashOtp(otp, { phone: normalizedPhone, scope: normalizedScope, salt });
+
     if (existing) {
-        existing.otp = otp;
+        existing.otp = undefined;
+        existing.otpHash = otpHash;
+        existing.salt = salt;
         existing.expiresAt = expiresAt;
         existing.attempts = 0;
         existing.lastRequestAt = now;
@@ -219,7 +249,8 @@ export const createOrUpdateOtp = async (phone, scope = 'default', { service = OT
         await FoodOtp.create({
             phone: normalizedPhone, 
             scope: normalizedScope,
-            otp, 
+            otpHash,
+            salt,
             expiresAt,
             requestCount: 1,
             lastRequestAt: now
@@ -234,11 +265,14 @@ export const createOrUpdateOtp = async (phone, scope = 'default', { service = OT
     return otp;
 };
 
-export const verifyOtp = async (phone, otp, scope = 'default') => {
+export const verifyOtp = async (phone, otp, scope) => {
     const normalizedPhone = normalizeOtpPhone(phone);
     const normalizedScope = normalizeOtpScope(scope);
     if (!normalizedPhone || normalizedPhone.length < 8) {
         return { valid: false, reason: 'Invalid phone format' };
+    }
+    if (!normalizedScope) {
+        return { valid: false, reason: 'OTP scope required' };
     }
 
     const otpStr = String(otp ?? '').trim();
@@ -288,37 +322,44 @@ export const verifyOtp = async (phone, otp, scope = 'default') => {
         }
     }
 
-    const record = await FoodOtp.findOne({
-        phone: normalizedPhone,
-        $or: [{ scope: normalizedScope }, { scope: { $exists: false } }]
-    }).sort({ createdAt: -1 });
+    // Count the guess and read the row in ONE write. The old read, compare, then
+    // fire-and-forget save let twenty parallel guesses all see attempts=0, so the
+    // limit counted almost nothing. Here a guess past the limit matches no row.
+    const now = new Date();
+    const record = await FoodOtp.findOneAndUpdate(
+        {
+            phone: normalizedPhone,
+            scope: normalizedScope,
+            attempts: { $lt: config.otpMaxAttempts },
+            expiresAt: { $gt: now },
+        },
+        { $inc: { attempts: 1 } },
+        { new: true, sort: { createdAt: -1 } },
+    );
     if (!record) {
-        return { valid: false, reason: 'OTP not found' };
-    }
-
-    if (record.expiresAt < new Date()) {
-        return { valid: false, reason: 'OTP expired' };
-    }
-
-    if (record.attempts >= config.otpMaxAttempts) {
+        const any = await FoodOtp.findOne({ phone: normalizedPhone, scope: normalizedScope })
+            .sort({ createdAt: -1 })
+            .select('expiresAt attempts')
+            .lean();
+        if (!any) return { valid: false, reason: 'OTP not found' };
+        if (any.expiresAt <= now) return { valid: false, reason: 'OTP expired' };
         return { valid: false, reason: 'Max attempts exceeded' };
     }
 
-    record.attempts += 1;
-
-    if (record.otp !== otpStr) {
-        // Do not block auth response on attempts write.
-        void record.save().catch((err) => {
-            logger.warn(`[OTP VERIFY] Failed to persist attempts for ${normalizedPhone}: ${err.message}`);
-        });
+    // Rows written before codes were hashed have no hash; they expire within
+    // minutes, and asking for a new code replaces them.
+    const candidate = hashOtp(otpStr, { phone: normalizedPhone, scope: normalizedScope, salt: record.salt });
+    if (!record.otpHash || !sameHash(candidate, record.otpHash)) {
         return { valid: false, reason: 'Invalid OTP' };
     }
 
-    // OTP is valid - return immediately and delete in background.
-    void record.deleteOne().catch((err) => {
-        logger.warn(`[OTP VERIFY] Failed to delete OTP record for ${normalizedPhone}: ${err.message}`);
-    });
+    // Consume it in the same step that confirms it is still there. Two requests
+    // carrying the right code race here, and only one gets the row back, so a
+    // code signs in once. Matching the hash also stops a just-resent code being
+    // eaten by a request that guessed the previous one.
+    const consumed = await FoodOtp.findOneAndDelete({ _id: record._id, otpHash: record.otpHash });
+    if (!consumed) {
+        return { valid: false, reason: 'OTP already used' };
+    }
     return { valid: true };
 };
-
-

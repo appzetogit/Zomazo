@@ -58,6 +58,8 @@ export const config = {
     otpRateLimit: Number(process.env.OTP_RATE_LIMIT || 3),
     otpRateWindow: Number(process.env.OTP_RATE_WINDOW || 600),
     useDefaultOtp: process.env.USE_DEFAULT_OTP === 'true',
+    // Digits in a new sign-in code: 4 (default, what the web screens take) or 6.
+    otpLength: Number(process.env.OTP_LENGTH || 4),
 
     // SMS India Hub
     smsIndiaHubUsername: process.env.SMS_INDIA_HUB_USERNAME,

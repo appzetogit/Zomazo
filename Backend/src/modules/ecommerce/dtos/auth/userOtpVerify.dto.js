@@ -11,8 +11,8 @@ const schema = z.object({
     .max(15, "Phone must be at most 15 digits"),
   otp: z
     .string()
-    .length(4, "OTP must be exactly 4 digits")
-    .regex(/^\d{4}$/, "OTP must be numeric and exactly 4 digits"),
+    // 4 or 6: OTP_LENGTH decides which the backend issues.
+    .regex(/^(\d{4}|\d{6})$/, "OTP must be 4 or 6 digits"),
   ref: z.string().trim().max(64).optional().or(z.literal("")),
   fcmToken: z.string().optional(),
   platform: z.preprocess(

@@ -8,12 +8,19 @@ const otpSchema = new mongoose.Schema(
         },
         scope: {
             type: String,
-            default: 'default',
+            required: true,
             index: true
         },
+        // Plain-text code, only on rows written before codes were hashed.
         otp: {
-            type: String,
-            required: true
+            type: String
+        },
+        // HMAC of the code (see otp.service.js); the code itself is not stored.
+        otpHash: {
+            type: String
+        },
+        salt: {
+            type: String
         },
         expiresAt: {
             type: Date,
