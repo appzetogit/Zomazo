@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Search, Wallet, Eye, CheckCircle, XCircle, Loader2, Package, QrCode } from "lucide-react"
 import { adminAPI } from "@shop/api"
 import { toast } from "sonner"
+import BankPayoutCell, { useBankPayoutsEnabled } from "@/shared/components/BankPayoutCell"
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ export default function DeliveryWithdrawal() {
   const [activeTab, setActiveTab] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
   const [requests, setRequests] = useState([])
+  const bankPayouts = useBankPayoutsEnabled(adminAPI.getPayoutConfig, "shop")
   const [loading, setLoading] = useState(true)
   const [isViewOpen, setIsViewOpen] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState(null)
@@ -290,6 +292,17 @@ export default function DeliveryWithdrawal() {
                                 </button>
                               </>
                             )}
+                            <BankPayoutCell
+                              enabled={bankPayouts}
+                              payout={req.payout}
+                              isApproved={req.status === "Approved"}
+                              isPending={req.status === "Pending"}
+                              manualRef={req.transactionId}
+                              pay={() => adminAPI.payDeliveryWithdrawalViaBank(req.id)}
+                              refresh={() => adminAPI.refreshDeliveryWithdrawalPayout(req.id)}
+                              approve={() => adminAPI.updateDeliveryWithdrawalStatus(req.id, { status: "Approved" })}
+                              onChanged={fetchRequests}
+                            />
                           </div>
                         </td>
                       </tr>

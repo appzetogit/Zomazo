@@ -29,6 +29,7 @@ import * as restaurantAppBanner from '../controllers/restaurantAppBanner.control
 
 // Master's, not a fork's: one permission model, or the fork is a way around it.
 import { requireFinancePermission } from '../../../../../../core/admin/requireFinancePermission.middleware.js';
+import { payoutAdminHandlers, payoutConfigHandler } from '../../../../../../core/payouts/payoutAdmin.js';
 import { enforceAdminAccess } from '../../../../../../core/admin/enforceAdminAccess.middleware.js';
 import { resolveStoreAdminResource } from '../../../../../../core/admin/adminAccessPolicy.js';
 
@@ -375,6 +376,15 @@ router.get('/withdrawals', adminController.getWithdrawals);
 router.patch('/withdrawals/:id', requireFinancePermission('WITHDRAWAL_DECIDE'), adminController.updateWithdrawalStatus);
 router.get('/delivery/withdrawals', adminController.getDeliveryWithdrawals);
 router.patch('/delivery/withdrawals/:id', requireFinancePermission('WITHDRAWAL_DECIDE'), adminController.updateDeliveryWithdrawalStatus);
+
+// Bank payouts (RazorpayX) for an approved withdrawal; see core/payouts/payout.service.js.
+const restaurantPayout = payoutAdminHandlers('qc_store');
+const riderPayout = payoutAdminHandlers('qc_rider');
+router.get('/payouts/config', payoutConfigHandler);
+router.post('/withdrawals/:id/payout', requireFinancePermission('WITHDRAWAL_DECIDE'), restaurantPayout.pay);
+router.post('/withdrawals/:id/payout/refresh', requireFinancePermission('WITHDRAWAL_DECIDE'), restaurantPayout.refresh);
+router.post('/delivery/withdrawals/:id/payout', requireFinancePermission('WITHDRAWAL_DECIDE'), riderPayout.pay);
+router.post('/delivery/withdrawals/:id/payout/refresh', requireFinancePermission('WITHDRAWAL_DECIDE'), riderPayout.refresh);
 router.get('/delivery/cash-limit-settlements', adminController.getCashLimitSettlements);
 
 // ----- Delivery partners & general -----

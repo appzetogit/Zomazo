@@ -584,6 +584,14 @@ export const adminAPI = {
     apiClient.patch(`/admin/delivery/withdrawals/${id}`, body, {
       contextModule: "admin",
     }),
+  /** Bank payouts (RazorpayX) for approved withdrawals; config says whether they are set up. */
+  getPayoutConfig: () => apiClient.get("/admin/payouts/config", { contextModule: "admin" }),
+  payWithdrawalViaBank: (id) => apiClient.post(`/admin/withdrawals/${id}/payout`, {}, { contextModule: "admin" }),
+  refreshWithdrawalPayout: (id) => apiClient.post(`/admin/withdrawals/${id}/payout/refresh`, {}, { contextModule: "admin" }),
+  payDeliveryWithdrawalViaBank: (id) =>
+    apiClient.post(`/admin/delivery/withdrawals/${id}/payout`, {}, { contextModule: "admin" }),
+  refreshDeliveryWithdrawalPayout: (id) =>
+    apiClient.post(`/admin/delivery/withdrawals/${id}/payout/refresh`, {}, { contextModule: "admin" }),
   /** Delivery withdrawal aliases */
   getDeliveryWithdrawalRequests: (params) => adminAPI.getDeliveryWithdrawals(params),
   approveDeliveryWithdrawal: (id) => adminAPI.updateDeliveryWithdrawalStatus(id, { status: "approved" }),

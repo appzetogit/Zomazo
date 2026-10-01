@@ -4349,6 +4349,9 @@ export const listDriverWithdrawals = async ({ driverId, page = 1, limit = 50 }) 
       requested_currency: 'INR',
       status: item.status || 'pending',
       payment_method: item.payment_method || '',
+      transactionId: item.transactionId || '',
+      // Bank payout state for the "Pay via bank" / "Retry" buttons.
+      payout: item.payout || null,
       createdAt: item.createdAt,
     })),
     paginator: {

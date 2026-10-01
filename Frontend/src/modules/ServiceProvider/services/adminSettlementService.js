@@ -111,6 +111,13 @@ const adminSettlementService = {
   rejectWithdrawal: async (withdrawalId, rejectionReason) => {
     const response = await api.post(`/admin/settlements/withdrawals/${withdrawalId}/reject`, { rejectionReason });
     return response.data;
+  },
+
+  /** Bank payouts (RazorpayX): whether they are set up, and paying an approved withdrawal. */
+  getPayoutConfig: () => api.get('/admin/settlements/payouts/config'),
+  payWithdrawalViaBank: async (withdrawalId) => {
+    const response = await api.post(`/admin/settlements/withdrawals/${withdrawalId}/payout`);
+    return response.data;
   }
 };
 

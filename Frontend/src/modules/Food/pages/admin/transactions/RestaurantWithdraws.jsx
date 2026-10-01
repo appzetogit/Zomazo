@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { exportTransactionsToExcel, exportTransactionsToPDF } from "@food/components/admin/transactions/transactionsExportUtils"
 import { adminAPI } from "@food/api"
 import { toast } from "sonner"
+import BankPayoutCell, { useBankPayoutsEnabled } from "@/shared/components/BankPayoutCell"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -14,6 +15,7 @@ export default function RestaurantWithdraws() {
   const [activeTab, setActiveTab] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
   const [withdraws, setWithdraws] = useState([])
+  const bankPayouts = useBankPayoutsEnabled(adminAPI.getPayoutConfig, "food")
   const [loading, setLoading] = useState(true)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
@@ -504,6 +506,17 @@ export default function RestaurantWithdraws() {
                                 </button>
                               </>
                             )}
+                            <BankPayoutCell
+                              enabled={bankPayouts}
+                              payout={withdraw.payout}
+                              isApproved={withdraw.status === 'Approved'}
+                              isPending={withdraw.status === 'Pending'}
+                              manualRef={withdraw.transactionId}
+                              pay={() => adminAPI.payWithdrawalViaBank(withdraw.id)}
+                              refresh={() => adminAPI.refreshWithdrawalPayout(withdraw.id)}
+                              approve={() => adminAPI.approveWithdrawalRequest(withdraw.id)}
+                              onChanged={fetchWithdrawals}
+                            />
                           </div>
                         </td>}
                       </tr>
