@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Search, Download, Mail } from "lucide-react"
 import { mailListAdminAPI, errorOf, fmtDate } from "./api"
+import NewsletterSender from "./NewsletterSender"
 
 const SOURCES = [
   ["", "All sources"],
@@ -131,6 +132,8 @@ export default function AdminMailList({ defaultSource = "" }) {
             <button type="button" disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="px-3 py-1 rounded border disabled:opacity-40">Next</button>
           </div>
         ) : null}
+
+        <NewsletterSender sources={SOURCES} defaultSource={defaultSource} />
       </div>
     </div>
   )

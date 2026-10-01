@@ -265,6 +265,44 @@ await check('the admin list needs Customers access for that service', async () =
   await rejects(() => mail.adminList(foodCustomers, {}), 403);
   await rejects(() => mail.adminList(foodPromoReader, { source: 'food' }), 403);
 });
+console.log('\nSending the newsletter');
+const campaigns = await import('../src/core/mailingList/mailCampaign.service.js');
+await check('sends to every active subscriber, each with their own unsubscribe link; never to the unsubscribed', async () => {
+  for (let i = 0; i < 120; i += 1) await mail.subscribe({ email: `bulk${i}@example.com`, source: 'shop' });
+  await mail.subscribe({ email: 'gone@example.com', source: 'shop' });
+  const gone = await MailSubscriber.findOne({ email: 'gone@example.com' }).lean();
+  await mail.unsubscribe(gone.unsubscribeToken);
+  const outbox = [];
+  const send = async (m) => { outbox.push(m); return !m.to.startsWith('bulk7@'); }; // one bounce
+  const c = await campaigns.startCampaign(owner, { subject: 'Diwali offers', body: 'Hello <friends>\nBig sale', source: 'shop' }, { wait: true, send });
+  const to = outbox.map((m) => m.to);
+  assert.equal(new Set(to).size, to.length, 'nobody mailed twice');
+  assert.ok(!to.includes('gone@example.com'));
+  assert.equal(c.total, to.length);
+  assert.equal(c.sent, to.length - 1);
+  assert.equal(c.failed, 1);
+  assert.equal(c.status, 'sent');
+  const om = outbox.find((m) => m.to === 'om@example.com');
+  const { unsubscribeToken } = await MailSubscriber.findOne({ email: 'om@example.com' }).lean();
+  assert.ok(om.text.includes(`token=${unsubscribeToken}`));
+  assert.ok(om.html.includes('Hello &lt;friends&gt;<br>Big sale'));
+  assert.match(om.headers['List-Unsubscribe'], /unsubscribe\?token=/);
+});
+await check('a source filter only reaches that source', async () => {
+  const outbox = [];
+  await campaigns.startCampaign(owner, { subject: 's', body: 'b', source: 'food' }, { wait: true, send: async (m) => { outbox.push(m.to); return true; } });
+  assert.deepEqual(outbox, ['om@example.com']);
+});
+await check('sending is checked and needs Banners & pages write access', async () => {
+  const send = async () => true;
+  await rejects(() => campaigns.startCampaign(owner, { subject: '', body: 'b' }, { send }), 400);
+  await rejects(() => campaigns.startCampaign(owner, { subject: 's', body: 'b', source: 'taxi' }, { send }), 400); // nobody
+  await rejects(() => campaigns.startCampaign(sub(['food'], ['customers.write']), { subject: 's', body: 'b', source: 'food' }, { send }), 403);
+  const { items } = await campaigns.listCampaigns(owner);
+  assert.equal(items.length, 2);
+  assert.equal(items[0].body, undefined);
+});
+
 await check('the admin endpoints are closed without an admin session', async () => {
   assert.equal((await call('/platform/mailing-list')).status, 401);
   assert.equal((await call('/platform/spotlight?service=food')).status, 401);

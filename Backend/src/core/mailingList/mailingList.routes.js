@@ -5,6 +5,7 @@ import { sendResponse, sendError } from '../../utils/response.js';
 import { mailingListRateLimiter } from '../../middleware/rateLimit.js';
 import { loadAdminCached } from '../../modules/food/admin/middlewares/foodAdmin.middleware.js';
 import * as list from './mailingList.service.js';
+import * as campaigns from './mailCampaign.service.js';
 
 /**
  * The newsletter list: /v1/platform/mailing-list (mailingList.service.js).
@@ -14,6 +15,8 @@ import * as list from './mailingList.service.js';
  *                              small page, since it is opened in a browser
  *   GET  /                     admins: search, source, from / to, status
  *   GET  /export.csv           admins: the same filters, as CSV
+ *   GET  /campaigns            admins: newsletter sends, newest first
+ *   POST /campaigns            admins: { subject, body, source? } starts a send
  */
 const router = express.Router();
 
@@ -66,6 +69,23 @@ router.use(async (req, res, next) => {
 router.get('/', async (req, res) => {
   try {
     return sendResponse(res, 200, 'OK', await list.adminList(req.platformAdmin, req.query));
+  } catch (err) {
+    return fail(res, err);
+  }
+});
+
+// Newsletter sends (mailCampaign.service.js): history, and starting one.
+router.get('/campaigns', async (req, res) => {
+  try {
+    return sendResponse(res, 200, 'OK', await campaigns.listCampaigns(req.platformAdmin));
+  } catch (err) {
+    return fail(res, err);
+  }
+});
+
+router.post('/campaigns', async (req, res) => {
+  try {
+    return sendResponse(res, 202, 'Sending', { campaign: await campaigns.startCampaign(req.platformAdmin, req.body || {}) });
   } catch (err) {
     return fail(res, err);
   }

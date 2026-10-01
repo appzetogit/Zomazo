@@ -28,6 +28,34 @@ function getTransporter() {
     return transporter;
 }
 
+/** Whether SMTP is set up, so a caller can refuse before queueing work. */
+export const isEmailConfigured = () => Boolean(getTransporter());
+
+/**
+ * Send one mail with the platform's SMTP. Returns true when the server took
+ * it, false when SMTP is not set up or the send failed (logged, not thrown),
+ * so a batch can count failures and carry on.
+ */
+export async function sendMail({ to, subject, text, html, headers }) {
+    const trans = getTransporter();
+    if (!trans) return false;
+    const from = emailCredentials().from;
+    try {
+        await trans.sendMail({
+            from: typeof from === 'string' && from.includes('<') ? from : `Quick Drop <${from}>`,
+            to,
+            subject,
+            text,
+            html,
+            headers
+        });
+        return true;
+    } catch (err) {
+        logger.error(`Failed to send email to ${to}:`, err.message);
+        return false;
+    }
+}
+
 /**
  * Send OTP email for admin forgot password.
  * @param {string} to - Recipient email

@@ -17,6 +17,8 @@ export const spotlightAdminAPI = {
 
 export const mailListAdminAPI = {
   list: (params) => apiClient.get("/platform/mailing-list", { params, ...admin }),
+  campaigns: () => apiClient.get("/platform/mailing-list/campaigns", admin),
+  sendCampaign: (body) => apiClient.post("/platform/mailing-list/campaigns", body, admin),
   exportCsv: (params) => apiClient.get("/platform/mailing-list/export.csv", { params, responseType: "blob", ...admin }),
 }
 
