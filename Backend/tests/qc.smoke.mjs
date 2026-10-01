@@ -72,6 +72,13 @@ const DELIBERATELY_SHARED = new Set([
     // platform account on every read and write, so money moves freely between Food,
     // Rides and Quick & Medical. Guarded by tests/one-wallet-quick.smoke.mjs.
     'food_user_wallets',
+    // Quick's refunds, settlements and entity transactions (1 Oct 2026): the core
+    // collections, every Quick row marked vertical 'quickCommerce' and every query
+    // narrowed to it (core/payments/models/verticalPayments.js). Guarded by
+    // tests/merge-qc-payments.smoke.mjs.
+    'refunds',
+    'settlements',
+    'transactions',
 ]);
 
 const leaked = (c) => !c.startsWith('qc_') && !DELIBERATELY_SHARED.has(c);
@@ -94,7 +101,7 @@ check('the shared collections really are shared, not a stale exception', () => {
     }
 });
 
-for (const live of ['users', 'admins', 'payments', 'refunds', 'settlements', 'food_orders', 'food_items', 'food_restaurants']) {
+for (const live of ['users', 'admins', 'payments', 'food_orders', 'food_items', 'food_restaurants']) {
     check(`nothing QC touches "${live}"`, () => assert.equal(qcCollections.includes(live), false));
 }
 

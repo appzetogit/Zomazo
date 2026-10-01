@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Transaction } from './models/transaction.model.js';
+import { Transaction, transactionsReadThrough } from './models/transaction.model.js';
 import { FoodUserWallet } from '../../modules/food/user/models/userWallet.model.js';
 import { FoodRestaurantWallet } from '../../modules/food/restaurant/models/restaurantWallet.model.js';
 import { FoodDeliveryWallet } from '../../modules/food/delivery/models/deliveryWallet.model.js';
@@ -182,10 +182,7 @@ export async function getTransactionsByEntity(entityType, entityId, { page = 1, 
         entityId: entityOid
     };
 
-    const [docs, total] = await Promise.all([
-        Transaction.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-        Transaction.countDocuments(filter)
-    ]);
+    const { docs, total } = await transactionsReadThrough.list(filter, { skip, limit });
 
     return {
         transactions: docs,
@@ -200,7 +197,5 @@ export async function getTransactionsByEntity(entityType, entityId, { page = 1, 
  * Get transactions for a specific order across all entities.
  */
 export async function getTransactionsByOrder(orderId) {
-    return Transaction.find({ orderId: new mongoose.Types.ObjectId(orderId) })
-        .sort({ createdAt: -1 })
-        .lean();
+    return (await transactionsReadThrough.list({ orderId: new mongoose.Types.ObjectId(orderId) })).docs;
 }

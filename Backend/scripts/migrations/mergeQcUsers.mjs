@@ -31,6 +31,7 @@
  */
 import mongoose from 'mongoose';
 import { pathToFileURL } from 'node:url';
+import { renameWhenIdle } from './renameCollection.mjs';
 
 export async function mergeQcUsers({ apply = false, dropOld = false, log = console.log } = {}) {
     const { mergeQcUser, countQcUserRefs, QC_USER_ID_MAP, QC_MERGE_DONE_KEY, QC_USER_REFS, clearQuickCustomerCache } =
@@ -98,7 +99,7 @@ async function retire({ db, log, countQcUserRefs, QC_USER_ID_MAP }) {
         return { refused: true, leftover };
     }
     const name = `qc_users_premerge_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
-    await db.collection('qc_users').rename(name);
+    await renameWhenIdle(db.collection('qc_users'), name);
     log(`qc_users renamed to ${name}. Drop it by hand when sure; qc_user_id_map stays.`);
     return { renamed: name };
 }

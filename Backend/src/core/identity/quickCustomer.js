@@ -71,6 +71,9 @@ export const QC_USER_REFS = Object.freeze([
     { c: 'qc_broadcast_notifications', arr: 'targets', f: 'ownerId' },
     { c: 'qc_entity_transactions', f: 'entityId' },
     { c: 'qc_settlements', f: 'entityId' },
+    // Quick's payment records once copied to the core collections (mergeQcPayments).
+    { c: 'refunds', f: 'userId' },
+    { c: 'transactions', f: 'entityId' },
     // Shared collections Quick writes with its own ids.
     { c: 'food_offer_usages', f: 'userId' },
     { c: 'food_notifications', f: 'ownerId' },

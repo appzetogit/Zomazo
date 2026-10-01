@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
-import { Settlement } from './models/settlement.model.js';
-import { Transaction } from './models/transaction.model.js';
+import { Settlement, settlementsReadThrough } from './models/settlement.model.js';
 import { debitWallet, unlockWalletAmount } from './wallet.service.js';
 import { logger } from '../../utils/logger.js';
 
@@ -32,7 +31,8 @@ export async function createSettlement({ entityType, entityId, amount, notes = '
  * Process a settlement — debit entity wallet + mark as processed.
  */
 export async function processSettlement(settlementId, { processedBy, payoutRef = '' } = {}) {
-    const settlement = await Settlement.findById(settlementId);
+    // An old qc_settlements row is copied to the core collection first.
+    const settlement = await settlementsReadThrough.findById(settlementId);
     if (!settlement) throw new Error('Settlement not found');
     if (settlement.status === 'processed') return settlement.toObject();
     if (settlement.status === 'failed') throw new Error('Cannot process a failed settlement');
@@ -99,10 +99,7 @@ export async function listSettlements({ entityType, entityId, status, page = 1, 
     if (status) filter.status = status;
 
     const skip = (Math.max(1, page) - 1) * limit;
-    const [docs, total] = await Promise.all([
-        Settlement.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-        Settlement.countDocuments(filter)
-    ]);
+    const { docs, total } = await settlementsReadThrough.list(filter, { skip, limit });
 
     return {
         settlements: docs,
@@ -117,5 +114,5 @@ export async function listSettlements({ entityType, entityId, status, page = 1, 
  * Get settlement by ID.
  */
 export async function getSettlementById(settlementId) {
-    return Settlement.findById(settlementId).lean();
+    return (await settlementsReadThrough.findById(settlementId))?.toObject() || null;
 }

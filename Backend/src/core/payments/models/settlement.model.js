@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { markCoreRows } from './verticalPayments.js';
 
 /**
  * Settlement — batch payout request for restaurants /delivery partners.
@@ -49,5 +50,8 @@ const settlementSchema = new mongoose.Schema(
 );
 
 settlementSchema.index({ entityType: 1, entityId: 1, status: 1, createdAt: -1 });
+
+// Shared with the verticals' rows, told apart by `vertical` (./verticalPayments.js).
+markCoreRows(settlementSchema);
 
 export const Settlement = mongoose.model('Settlement', settlementSchema);

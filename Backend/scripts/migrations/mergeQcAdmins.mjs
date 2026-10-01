@@ -27,6 +27,7 @@
  */
 import mongoose from 'mongoose';
 import { pathToFileURL } from 'node:url';
+import { renameWhenIdle } from './renameCollection.mjs';
 
 export async function mergeQcAdmins({ apply = false, dropOld = false, log = console.log } = {}) {
     const { mergeQcAdmin, countQcAdminRefs, QC_ADMIN_ID_MAP } = await import('../../src/core/admin/quickAdmin.js');
@@ -53,7 +54,7 @@ export async function mergeQcAdmins({ apply = false, dropOld = false, log = cons
             return { refused: true, leftover };
         }
         const name = `qc_admins_premerge_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
-        await db.collection('qc_admins').rename(name);
+        await renameWhenIdle(db.collection('qc_admins'), name);
         log(`qc_admins renamed to ${name}. Drop it by hand when sure; qc_admin_id_map stays.`);
         return { renamed: name };
     }

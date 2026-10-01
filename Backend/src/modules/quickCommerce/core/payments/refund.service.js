@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Refund } from './models/refund.model.js';
+import { Refund, refundsReadThrough } from './models/refund.model.js';
 import { Payment } from './models/payment.model.js';
 import { creditWallet } from './wallet.service.js';
 import { getRazorpayInstance, isRazorpayConfigured } from '../../modules/food/orders/helpers/razorpay.helper.js';
@@ -71,7 +71,8 @@ export async function initiateRefund({ paymentId, orderId, userId, amount, reaso
  * Process a gateway refund (Razorpay) for a pending refund record.
  */
 export async function processGatewayRefund(refundId) {
-    const refund = await Refund.findById(refundId);
+    // An old qc_refunds row is copied to the core collection first.
+    const refund = await refundsReadThrough.findById(refundId);
     if (!refund) throw new Error('Refund not found');
     if (refund.status === 'processed') return refund.toObject();
 
@@ -120,9 +121,7 @@ export async function processGatewayRefund(refundId) {
  * Get refunds for an order.
  */
 export async function getRefundsByOrder(orderId) {
-    return Refund.find({ orderId: new mongoose.Types.ObjectId(orderId) })
-        .sort({ createdAt: -1 })
-        .lean();
+    return (await refundsReadThrough.list({ orderId: new mongoose.Types.ObjectId(orderId) })).docs;
 }
 
 /**
@@ -133,10 +132,7 @@ export async function listRefunds({ status, page = 1, limit = 20 } = {}) {
     if (status) filter.status = status;
 
     const skip = (Math.max(1, page) - 1) * limit;
-    const [docs, total] = await Promise.all([
-        Refund.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-        Refund.countDocuments(filter)
-    ]);
+    const { docs, total } = await refundsReadThrough.list(filter, { skip, limit });
 
     return { refunds: docs, total, page, limit, totalPages: Math.ceil(total / limit) };
 }

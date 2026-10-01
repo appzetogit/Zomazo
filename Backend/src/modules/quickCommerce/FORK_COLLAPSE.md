@@ -49,7 +49,7 @@ that is already slated for removal is poor value for the risk.
 | notifications | `food_notifications` | same | already shared |
 | broadcasts | `food_notification_broadcasts` | `qc_broadcast_notifications` | not yet — plus a TTL index master lacks |
 | payments | `payments` | same | already shared |
-| refunds / settlements / transactions | shared names | `qc_*` | no — needs a migration |
+| refunds / settlements / transactions | shared names | was `qc_*` | **merged** (1 Oct 2026) -- core collections, `vertical` marker; see below |
 | users | `users` | was `qc_users` | **merged** (1 Oct 2026) -- see "Database merges" below |
 | admins | `admins` | was `qc_admins` | **merged** (1 Oct 2026) -- see "Database merges" below |
 
@@ -132,9 +132,11 @@ were deleted.
 Done: `otp`, `refreshTokens`, `roles/role.middleware`, `notifications` (4 of 7),
 `payments/razorpayWebhook.controller`.
 
-Blocked on a database (`users` and `admin` are done, see below):
-`payments/{refund,settlement,transaction}` models and services (collection
-migrations, and the ledger cutover replaces them anyway).
+Blocked on a database: nothing left -- `users`, `admin` and the payment
+records are merged (1 Oct 2026, see "Database merges" below). The Quick
+`payments/{refund,settlement,transaction}.service.js` files remain as code (they
+bind to Quick's wallets, see section 1); their data is in the core collections,
+and the ledger cutover replaces them anyway.
 
 Merge projects, not collapses: `notifications/firebase.service.js`,
 `notifications/fcm.routes.js`.
@@ -255,3 +257,30 @@ the shared permission model enforced by `core/admin/enforceAdminAccess.middlewar
   are managed in Master > Admin accounts. The web panel did not use them.
 - Run: deploy, then `node scripts/migrations/mergeQcAdmins.mjs`, `--apply`,
   later `--drop-old`. Test: `tests/merge-qc-admins.smoke.mjs`.
+
+**Payment records: `qc_refunds`, `qc_settlements`, `qc_entity_transactions` ->
+`refunds`, `settlements`, `transactions`.** One schema per record
+(`core/payments/models/*.model.js`); every row carries `vertical` -- null for
+the core's own, 'quickCommerce' for Quick's (`core/payments/models/verticalPayments.js`).
+The core models read only rows with no vertical; Quick's models are the same
+schema narrowed to theirs, so neither side's lists or reports see the other's.
+
+- Rows keep their `_id` when copied (a return's `refundId`, a settlement's
+  `transactionIds` still resolve); `qc_payment_id_map` records each copy.
+- Works before and after: until a collection is fully copied, Quick's lists
+  read both (`readThrough`), and a row Quick touches (processing a settlement
+  or a gateway refund) is copied first, so nothing is written to the old
+  collections again.
+- Reports: pnl, commission overview and core/finance read none of these
+  collections, so nothing there changes. All three were written only by the
+  BullMQ path (off) and Quick's admin settlement screens.
+- Run: deploy, then `node scripts/migrations/mergeQcPayments.mjs`, `--apply`,
+  later `--drop-old` (renames the three). The first boot builds a `vertical`
+  index on the three core collections; a ledger write that lands during that
+  build can fail once with "catalog changes" and is safe to retry.
+- Test: `tests/merge-qc-payments.smoke.mjs`.
+
+**Production order:** deploy; `mergeQcUsers.mjs` (dry run, then `--apply`);
+`mergeQcAdmins.mjs` (dry run, review the REVIEW list, `--apply`);
+`mergeQcPayments.mjs` (dry run, `--apply`). The three are independent and
+each is re-runnable; run `--drop-old` for each only after checking the app.

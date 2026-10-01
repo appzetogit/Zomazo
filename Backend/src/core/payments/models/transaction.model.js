@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { markCoreRows } from './verticalPayments.js';
 
 /**
  * Transaction — universal financial ledger.
@@ -90,5 +91,8 @@ const transactionSchema = new mongoose.Schema(
 transactionSchema.index({ entityType: 1, entityId: 1, createdAt: -1 });
 transactionSchema.index({ orderId: 1, entityType: 1 });
 transactionSchema.index({ paymentId: 1, type: 1 });
+
+// Shared with the verticals' rows, told apart by `vertical` (./verticalPayments.js).
+markCoreRows(transactionSchema);
 
 export const Transaction = mongoose.model('Transaction', transactionSchema);

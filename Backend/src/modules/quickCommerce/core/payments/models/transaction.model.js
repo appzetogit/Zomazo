@@ -1,107 +1,24 @@
-import mongoose from 'mongoose';
-
 /**
- * Transaction — universal financial ledger.
- * Every credit/debit across all entity types (user, restaurant, deliveryBoy, admin)
- * gets a row here. This is the single source of truth for money movement.
+ * Quick's entity ledger rows (wallet credits and debits of customers, stores,
+ * riders and the platform): rows of the core `transactions` collection marked
+ * vertical 'quickCommerce' (core/payments/models/verticalPayments.js).
  *
- * RULE: Never update Wallet.balance directly — always go through
- *       transaction.service.recordTransaction() which atomically creates
- *       a Transaction row + updates the matching Wallet.
+ * Its own model name, kept apart from the ORDER ledger ('QCTransaction' on
+ * qc_transactions, orders/models/foodTransaction.model.js): the two once shared
+ * a name, and every row written here was refused by the order schema.
+ *
+ * The rows were in qc_entity_transactions; scripts/migrations/mergeQcPayments.mjs
+ * copies them over (same _id), and transactionsReadThrough reads both until it has.
  */
-const transactionSchema = new mongoose.Schema(
-    {
-        /** Link to the Payment document that triggered this transaction (optional for manual adjustments) */
-        paymentId: {
-            type: mongoose.Schema.Types.ObjectId,
-            // Quick-commerce payments moved into the shared `payments` collection, so
-            // the QCPayment model no longer exists. Populating this would have thrown
-            // MissingSchemaError at request time.
-            ref: 'Payment',
-            default: null
-        },
-        /** Link to the order (optional — wallet top-ups / adjustments may not have an order) */
-        orderId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'QCOrder',
-            default: null,
-            index: true
-        },
+import { Transaction as CoreTransaction } from '../../../../../core/payments/models/transaction.model.js';
+import { readThrough, verticalModel } from '../../../../../core/payments/models/verticalPayments.js';
+import { QC_PAYMENT_ID_MAP } from './refund.model.js';
 
-        /** Which type of entity this transaction belongs to */
-        entityType: {
-            type: String,
-            enum: ['user', 'restaurant', 'deliveryBoy', 'admin'],
-            required: true,
-            index: true
-        },
-        /** ObjectId of the entity (userId, restaurantId, deliveryPartnerId, or admin id) */
-        entityId: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: true,
-            index: true
-        },
+export const Transaction = verticalModel(CoreTransaction, 'quickCommerce', 'QCEntityTransaction', { orderId: 'QCOrder' });
 
-        type: {
-            type: String,
-            enum: ['credit', 'debit'],
-            required: true
-        },
-
-        amount: { type: Number, required: true, min: 0 },
-        /** Wallet balance AFTER this transaction was applied — set atomically */
-        balanceAfter: { type: Number, required: true },
-
-        currency: { type: String, default: 'INR', trim: true },
-
-        status: {
-            type: String,
-            enum: ['completed', 'pending', 'failed', 'reversed'],
-            default: 'completed',
-            index: true
-        },
-
-        /** Human-readable description shown in wallet history */
-        description: { type: String, default: '', trim: true },
-
-        /** Category for easier filtering / reporting */
-        category: {
-            type: String,
-            enum: [
-                'order_payment',
-                'order_refund',
-                'wallet_topup',
-                'wallet_debit',
-                'commission',
-                'delivery_earning',
-                'platform_fee',
-                'settlement_payout',
-                'referral_reward',
-                'adjustment',
-                'other'
-            ],
-            default: 'other'
-        },
-
-        module: { type: String, default: 'food', trim: true },
-
-        metadata: { type: mongoose.Schema.Types.Mixed, default: undefined }
-    },
-    { collection: 'transactions', timestamps: true }
-);
-
-transactionSchema.index({ entityType: 1, entityId: 1, createdAt: -1 });
-transactionSchema.index({ orderId: 1, entityType: 1 });
-transactionSchema.index({ paymentId: 1, type: 1 });
-
-/*
- * Its own model and collection. This registered as 'QCTransaction' on
- * qc_transactions -- the name and collection of the ORDER ledger
- * (orders/models/foodTransaction.model.js) -- and both guard with
- * `mongoose.models.QCTransaction ||`, so whichever file loaded first won. The
- * order ledger does, so every row written here was validated against the order
- * schema and refused (orderId, userId, restaurantId ... required): this entity
- * ledger could never write. Food keeps the two apart the same way
- * (Transaction on 'transactions', FoodTransaction on its own).
- */
-export const Transaction = mongoose.models.QCEntityTransaction || mongoose.model('QCEntityTransaction', transactionSchema, 'qc_entity_transactions');
+export const transactionsReadThrough = readThrough({
+    model: Transaction,
+    vertical: 'quickCommerce',
+    legacyCollection: 'qc_entity_transactions',
+    mapCollection: QC_PAYMENT_ID_MAP,
+});

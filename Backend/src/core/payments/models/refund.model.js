@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { markCoreRows } from './verticalPayments.js';
 
 /**
  * Refund — tracks refund requests against a Payment.
@@ -58,5 +59,8 @@ const refundSchema = new mongoose.Schema(
 );
 
 refundSchema.index({ orderId: 1, status: 1 });
+
+// Shared with the verticals' rows, told apart by `vertical` (./verticalPayments.js).
+markCoreRows(refundSchema);
 
 export const Refund = mongoose.model('Refund', refundSchema);

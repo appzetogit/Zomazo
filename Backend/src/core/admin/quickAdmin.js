@@ -90,6 +90,8 @@ export const QC_ADMIN_REFS = Object.freeze([
     { c: 'qc_delivery_order_emergency_requests', f: 'resolvedBy' },
     { c: 'qc_refunds', f: 'processedBy' },
     { c: 'qc_settlements', f: 'processedBy' },
+    { c: 'refunds', f: 'processedBy' },
+    { c: 'settlements', f: 'processedBy' },
     { c: 'qc_settingses', f: 'updatedBy.adminId' },
     { c: 'qc_subscription_transactions', f: 'processedBy.id' },
     { c: 'qc_orders', arr: 'statusHistory', f: 'byId' },

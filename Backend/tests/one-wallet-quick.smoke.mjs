@@ -44,6 +44,10 @@ const quickLedger = await import('../src/modules/quickCommerce/core/payments/wal
 const { CustomerWallet } = await import('../src/core/wallet/customerWallet.model.js');
 const { FoodUserWallet: QuickWallet, __testables } = await import('../src/modules/quickCommerce/modules/food/user/models/userWallet.model.js');
 
+// Index builds (the core `transactions` collection now also indexes `vertical`)
+// finish before the ledger's multi-document transactions start.
+await Promise.all(Object.values(mongoose.models).map((m) => m.init().catch(() => {})));
+
 const oid = () => new mongoose.Types.ObjectId();
 const asha = oid();
 const ashaQuick = oid();
