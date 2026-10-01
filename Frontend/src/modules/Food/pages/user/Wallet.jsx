@@ -5,6 +5,7 @@ import { Button } from "@food/components/ui/button"
 import { Card, CardContent } from "@food/components/ui/card"
 import AnimatedPage from "@food/components/user/AnimatedPage"
 import AddMoneyModal from "@food/components/user/AddMoneyModal"
+import LoyaltyPointsCard from "@food/components/user/LoyaltyPointsCard"
 import { userAPI } from "@food/api"
 import { toast } from "sonner"
 import { useCompanyName } from "@food/hooks/useCompanyName"
@@ -221,6 +222,8 @@ export default function Wallet() {
                 </Button>
               </div>
             </div>
+
+            <LoyaltyPointsCard onConverted={fetchWalletData} />
 
             <div className="space-y-4 md:space-y-6 lg:space-y-8">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">

@@ -378,6 +378,28 @@ export const couponListAPI = {
   updatePlatform: (id, body) => apiClient.patch(`/platform/coupons/platform/${encodeURIComponent(id)}`, body, { contextModule: "admin" }),
 };
 
+// Admin > Cashback, Wallet Bonus and Loyalty Points: the platform's, paid into
+// the customer's one wallet from every service (core/promotions/rewards.routes.js).
+export const rewardsAdminAPI = {
+  listCashback: (params) => apiClient.get("/platform/rewards/cashback", { params, contextModule: "admin" }),
+  createCashback: (body) => apiClient.post("/platform/rewards/cashback", body, { contextModule: "admin" }),
+  updateCashback: (id, body) => apiClient.patch(`/platform/rewards/cashback/${encodeURIComponent(id)}`, body, { contextModule: "admin" }),
+  deleteCashback: (id) => apiClient.delete(`/platform/rewards/cashback/${encodeURIComponent(id)}`, { contextModule: "admin" }),
+  listBonuses: (params) => apiClient.get("/platform/rewards/wallet-bonus", { params, contextModule: "admin" }),
+  createBonus: (body) => apiClient.post("/platform/rewards/wallet-bonus", body, { contextModule: "admin" }),
+  updateBonus: (id, body) => apiClient.patch(`/platform/rewards/wallet-bonus/${encodeURIComponent(id)}`, body, { contextModule: "admin" }),
+  deleteBonus: (id) => apiClient.delete(`/platform/rewards/wallet-bonus/${encodeURIComponent(id)}`, { contextModule: "admin" }),
+  getLoyaltySettings: () => apiClient.get("/platform/rewards/loyalty/settings", { contextModule: "admin" }),
+  saveLoyaltySettings: (body) => apiClient.put("/platform/rewards/loyalty/settings", body, { contextModule: "admin" }),
+  loyaltyReport: (params) => apiClient.get("/platform/rewards/loyalty/report", { params, contextModule: "admin" }),
+};
+
+// The signed-in customer's loyalty points (core/loyalty).
+export const loyaltyAPI = {
+  get: () => apiClient.get("/platform/me/loyalty", { contextModule: "user" }),
+  convert: (points) => apiClient.post("/platform/me/loyalty/convert", { points }, { contextModule: "user" }),
+};
+
 // Master > Broadcast: one message sent through each service's own broadcast
 // endpoint. There is no platform-wide sender; each service keeps its own
 // audiences, device tokens and history, so this only fans the request out.

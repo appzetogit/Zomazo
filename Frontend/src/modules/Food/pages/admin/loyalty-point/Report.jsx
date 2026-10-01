@@ -1,18 +1,48 @@
-import { useState, useMemo } from "react"
+import { useCallback, useEffect, useState, useMemo } from "react"
+import { toast } from "sonner"
 import { Search, Download, ChevronDown, Filter, Calendar, Settings, TrendingUp, Wallet, Utensils, FileText, FileSpreadsheet, Code, Check, Columns } from "lucide-react"
-import { emptyLoyaltyPointTransactions } from "@food/utils/adminFallbackData"
+import { rewardsAdminAPI } from "@food/api"
+import LoyaltySettingsCard from "@food/components/admin/loyalty-point/LoyaltySettingsCard"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@food/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@food/components/ui/dialog"
 import { exportLoyaltyPointsToCSV, exportLoyaltyPointsToExcel, exportLoyaltyPointsToPDF, exportLoyaltyPointsToJSON } from "@food/components/admin/loyalty-point/loyaltyPointExportUtils"
 
+/**
+ * Admin > Loyalty Point Report: every customer's points earned on completed
+ * orders, converted into the wallet, or taken back on a refund, from every
+ * service (core/loyalty). Dates and customer filter on the server; the search
+ * box narrows the page already loaded.
+ */
+const NO_FILTERS = { startDate: "", endDate: "", customer: "" }
+
 export default function Report() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [transactions, setTransactions] = useState(emptyLoyaltyPointTransactions)
-  const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
-    customer: "All",
-  })
+  const [transactions, setTransactions] = useState([])
+  const [totals, setTotals] = useState({ earned: 0, converted: 0, reversed: 0, convertedRupees: 0 })
+  const [loading, setLoading] = useState(true)
+  const [filters, setFilters] = useState(NO_FILTERS)
+
+  const load = useCallback(async (f) => {
+    setLoading(true)
+    try {
+      const res = await rewardsAdminAPI.loyaltyReport({
+        from: f.startDate || undefined,
+        to: f.endDate || undefined,
+        user: f.customer.trim() || undefined,
+        limit: 500,
+      })
+      const data = res?.data?.data || {}
+      setTransactions((data.items || []).map((t, i) => ({ ...t, sl: i + 1, createdAt: new Date(t.createdAt).toLocaleString("en-IN") })))
+      setTotals(data.totals || {})
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Could not load the report")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(NO_FILTERS) }, [load])
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState({
     si: true,
@@ -27,47 +57,18 @@ export default function Report() {
   })
 
   const filteredTransactions = useMemo(() => {
-    let result = [...transactions]
-    
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim()
-      result = result.filter(transaction =>
-        transaction.transactionId.toLowerCase().includes(query) ||
-        transaction.customer.toLowerCase().includes(query) ||
-        transaction.reference.includes(query)
-      )
-    }
+    const query = searchQuery.toLowerCase().trim()
+    if (!query) return transactions
+    return transactions.filter((t) =>
+      t.transactionId.toLowerCase().includes(query) ||
+      t.customer.toLowerCase().includes(query) ||
+      String(t.reference).toLowerCase().includes(query)
+    )
+  }, [transactions, searchQuery])
 
-    // Apply date filters
-    if (filters.startDate) {
-      result = result.filter(transaction => {
-        const transactionDate = new Date(transaction.createdAt)
-        const startDate = new Date(filters.startDate)
-        return transactionDate >= startDate
-      })
-    }
-
-    if (filters.endDate) {
-      result = result.filter(transaction => {
-        const transactionDate = new Date(transaction.createdAt)
-        const endDate = new Date(filters.endDate)
-        endDate.setHours(23, 59, 59, 999) // Include the entire end date
-        return transactionDate <= endDate
-      })
-    }
-
-    // Apply customer filter
-    if (filters.customer && filters.customer !== "All") {
-      result = result.filter(transaction =>
-        transaction.customer.toLowerCase().includes(filters.customer.toLowerCase())
-      )
-    }
-
-    return result
-  }, [transactions, searchQuery, filters])
-
-  const totalDebit = filteredTransactions.reduce((sum, t) => sum + t.debit, 0)
-  const totalCredit = filteredTransactions.reduce((sum, t) => sum + t.credit, 0)
+  // Over everything the filters match, not just the rows on screen.
+  const totalCredit = Number(totals.earned) || 0
+  const totalDebit = (Number(totals.converted) || 0) + (Number(totals.reversed) || 0)
   const balance = totalCredit - totalDebit
 
   const handleFilterChange = (field, value) => {
@@ -75,11 +76,8 @@ export default function Report() {
   }
 
   const handleResetFilters = () => {
-    setFilters({
-      startDate: "",
-      endDate: "",
-      customer: "All",
-    })
+    setFilters(NO_FILTERS)
+    load(NO_FILTERS)
   }
 
   const handleExport = (format) => {
@@ -139,12 +137,14 @@ export default function Report() {
     createdAt: "Created At",
   }
 
-  const activeFiltersCount = (filters.startDate ? 1 : 0) + (filters.endDate ? 1 : 0) + (filters.customer !== "All" ? 1 : 0)
+  const activeFiltersCount = (filters.startDate ? 1 : 0) + (filters.endDate ? 1 : 0) + (filters.customer.trim() ? 1 : 0)
 
   return (
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-900 mb-6">Customer Loyalty Point Report</h1>
+
+        <LoyaltySettingsCard />
 
         {/* Filter Options */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
@@ -186,17 +186,15 @@ export default function Report() {
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Select Customer
+                Customer
               </label>
-              <select
+              <input
+                type="text"
                 value={filters.customer}
                 onChange={(e) => handleFilterChange("customer", e.target.value)}
+                placeholder="Name or phone"
                 className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              >
-                <option value="All">All</option>
-                <option value="jane-doe">Jane Doe</option>
-                <option value="john-doe">John Doe</option>
-              </select>
+              />
             </div>
 
             <div className="flex items-end gap-2">
@@ -207,7 +205,7 @@ export default function Report() {
                 Reset
               </button>
               <button 
-                onClick={() => {}} 
+                onClick={() => load(filters)} 
                 className={`px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center gap-2 relative ${activeFiltersCount > 0 ? "ring-2 ring-blue-300" : ""}`}
               >
                 <Filter className="w-4 h-4" />
@@ -226,22 +224,22 @@ export default function Report() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-sm border border-green-200 p-6">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-green-800">Debit</h3>
+              <h3 className="text-sm font-semibold text-green-800">Debit (converted + taken back)</h3>
               <div className="w-10 h-10 rounded-lg bg-green-200 flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-green-700" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-green-900">{totalDebit.toFixed(3)}</p>
+            <p className="text-2xl font-bold text-green-900">{totalDebit.toLocaleString("en-IN")}</p>
           </div>
 
           <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl shadow-sm border border-red-200 p-6">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-red-800">Credit</h3>
+              <h3 className="text-sm font-semibold text-red-800">Credit (earned)</h3>
               <div className="w-10 h-10 rounded-lg bg-red-200 flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-red-700" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-red-900">{totalCredit.toFixed(3)}</p>
+            <p className="text-2xl font-bold text-red-900">{totalCredit.toLocaleString("en-IN")}</p>
           </div>
 
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-sm border border-blue-200 p-6">
@@ -251,7 +249,7 @@ export default function Report() {
                 <Utensils className="w-5 h-5 text-blue-700" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-blue-900">{balance}</p>
+            <p className="text-2xl font-bold text-blue-900">{balance.toLocaleString("en-IN")}</p>
           </div>
         </div>
 
@@ -351,15 +349,15 @@ export default function Report() {
                 {filteredTransactions.length === 0 ? (
                   <tr>
                     <td colSpan={Object.values(visibleColumns).filter(v => v).length} className="px-6 py-8 text-center text-slate-500">
-                      No transactions found
+                      {loading ? "Loading…" : "No transactions found"}
                     </td>
                   </tr>
                 ) : (
-                  filteredTransactions.map((transaction) => (
-                    <tr key={transaction.sl} className="hover:bg-slate-50 transition-colors">
+                  filteredTransactions.map((transaction, index) => (
+                    <tr key={transaction.id} className="hover:bg-slate-50 transition-colors">
                       {visibleColumns.si && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-medium text-slate-700">{transaction.sl}</span>
+                          <span className="text-sm font-medium text-slate-700">{index + 1}</span>
                         </td>
                       )}
                       {visibleColumns.transactionId && (
