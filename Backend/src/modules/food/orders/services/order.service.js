@@ -953,7 +953,7 @@ export async function resyncState(userId, role) {
  * @param {import('mongoose').Document} order
  * @param {string|import('mongoose').Types.ObjectId} refundUserId user to credit for wallet refunds
  */
-async function processOrderRefundOnce(order, refundUserId) {
+export async function processOrderRefundOnce(order, refundUserId) {
   if (String(order.payment?.status || "").toLowerCase() !== "paid") return;
   const method = String(order.payment?.method || "").toLowerCase();
   if (method !== "razorpay" && method !== "wallet") return;
