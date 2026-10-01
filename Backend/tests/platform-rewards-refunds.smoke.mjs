@@ -143,9 +143,9 @@ const spUser = new mongoose.Types.ObjectId();
 await mongoose.connection.collection('users').insertOne({ _id: platformUser, phone: '9000000001', name: 'Dev' });
 await mongoose.connection.collection('sp_users').insertOne({ _id: spUser, phone: '9000000001', platformUserId: platformUser });
 
-const newBooking = async (userId) => {
+const newBooking = async (userId, paymentStatus = 'success') => {
     const _id = new mongoose.Types.ObjectId();
-    await SPBooking.collection.insertOne({ _id, bookingNumber: `BK${String(_id).slice(-8)}`, userId, status: 'work_done', finalAmount: 600 });
+    await SPBooking.collection.insertOne({ _id, bookingNumber: `BK${String(_id).slice(-8)}`, userId, status: 'work_done', paymentStatus, finalAmount: 600 });
     return SPBooking.findById(_id);
 };
 
@@ -168,6 +168,24 @@ await check('Services: a booking completed inside a transaction pays after commi
     await spRewards.rewardCompletedBooking(booking.toObject());
     await settle();
     assert.equal(await balance(platformUser), 50);
+});
+
+await check('Services: completed but not yet paid earns nothing until the payment lands, then once', async () => {
+    const before = await balance(platformUser);
+    const booking = await newBooking(spUser, 'pending');
+    booking.status = 'completed';
+    await booking.save({ validateBeforeSave: false });
+    await settle();
+    assert.equal(await balance(platformUser), before, 'paid before the customer paid');
+    booking.paymentStatus = 'success';
+    await booking.save({ validateBeforeSave: false });
+    await settle();
+    assert.equal(await balance(platformUser), before + 50);
+    booking.paymentStatus = 'success';
+    booking.workerNotes = 'again';
+    await booking.save({ validateBeforeSave: false });
+    await settle();
+    assert.equal(await balance(platformUser), before + 50);
 });
 
 await check('Services: a completion that rolls back pays nothing', async () => {

@@ -429,8 +429,14 @@ bookingSchema.pre('save', async function (next) {
  * the reward waits for the session to end and re-reads the booking, so a
  * rolled-back completion pays nothing. The core pays once per booking.
  */
+// Rewards are for a service done AND paid for: a booking can be completed
+// before a pay-after-service customer pays, so the hook looks again when the
+// payment lands. Plan-covered bookings were paid for by the plan, not here.
+const REWARDABLE_PAYMENT = ['success', 'collected_by_vendor'];
+const rewardable = (b) => b?.status === 'completed' && REWARDABLE_PAYMENT.includes(b?.paymentStatus);
+
 bookingSchema.pre('save', function (next) {
-  this.$locals.completedNow = this.isModified('status') && this.status === 'completed';
+  this.$locals.completedNow = (this.isModified('status') || this.isModified('paymentStatus')) && rewardable(this);
   next();
 });
 bookingSchema.post('save', function () {
@@ -439,7 +445,7 @@ bookingSchema.post('save', function () {
   const run = () => {
     const Booking = mongoose.models.SPBooking;
     Booking.findById(id).lean()
-      .then((fresh) => fresh && require('../services/platformRewards').rewardCompletedBooking(fresh))
+      .then((fresh) => rewardable(fresh) && require('../services/platformRewards').rewardCompletedBooking(fresh))
       .catch((err) => console.warn(`[SP] booking rewards hook failed for ${id}: ${err?.message || err}`));
   };
   const session = this.$session();
