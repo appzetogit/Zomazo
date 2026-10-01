@@ -318,20 +318,29 @@ const resolveRefundDestination = (order, refundTo) => {
  * runs when a return is REQUESTED, and two returns opened before either is paid both
  * see the whole order as unrefunded.
  */
+/**
+ * Orders refunded before the counter existed: seed it, once, from the returns
+ * already paid and from a refund already recorded on the payment (a cancellation
+ * refund, or an admin refund from before admin refunds used this counter), so
+ * that money is not handed out a second time. Shared with the admin refund
+ * (order.service.js processRefundAdmin), which reserves against the same counter.
+ */
+export const seedRefundCounter = async (order) => {
+    if (order.returnRefundedPaise !== undefined && order.returnRefundedPaise !== null) return;
+    const prior = await QCReturn.find({ orderId: order._id, status: RETURN_STATUS.REFUNDED })
+        .select('refund.total').lean();
+    const priorPaise = prior.reduce((s, r) => s + toPaise(r.refund?.total), 0);
+    const paymentPaise = order.payment?.refund?.status === 'processed' ? toPaise(order.payment.refund.amount) : 0;
+    await FoodOrder.updateOne(
+        { _id: order._id, returnRefundedPaise: null },
+        { $set: { returnRefundedPaise: priorPaise + paymentPaise } },
+    );
+};
+
 const reserveRefund = async (order, wantedPaise) => {
     const paidPaise = toPaise(order.pricing?.total);
 
-    // Orders refunded before the counter existed: seed it from the returns already
-    // paid, once, so their money is not handed out a second time.
-    if (order.returnRefundedPaise === undefined || order.returnRefundedPaise === null) {
-        const prior = await QCReturn.find({ orderId: order._id, status: RETURN_STATUS.REFUNDED })
-            .select('refund.total').lean();
-        const priorPaise = prior.reduce((s, r) => s + toPaise(r.refund?.total), 0);
-        await FoodOrder.updateOne(
-            { _id: order._id, returnRefundedPaise: null },
-            { $set: { returnRefundedPaise: priorPaise } },
-        );
-    }
+    await seedRefundCounter(order);
 
     for (let attempt = 0; attempt < 8; attempt += 1) {
         const fresh = await FoodOrder.findById(order._id).select('returnRefundedPaise').lean();
