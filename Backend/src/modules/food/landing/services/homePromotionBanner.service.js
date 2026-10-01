@@ -1,4 +1,5 @@
 import { HomePromotionBanner } from '../models/homePromotionBanner.model.js';
+import { runningBanners } from '../../../../core/spotlight/spotlight.service.js';
 import {
     uploadMediaBufferDetailed,
     deleteStoredAsset,
@@ -36,9 +37,12 @@ export const getPublicHomePromotionBanners = async (zoneId = null) => {
         filter.zoneId = zoneId;
     }
 
-    return HomePromotionBanner.find(filter)
+    const own = await HomePromotionBanner.find(filter)
     .sort({ sortOrder: 1, createdAt: -1 })
     .lean();
+    // Partners' approved banner ads (core/spotlight) show in the same strip,
+    // after the service's own banners.
+    return [...own, ...(await runningBanners('food'))];
 };
 
 export const createHomePromotionBanner = async (file, meta = {}) => {

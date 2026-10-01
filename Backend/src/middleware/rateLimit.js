@@ -293,6 +293,22 @@ export const registrationRateLimiter = rateLimit({
 });
 
 /**
+ * The public newsletter form. Nobody signs up for a mail list more than a few
+ * times an hour; a script filling the list with other people's addresses
+ * would. Pre-authentication, so per IP.
+ */
+export const mailingListRateLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: config.nodeEnv === 'development' ? 200 : 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    passOnStoreError: true,
+    store: new LazyRedisStore('rl:mailing:'),
+    keyGenerator: (req) => normaliseIp(req.ip),
+    message: { success: false, message: 'Too many attempts. Please try again later.' },
+});
+
+/**
  * The restaurant signup upload, open to people who have no account yet. A
  * signup sends a dozen or so documents and photos, so the bound is generous
  * but it exists: anonymous callers could otherwise fill storage.
