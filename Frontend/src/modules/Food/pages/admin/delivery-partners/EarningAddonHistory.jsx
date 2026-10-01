@@ -1,3 +1,4 @@
+import { exportReportsToCSV, exportReportsToExcel, exportReportsToJSON, exportReportsToPDF } from "@food/components/admin/reports/reportsExportUtils"
 import { useState, useEffect, useMemo } from "react"
 import { 
   Search, 
@@ -224,8 +225,25 @@ export default function EarningAddonHistory() {
       toast.error("No data to export")
       return
     }
-    // Export functionality can be added here
-    toast.info(`Export as ${format.toUpperCase()} - Feature coming soon`)
+    const headers = [
+      { key: "deliveryman", label: "Delivery partner" },
+      { key: "deliveryPhone", label: "Phone" },
+      { key: "offerTitle", label: "Offer" },
+      { key: "ordersCompleted", label: "Orders completed" },
+      { key: "ordersRequired", label: "Orders required" },
+      { key: "earningAmount", label: "Bonus (Rs)" },
+      { key: "status", label: "Status" },
+      { key: "completedAt", label: "Completed at" },
+    ]
+    const rows = filteredHistory.map((item) => ({
+      ...item,
+      completedAt: item.completedAt ? new Date(item.completedAt).toLocaleString() : "",
+    }))
+    const name = "earning_addon_history"
+    if (format === "excel") exportReportsToExcel(rows, headers, name)
+    else if (format === "pdf") exportReportsToPDF(rows, headers, name, "Earning add-on history")
+    else if (format === "json") exportReportsToJSON(rows, name)
+    else exportReportsToCSV(rows, headers, name)
   }
 
   const handleCheckAllCompletions = async () => {

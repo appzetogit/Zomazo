@@ -1,3 +1,4 @@
+import { exportReportsToExcel, exportReportsToPDF } from "@food/components/admin/reports/reportsExportUtils"
 import { useState, useMemo, useEffect, useCallback } from "react"
 import { Search, Download, ChevronDown, DollarSign, Calendar, Filter, Loader2, FileText, FileSpreadsheet, Code } from "lucide-react"
 import { adminAPI } from "@food/api"
@@ -155,10 +156,11 @@ export default function DeliveryEarnings() {
         toast.success("CSV exported successfully")
         break
       case "excel":
-        toast.info("Excel export coming soon")
+        exportReportsToExcel(data, headers, "delivery_earnings")
+        toast.success("Excel exported successfully")
         break
       case "pdf":
-        toast.info("PDF export coming soon")
+        exportReportsToPDF(data, headers, "delivery_earnings", "Delivery earnings")
         break
       case "json":
         const jsonContent = JSON.stringify(data, null, 2)

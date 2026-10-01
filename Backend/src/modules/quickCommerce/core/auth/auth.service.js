@@ -146,7 +146,6 @@ export const requestUserOtp = async (phone) => {
   }
 
   const otp = await createOrUpdateOtp(phone, "qc:user", { service: OTP_SERVICES.QUICK_COMMERCE });
-  // TODO: integrate SMS provider here
   const shouldExposeOtp =
     config.nodeEnv !== "production" || config.useDefaultOtp;
   return shouldExposeOtp ? { otp } : {};

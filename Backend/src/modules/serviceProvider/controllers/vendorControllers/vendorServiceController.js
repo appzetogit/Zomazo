@@ -12,9 +12,9 @@ const getVendorServices = async (req, res) => {
     const vendorId = req.user.id;
     const { status, page = 1, limit = 20 } = req.query;
 
-    // Build query - services are linked to vendors through bookings
-    // For now, we'll get all services and filter by vendor bookings
-    // TODO: Add vendorId field to Service model if vendors can own services
+    // Vendors do not own catalog services: every vendor sees the admin's
+    // catalog, with their own price and availability laid over it from
+    // sp_vendor_services (see upsertVendorOverride below).
 
     const query = {};
     if (status) {

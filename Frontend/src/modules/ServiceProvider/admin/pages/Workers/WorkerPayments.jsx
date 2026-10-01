@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiDollarSign, FiSearch, FiLoader, FiArrowUpRight, FiCheckCircle } from 'react-icons/fi';
+import { FiDollarSign, FiSearch, FiLoader, FiArrowUpRight, FiCheckCircle, FiX } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import CardShell from '../UserCategories/components/CardShell';
 import adminWorkerService from '@sp/services/adminWorkerService';
@@ -9,6 +9,19 @@ const WorkerPayments = () => {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  // The worker whose money movements are open, and what was loaded for them.
+  const [history, setHistory] = useState(null);
+
+  const openHistory = async (worker) => {
+    setHistory({ worker, loading: true, data: null });
+    try {
+      const response = await adminWorkerService.getWorkerEarnings(worker._id || worker.id);
+      setHistory({ worker, loading: false, data: response?.data || null });
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not load the history');
+      setHistory(null);
+    }
+  };
 
   const loadPayments = async () => {
     try {
@@ -104,7 +117,7 @@ const WorkerPayments = () => {
                       <td className="px-4 py-4">
                         <button
                           className="flex items-center gap-1 text-primary-600 font-semibold hover:underline"
-                          onClick={() => toast('Detailed transaction history coming soon')}
+                          onClick={() => openHistory(worker)}
                         >
                           View History <FiArrowUpRight className="w-4 h-4" />
                         </button>
@@ -117,6 +130,54 @@ const WorkerPayments = () => {
           )}
         </div>
       </CardShell>
+
+      {history && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+            <div className="flex items-start justify-between border-b border-gray-200 px-5 py-4">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">{history.worker.name}: payment history</h3>
+                {history.data && (
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    Balance ₹{history.data.wallet.balance.toLocaleString()} · Lifetime earnings ₹{history.data.wallet.totalEarnings.toLocaleString()} · Dues ₹{history.data.wallet.dues.toLocaleString()}
+                  </p>
+                )}
+              </div>
+              <button type="button" onClick={() => setHistory(null)} className="rounded-lg p-1 text-gray-500 hover:bg-gray-100" aria-label="Close">
+                <FiX className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto px-5 py-3">
+              {history.loading ? (
+                <div className="flex justify-center py-10"><FiLoader className="h-6 w-6 animate-spin text-gray-400" /></div>
+              ) : !history.data?.transactions?.length ? (
+                <p className="py-10 text-center text-sm text-gray-500">No transactions yet.</p>
+              ) : (
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="text-xs uppercase text-gray-500">
+                      <th className="py-2">Date</th>
+                      <th className="py-2">What</th>
+                      <th className="py-2">Status</th>
+                      <th className="py-2 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {history.data.transactions.map((t) => (
+                      <tr key={t._id}>
+                        <td className="py-2 text-gray-600">{new Date(t.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                        <td className="py-2 text-gray-800">{t.description || t.type.replace(/_/g, ' ')}</td>
+                        <td className="py-2 text-gray-600">{t.status}</td>
+                        <td className="py-2 text-right font-semibold text-gray-900">₹{(Number(t.amount) || 0).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

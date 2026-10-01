@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+const Transaction = require('../../models/Transaction');
 const Worker = require('../../models/Worker');
 const Booking = require('../../models/Booking');
 const { validationResult } = require('express-validator');
@@ -291,13 +293,51 @@ const getWorkerJobs = async (req, res) => {
  * Get worker earnings
  */
 const getWorkerEarnings = async (req, res) => {
-  // Placeholder for now, can be expanded if we track granular worker earnings
-  res.status(200).json({
-    success: true,
-    data: {
-      totalEarnings: 0
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(String(id))) {
+      return res.status(400).json({ success: false, message: 'Invalid worker id' });
     }
-  });
+    const worker = await Worker.findById(id).select('name phone wallet').lean();
+    if (!worker) return res.status(404).json({ success: false, message: 'Worker not found' });
+
+    // The worker's money movements, newest first: what bookings credited them,
+    // what the vendor or admin paid out, cash collected and dues.
+    const filter = { workerId: worker._id };
+    const createdAt = {};
+    if (req.query.startDate && !Number.isNaN(Date.parse(req.query.startDate))) createdAt.$gte = new Date(`${req.query.startDate}T00:00:00`);
+    if (req.query.endDate && !Number.isNaN(Date.parse(req.query.endDate))) createdAt.$lte = new Date(`${req.query.endDate}T23:59:59.999`);
+    if (Object.keys(createdAt).length) filter.createdAt = createdAt;
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 100));
+
+    const transactions = await Transaction.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select('type amount status paymentMethod description bookingId referenceId balanceAfter createdAt')
+      .lean();
+
+    const sum = (types) => transactions
+      .filter((t) => t.status === 'completed' && types.includes(t.type))
+      .reduce((total, t) => total + (Number(t.amount) || 0), 0);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        worker: { id: worker._id, name: worker.name, phone: worker.phone },
+        wallet: {
+          balance: Number(worker.wallet?.balance) || 0,
+          totalEarnings: Number(worker.wallet?.earnings) || 0,
+          dues: Number(worker.wallet?.dues) || 0,
+        },
+        // Totals over the transactions listed (the date range, if one was given).
+        periodEarnings: sum(['earnings_credit', 'credit', 'worker_payment']),
+        periodPaidOut: sum(['withdrawal', 'settlement']),
+        transactions,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Could not load the worker\'s earnings' });
+  }
 };
 
 /**
@@ -331,7 +371,7 @@ const payWorker = async (req, res) => {
      */
     const credit = Math.round(parseFloat(amount) * 100) / 100;
     const { withTransaction, abort } = require('../../utils/withTransaction');
-    const Transaction = require('../../models/Transaction');
+
 
     const outcome = await withTransaction(async (session) => {
       const updated = await Worker.findByIdAndUpdate(

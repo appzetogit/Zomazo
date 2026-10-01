@@ -66,7 +66,6 @@ export const requestUserOtp = async (phone) => {
 
   const existingUser = await FoodUser.findOne({ phone }).select("_id name").lean();
   const otp = await createOrUpdateOtp(phone, "user");
-  // TODO: integrate SMS provider here
   const shouldExposeOtp =
     config.nodeEnv !== "production" || config.useDefaultOtp;
   return {
