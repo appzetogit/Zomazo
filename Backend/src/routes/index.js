@@ -52,6 +52,10 @@ import myOrdersRoutes from '../core/orders/myOrders.routes.js';
 import customerSupportRoutes from '../core/support/customerSupport.routes.js';
 import rewardsRoutes from '../core/promotions/rewards.routes.js';
 import loyaltyRoutes from '../core/loyalty/loyalty.routes.js';
+import spotlightRoutes, { partnerSpotlightRouter } from '../core/spotlight/spotlight.routes.js';
+import mailingListRoutes from '../core/mailingList/mailingList.routes.js';
+import { authMiddleware as qcAuthMiddleware } from '../modules/quickCommerce/core/auth/auth.middleware.js';
+import { authMiddleware as ecomAuthMiddleware } from '../modules/ecommerce/core/auth/auth.middleware.js';
 import { getPublicAppLegal } from '../core/settings/appLegal.js';
 import { adminZoneScope } from '../core/admin/adminZoneScope.js';
 import { refuseRestrictedAdminWrites } from '../core/admin/enforceAdminAccess.middleware.js';
@@ -145,6 +149,17 @@ router.use('/v1/platform/me', authMiddleware, requireRoles('USER'), myOrdersRout
 router.use('/v1/platform/me/support', authMiddleware, requireRoles('USER'), customerSupportRoutes);
 // The customer's loyalty points, earned in every service (core/loyalty).
 router.use('/v1/platform/me/loyalty', authMiddleware, requireRoles('USER'), loyaltyRoutes);
+// Partner ads (core/spotlight): admins review them here; each partner asks
+// from its own panel, behind its own service's sign-in, mounted ahead of that
+// service's router so the path is not swallowed by it.
+router.use('/v1/platform/spotlight', spotlightRoutes);
+router.use('/v1/food/restaurant/spotlight', authMiddleware, partnerSpotlightRouter('food', 'RESTAURANT'));
+router.use('/v1/qc/restaurant/spotlight', requireModuleEnabled(MODULES.QUICK_COMMERCE), qcAuthMiddleware,
+    partnerSpotlightRouter('quick', 'RESTAURANT'));
+router.use('/v1/ecom/seller/spotlight', requireModuleEnabled(MODULES.ECOMMERCE), ecomAuthMiddleware,
+    partnerSpotlightRouter('shop', 'SELLER'));
+// The newsletter list: public subscribe / unsubscribe, admin list and export.
+router.use('/v1/platform/mailing-list', mailingListRoutes);
 // Terms and privacy for one app, public (shown before sign-in).
 router.get('/v1/platform/legal/:app/:kind', getPublicAppLegal);
 
