@@ -138,7 +138,13 @@ const creditTopupOnce = async (userId, tx, amount) => {
     { userId, 'transactions.providerPaymentId': { $ne: tx.providerPaymentId } },
     { $inc: { balance: amount }, $push: { transactions: { $each: [tx], $position: 0 } } },
   );
-  return result.modifiedCount === 1;
+  const credited = result.modifiedCount === 1;
+  // Admin > Wallet Bonus on a ride-app top-up, once per gateway order.
+  if (credited) {
+    const { applyTopupBonus } = await import('../../../../core/promotions/walletBonus.service.js');
+    await applyTopupBonus({ customerId: userId, topupAmount: amount, reference: tx.providerOrderId || tx.providerPaymentId, service: 'taxi' });
+  }
+  return credited;
 };
 
 /*

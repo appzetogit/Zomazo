@@ -2526,6 +2526,18 @@ export const updateRideLifecycle = async ({ rideId, driverId, nextStatus, paymen
     await processCompletedRideReferralReward(ride);
     await processCompletedDriverReferralReward(ride);
 
+    // Loyalty points and platform cashback on the fare, into the one wallet.
+    // Once per ride and never throws, but kept off the completion's path anyway.
+    import('../../../core/promotions/orderRewards.js')
+      .then(({ rewardCompletedOrder }) => rewardCompletedOrder({
+        service: 'taxi',
+        customerId: ride.userId,
+        orderId: ride._id,
+        orderDisplayId: String(ride._id).slice(-8).toUpperCase(),
+        amount: ride.fare,
+      }))
+      .catch((err) => logger.warn(`ride rewards hook failed for ride ${ride._id}: ${err?.message || err}`));
+
     // Daily order-target incentive progress (rides and parcel/porter jobs
     // both count toward the taxiAndPorter target). Fire-and-forget and
     // idempotent per rider/rule/day — must never fail ride completion.

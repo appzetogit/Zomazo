@@ -182,6 +182,11 @@ export const verifyWalletTopupPayment = async (userId, payload) => {
     wallet.balance = Number(wallet.balance || 0) + creditedAmount;
     await wallet.save();
 
+    // Admin > Wallet Bonus: the extra paid on a top-up, as its own row and once
+    // per Razorpay order. Quick's top-ups are verified here too.
+    const { applyTopupBonus } = await import('../../../../core/promotions/walletBonus.service.js');
+    await applyTopupBonus({ customerId: wallet.userId, topupAmount: creditedAmount, reference: orderId });
+
     return { wallet: await getUserWallet(userId) };
 };
 
