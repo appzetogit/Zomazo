@@ -21,6 +21,7 @@ import {
     verifyPaymentSignature,
     isRazorpayConfigured,
     initiateRazorpayRefund,
+    findRazorpayRefundByKey,
     fetchRazorpayPayment
 } from '../helpers/razorpay.helper.js';
 import { getIO, rooms } from '../../../../config/socket.js';
@@ -1001,19 +1002,16 @@ async function processOrderRefundOnce(order, refundUserId) {
 
 const refundToPaise = (rupees) => Math.round((Number(rupees) || 0) * 100);
 
-// 4xx so the error handler passes our wording through to the admin; a 5xx is masked.
-const adminRefundError = (message, statusCode) => Object.assign(new Error(message), { statusCode });
-
 /**
  * Admin refund on a paid order: full or partial, any number of times, never more
  * than was paid in total.
  *
- * Money moves in three steps, in an order that never pays twice: claim, pay, record.
- * The claim is one atomic update that flips payment.refund.status to 'pending' AND
- * reserves the amount on payment.refund.refundedPaise, matched against the values
- * just read -- so two clicks, or this racing a cancellation's processOrderRefundOnce
- * (which skips a 'pending' refund), cannot both spend the same headroom. A payout
- * that fails gives the claim back; nothing has moved, so the admin can retry.
+ * Claim, pay, record through core/orders/adminRefundClaim.js: the claim flips
+ * payment.refund.status to 'pending' and reserves the amount on
+ * payment.refund.refundedPaise in one atomic update, so two clicks, or this racing a
+ * cancellation's processOrderRefundOnce (which skips a 'pending' refund), cannot both
+ * spend the same headroom. A claim a crash left behind is taken over after ten
+ * minutes and its payout looked up by key before anything is paid again.
  *
  * Money goes back the way it came: Razorpay refund for an online payment, wallet
  * credit for a wallet payment. Cash cannot be handed back by the app, so a cash
@@ -1047,83 +1045,55 @@ export async function adminRefundOrder(orderId, { amount, reason, adminId } = {}
     destination = "wallet";
   }
 
-  const refund = order.payment?.refund || {};
-  const prevStatus = String(refund.status || "none");
-  if (prevStatus === "pending") {
-    throw adminRefundError("A refund on this order is already in progress. Refresh in a moment.", 409);
-  }
-  const rawCounter = Number.isFinite(refund.refundedPaise) ? refund.refundedPaise : null;
-  // A cancellation refund (processOrderRefundOnce) records only amount + status:
-  // count it once, so an order already refunded in full has no headroom left.
-  const alreadyPaise = rawCounter ?? (prevStatus === "processed" ? refundToPaise(refund.amount) : 0);
   const paidPaise = refundToPaise(order.pricing?.total);
-  const leftPaise = paidPaise - alreadyPaise;
-  if (leftPaise <= 0) throw new ValidationError("Everything paid on this order has already been refunded");
-
-  const wantedPaise = amount === undefined || amount === null || amount === "" ? leftPaise : refundToPaise(amount);
-  if (!(wantedPaise > 0)) throw new ValidationError("Refund amount must be more than zero");
-  if (wantedPaise > leftPaise) {
-    throw new ValidationError(`Refund cannot be more than ₹${(leftPaise / 100).toFixed(2)}, what is left of the ₹${(paidPaise / 100).toFixed(2)} paid`);
-  }
-
-  const reservedPaise = alreadyPaise + wantedPaise;
-  const claimed = await FoodOrder.findOneAndUpdate(
-    {
-      _id: order._id,
-      "payment.status": { $in: ["paid", "refunded"] },
-      "payment.refund.status": prevStatus === "none" ? { $in: [null, "none"] } : prevStatus,
-      "payment.refund.refundedPaise": rawCounter,
-    },
-    { $set: { "payment.refund.status": "pending", "payment.refund.refundedPaise": reservedPaise } },
-    { new: true },
-  );
-  if (!claimed) {
-    throw adminRefundError("Another refund on this order is in progress or just finished. Refresh and try again.", 409);
-  }
-
-  const rupees = wantedPaise / 100;
   const readableId = order.order_id || order._id;
-  let refundId = "";
-  try {
-    if (destination === "gateway") {
-      const result = await initiateRazorpayRefund(paymentId, rupees);
-      if (!result?.success) throw new Error(result?.error || "gateway refused the refund");
-      refundId = String(result.refundId || "");
-    } else {
+  const { runAdminRefund } = await import("../../../../core/orders/adminRefundClaim.js");
+  const { FoodUserWallet } = await import("../../user/models/userWallet.model.js");
+  const { entry, totalPaise, full } = await runAdminRefund({
+    Model: FoodOrder,
+    docId: order._id,
+    paths: {
+      status: "payment.refund.status",
+      counter: "payment.refund.refundedPaise",
+      claim: "payment.refund.claim",
+      history: "payment.refund.history",
+    },
+    paidPaise,
+    // A cancellation refund (processOrderRefundOnce) records only amount + status:
+    // count it once, so an order already refunded in full has no headroom left.
+    seedPaise: (doc) => (doc.payment?.refund?.status === "processed" ? refundToPaise(doc.payment.refund.amount) : 0),
+    amount,
+    meta: { method: destination === "gateway" ? "razorpay" : "wallet", reason: note, byAdminId: String(adminId || "") },
+    pay: async ({ rupees, key }) => {
+      if (destination === "gateway") {
+        const result = await initiateRazorpayRefund(paymentId, rupees, { key, reason: note });
+        if (!result?.success) throw new Error(result?.error || "gateway refused the refund");
+        return { refundId: String(result.refundId || "") };
+      }
       const description = method === "cash"
         ? `Refund for order #${readableId} (paid in cash, so credited to your wallet)`
         : `Refund for order #${readableId}`;
       await userWalletService.refundWalletBalance(order.userId, rupees, description, {
-        orderId: order._id, source: "admin_refund", byAdminId: String(adminId || ""),
+        orderId: order._id, source: "admin_refund", byAdminId: String(adminId || ""), claimKey: key,
       });
-    }
-  } catch (err) {
-    logger.error(`Admin refund payout failed for Order ${order._id}: ${err?.message || err}`);
-    await FoodOrder.updateOne(
-      { _id: order._id, "payment.refund.status": "pending", "payment.refund.refundedPaise": reservedPaise },
-      { $set: { "payment.refund.status": prevStatus, "payment.refund.refundedPaise": alreadyPaise } },
-    );
-    throw adminRefundError(`The refund could not be paid (${err?.message || "payout error"}). Nothing was refunded; try again.`, 424);
-  }
-
-  const full = reservedPaise >= paidPaise;
-  const now = new Date();
-  const entry = {
-    amount: rupees,
-    method: destination === "gateway" ? "razorpay" : "wallet",
-    refundId,
-    reason: note,
-    byAdminId: String(adminId || ""),
-    at: now,
-  };
-  const set = {
-    "payment.refund.status": "processed",
-    "payment.refund.amount": reservedPaise / 100,
-    "payment.refund.processedAt": now,
-    ...(refundId ? { "payment.refund.refundId": refundId } : {}),
-    ...(full ? { "payment.status": "refunded" } : {}),
-  };
-  await FoodOrder.updateOne({ _id: order._id }, { $set: set, $push: { "payment.refund.history": entry } });
+      return {};
+    },
+    findPaid: async (claim) => {
+      if (destination === "gateway") return findRazorpayRefundByKey(paymentId, claim.key);
+      const hit = await FoodUserWallet.exists({ userId: order.userId, "transactions.metadata.claimKey": claim.key });
+      return hit ? {} : null;
+    },
+    recordSet: ({ full: isFull, totalPaise: total, refundId }) => ({
+      "payment.refund.amount": total / 100,
+      "payment.refund.processedAt": new Date(),
+      ...(refundId ? { "payment.refund.refundId": refundId } : {}),
+      ...(isFull ? { "payment.status": "refunded" } : {}),
+    }),
+  });
+  const rupees = entry.amount;
+  const refundId = entry.refundId;
+  const now = entry.at;
+  const reservedPaise = totalPaise;
 
   // The order's money ledger (food_transactions): one history row per refund, and
   // the row reads refunded once the whole payment has gone back.

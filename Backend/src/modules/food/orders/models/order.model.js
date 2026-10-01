@@ -311,6 +311,8 @@ const paymentSchema = new mongoose.Schema(
              * which seeds it from a cancellation refund already processed.
              */
             refundedPaise: { type: Number, min: 0 },
+            // The admin refund being paid right now (core/orders/adminRefundClaim.js).
+            claim: { type: mongoose.Schema.Types.Mixed },
             // One row per admin refund that actually paid out.
             history: {
                 type: [{
@@ -320,6 +322,7 @@ const paymentSchema = new mongoose.Schema(
                     refundId: { type: String, default: '' },
                     reason: { type: String, default: '' },
                     byAdminId: { type: String, default: '' },
+                    claimKey: { type: String, default: '' },
                     at: { type: Date, default: Date.now }
                 }],
                 default: undefined

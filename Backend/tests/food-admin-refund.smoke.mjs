@@ -160,6 +160,59 @@ await check('a failed gateway refund gives the claim back and records nothing', 
   assert.equal(o.payment.refund?.history?.length ?? 0, 0);
 });
 
+// A claim a crash left 'pending': 30 paise reserved under key k, 11 minutes ago.
+const staleClaim = async ({ method = 'wallet', paymentId, minutesAgo = 11, paidOut = false }) => {
+  const { _id, userId } = await makeOrder({ method, paymentId });
+  const key = `rf_test_${String(_id).slice(-6)}`;
+  await FoodOrder.collection.updateOne({ _id }, { $set: {
+    'payment.refund': {
+      status: 'pending', refundedPaise: 10000, amount: 0,
+      claim: { key, at: new Date(Date.now() - minutesAgo * 60000), amountPaise: 10000, prevStatus: 'none', method: 'wallet', reason: 'crashed', byAdminId: adminId },
+    },
+  } });
+  if (paidOut) {
+    await CustomerWallet.collection.insertOne({ userId, balance: 100, transactions: [{ type: 'refund', kind: 'credit', amount: 100, metadata: { claimKey: key } }] });
+  }
+  return { _id, userId, key };
+};
+
+await check('a fresh pending claim still blocks a second refund', async () => {
+  const { _id } = await staleClaim({ minutesAgo: 2 });
+  const err = await thrownBy(() => adminRefundOrder(String(_id), { amount: 10, reason: 'second', adminId }));
+  assert.equal(err?.statusCode, 409);
+});
+
+await check('stale claim whose payout happened: recorded, not paid again', async () => {
+  const { _id, userId, key } = await staleClaim({ paidOut: true });
+  await adminRefundOrder(String(_id), { amount: 50, reason: 'after crash', adminId });
+  const o = await FoodOrder.findById(_id).lean();
+  assert.deepEqual(o.payment.refund.history.map((h) => [h.amount, h.claimKey === key]), [[100, true], [50, false]]);
+  assert.equal(o.payment.refund.refundedPaise, 15000);
+  assert.equal(o.payment.refund.claim, undefined);
+  assert.equal(await walletOf(userId), 150, 'the crashed 100 was not credited twice');
+});
+
+await check('stale claim whose payout never happened: released, headroom back', async () => {
+  const { _id, userId } = await staleClaim({ paidOut: false });
+  await adminRefundOrder(String(_id), { reason: 'everything now', adminId });
+  const o = await FoodOrder.findById(_id).lean();
+  assert.equal(o.payment.refund.history.length, 1);
+  assert.equal(o.payment.refund.history[0].amount, 300);
+  assert.equal(await walletOf(userId), 300);
+});
+
+await check('two takeovers of one stale claim: one wins', async () => {
+  const { _id, userId } = await staleClaim({ paidOut: true });
+  const results = await Promise.allSettled([
+    adminRefundOrder(String(_id), { amount: 10, reason: 'take one', adminId }),
+    adminRefundOrder(String(_id), { amount: 10, reason: 'take two', adminId }),
+  ]);
+  const o = await FoodOrder.findById(_id).lean();
+  const recordedCrash = o.payment.refund.history.filter((h) => h.reason === 'crashed').length;
+  assert.equal(recordedCrash, 1, JSON.stringify(results.map((r) => r.reason?.message || 'ok')));
+  assert.ok(await walletOf(userId) <= 120);
+});
+
 await mongoose.disconnect();
 await mongo.stop();
 console.log(failed ? `\n${failed} check(s) failed\n` : '\nall checks passed\n');

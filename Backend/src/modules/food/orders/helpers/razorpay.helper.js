@@ -207,7 +207,7 @@ export function fetchRazorpayPaymentLink(paymentLinkId) {
  * @param {string} paymentId - Original Razorpay payment_id (captured)
  * @param {number} amount - Amount to refund (in major unit, e.g., INR 123.45)
  */
-export async function initiateRazorpayRefund(paymentId, amount) {
+export async function initiateRazorpayRefund(paymentId, amount, { key = '', reason = '' } = {}) {
     if (MOCK_GATEWAY_ALLOWED && (!paymentId || String(paymentId).startsWith('mock_'))) {
         logger.info(`[Razorpay] Mock Refund triggered for payment ID: ${paymentId}`);
         return {
@@ -224,8 +224,12 @@ export async function initiateRazorpayRefund(paymentId, amount) {
     try {
         const refund = await instance.payments.refund(paymentId, {
             amount: Math.round(Number(amount) * 100), // convert to paise
+            // `key` tags an admin refund so a takeover can find it again
+            // (findRazorpayRefundByKey) instead of paying it a second time.
+            ...(key ? { receipt: String(key).slice(0, 40) } : {}),
             notes: {
-                reason: 'Order cancelled by system flow',
+                reason: reason ? String(reason).slice(0, 250) : 'Order cancelled by system flow',
+                ...(key ? { refund_key: key } : {}),
                 at: new Date().toISOString()
             }
         });
@@ -244,4 +248,17 @@ export async function initiateRazorpayRefund(paymentId, amount) {
             status: 'failed'
         };
     }
+}
+
+/**
+ * A refund already made on this payment under an admin refund's key, or null.
+ * Used before re-paying a refund whose claim was left behind by a crash.
+ * Throws when the gateway cannot be asked: not knowing is not "not refunded".
+ */
+export async function findRazorpayRefundByKey(paymentId, key) {
+    if (MOCK_GATEWAY_ALLOWED && String(paymentId || '').startsWith('mock_')) return null;
+    if (!isRazorpayConfigured()) throw new Error('Razorpay is not configured on this server');
+    const list = await getRazorpayInstance().payments.fetchMultipleRefund(paymentId, { count: 100 });
+    const hit = (list?.items || []).find((r) => r?.notes?.refund_key === key || r?.receipt === String(key).slice(0, 40));
+    return hit ? { refundId: hit.id } : null;
 }
