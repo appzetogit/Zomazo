@@ -34,74 +34,11 @@ import { pathToFileURL } from 'node:url';
 import { renameWhenIdle } from './renameCollection.mjs';
 
 export async function mergeQcUsers({ apply = false, dropOld = false, log = console.log } = {}) {
-    const { mergeQcUser, countQcUserRefs, QC_USER_ID_MAP, QC_MERGE_DONE_KEY, QC_USER_REFS, clearQuickCustomerCache } =
-        await import('../../src/core/identity/quickCustomer.js');
-    const db = mongoose.connection;
-    const exists = (await db.db.listCollections({ name: 'qc_users' }).toArray()).length > 0;
-    if (!exists) {
-        log('qc_users does not exist: nothing to merge.');
-        return { rows: 0 };
-    }
-
-    if (dropOld) return retire({ db, log, countQcUserRefs, QC_USER_ID_MAP, QC_USER_REFS });
-
-    const totals = { rows: 0, already: 0, linked: 0, created: 0, clashes: 0, refs: {} };
-    for await (const row of db.collection('qc_users').find({})) {
-        totals.rows += 1;
-        const r = await mergeQcUser(row, { dryRun: !apply });
-        if (!r) continue;
-        totals[r.action] += 1;
-        totals.clashes += r.clashes || 0;
-        for (const [k, n] of Object.entries(r.refs || {})) totals.refs[k] = (totals.refs[k] || 0) + n;
-        if (r.clashes) log(`  clash: qc ${r.qcId} -> ${r.platformId}: ${JSON.stringify(r.refs)}`);
-    }
-
-    if (apply) {
-        const left = await db.collection('qc_users').countDocuments({ mergedAt: { $exists: false } });
-        if (!left) {
-            await db.collection(QC_USER_ID_MAP).updateOne(
-                { _id: QC_MERGE_DONE_KEY },
-                { $set: { at: new Date(), rows: totals.rows } },
-                { upsert: true },
-            );
-        }
-        totals.leftUnmerged = left;
-        clearQuickCustomerCache();
-    }
-
-    log(`${apply ? 'Merged' : 'Dry run (nothing written)'}: ${totals.rows} qc_users rows`);
-    log(`  already merged ${totals.already}, ${apply ? '' : 'would be '}linked to an existing account ${totals.linked}, ${apply ? '' : 'would be '}made as a new account ${totals.created}`);
-    log(`  references ${apply ? 'rewritten' : 'to rewrite'}:`);
-    for (const [k, n] of Object.entries(totals.refs).sort()) log(`    ${k}: ${n}`);
-    if (totals.clashes) log(`  CLASHES left on the old id: ${totals.clashes} (see lines above; a second wallet/cart for one person)`);
-    if (apply) log(totals.leftUnmerged ? `  ${totals.leftUnmerged} rows still unmerged -- run again` : '  every row merged');
-    return totals;
-}
-
-async function retire({ db, log, countQcUserRefs, QC_USER_ID_MAP }) {
-    const unmerged = await db.collection('qc_users').countDocuments({ mergedAt: { $exists: false } });
-    if (unmerged) {
-        log(`Refusing --drop-old: ${unmerged} qc_users rows are not merged. Run --apply first.`);
-        return { refused: true, unmerged };
-    }
-    let leftover = 0;
-    for await (const m of db.collection(QC_USER_ID_MAP).find({ doneAt: { $exists: true } })) {
-        if (String(m._id) === String(m.platformId)) continue;
-        const refs = await countQcUserRefs(m._id);
-        const n = Object.values(refs).reduce((a, b) => a + b, 0);
-        if (n) {
-            leftover += n;
-            log(`  still referenced: qc ${m._id}: ${JSON.stringify(refs)}`);
-        }
-    }
-    if (leftover) {
-        log(`Refusing --drop-old: ${leftover} stored references still name old qc_users ids (clashes to settle by hand).`);
-        return { refused: true, leftover };
-    }
-    const name = `qc_users_premerge_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`;
-    await renameWhenIdle(db.collection('qc_users'), name);
-    log(`qc_users renamed to ${name}. Drop it by hand when sure; qc_user_id_map stays.`);
-    return { renamed: name };
+    const [{ quickCustomers }, { runCustomerMerge }] = await Promise.all([
+        import('../../src/core/identity/quickCustomer.js'),
+        import('../../src/core/identity/serviceCustomer.js'),
+    ]);
+    return runCustomerMerge(quickCustomers, { apply, dropOld, log, renameWhenIdle });
 }
 
 const isCli = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
