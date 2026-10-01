@@ -129,7 +129,8 @@ const createTransporter = () => {
 const sendOTPEmail = async (email, otp, purpose = 'verification') => {
   try {
     if (!emailCredentials().user || !emailCredentials().pass) {
-      console.log(`[EMAIL SERVICE] OTP for ${email}: ${otp}`);
+      // No mail set up: say so, but never print the code -- it is a credential.
+      console.log(`[EMAIL SERVICE] Email not configured; OTP for ${email} not sent`);
       return { success: true };
     }
 

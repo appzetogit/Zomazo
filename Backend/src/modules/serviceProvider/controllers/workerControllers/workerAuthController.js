@@ -74,11 +74,6 @@ const sendOTP = async (req, res) => {
     // 4. Send OTP via SMS
     const smsResult = await sendSMSOTP(phone, otp);
 
-    // Log OTP
-    if (process.env.NODE_ENV === 'development' || process.env.USE_DEFAULT_OTP === 'true') {
-      console.log(`[DEV] Worker OTP for ${phone}: ${otp}`);
-    }
-
     if (!smsResult.success) {
       console.warn(`[OTP] SMS failed for worker ${phone}, but OTP stored`);
     }

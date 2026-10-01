@@ -206,33 +206,45 @@ console.log('\n[3] Source-level guards (the constants must stay behind an env ch
 
 const srcOf = (rel) => stripComments(readFileSync(path.join(backendDir, 'src', rel), 'utf8'));
 
-check('otp.service.js gates its bypass block on NODE_ENV', () => {
+check('otp.service.js gates its bypass block on devOtpEnabled()', () => {
     const src = srcOf('core/otp/otp.service.js');
     const verify = src.indexOf('export const verifyOtp');
     assert.ok(verify !== -1, 'verifyOtp is gone');
-    const gate = src.indexOf("config.nodeEnv !== 'production'", verify);
-    // The executable fallback, not the number in prose — the comment above the gate
-    // quotes the same digits deliberately.
+    const gate = src.indexOf('if (devOtpEnabled())', verify);
     const bypass = src.indexOf('process.env.DEFAULT_RESTAURANT_PHONE', verify);
-    assert.ok(gate !== -1, 'the production gate is gone from verifyOtp');
-    assert.ok(bypass !== -1 && bypass > gate, 'the default phone fallback escaped the gate');
+    assert.ok(gate !== -1, 'the opt-in gate is gone from verifyOtp');
+    assert.ok(bypass !== -1 && bypass > gate, 'the default phone list escaped the gate');
+    assert.ok(!/7974161582|7610416911/.test(src), 'a hard-coded test phone is back');
 });
 
-check('userOtpService.js gates its static OTP on NODE_ENV', () => {
-    const src = srcOf('modules/taxi/user/services/userOtpService.js');
-    const fn = src.indexOf('const resolveUserOtpForPhone');
-    const gate = src.indexOf("process.env.NODE_ENV !== 'production'", fn);
-    const useStatic = src.indexOf('isStatic: true', fn);
-    assert.ok(gate !== -1, 'the production gate is gone');
-    assert.ok(useStatic > gate, 'the static-OTP return escaped the gate');
+check('the taxi sign-in flows gate their static OTP on devOtpEnabled()', () => {
+    for (const [rel, fnName] of [
+        ['modules/taxi/user/services/userOtpService.js', 'const resolveUserOtpForPhone'],
+        ['modules/taxi/driver/services/loginOtpService.js', 'const resolveDriverLoginOtpForPhone'],
+        ['modules/taxi/driver/services/onboardingService.js', 'const resolveDriverOnboardingOtpForPhone'],
+    ]) {
+        const src = srcOf(rel);
+        const fn = src.indexOf(fnName);
+        const gate = src.indexOf('devOtpEnabled()', fn);
+        const useStatic = src.indexOf('isStatic: true', fn);
+        assert.ok(fn !== -1 && gate !== -1, `${rel}: the opt-in gate is gone`);
+        assert.ok(useStatic > gate, `${rel}: the static-OTP return escaped the gate`);
+        assert.ok(!/'0000'/.test(src), `${rel}: a hard-coded test code is back`);
+        assert.ok(!/console\.log\([^)]*OTP for/.test(src), `${rel}: logs the OTP`);
+    }
 });
 
-check('no OTP value is logged unconditionally', () => {
+check('no OTP value is logged by the core OTP service', () => {
     const src = srcOf('core/otp/otp.service.js');
-    const debug = src.indexOf('[OTP DEBUG] Generated OTP');
-    assert.ok(debug !== -1, 'expected the debug log to still exist for development');
-    const gate = src.lastIndexOf("config.nodeEnv !== 'production'", debug);
-    assert.ok(gate !== -1 && gate < debug, 'the OTP is logged outside a development gate');
+    assert.ok(!/(logger\.\w+|console\.log)\([^\n]*\$\{otp\}/.test(src), 'an OTP value is logged');
+});
+
+check('devOtpEnabled needs USE_DEFAULT_OTP AND a non-production NODE_ENV', () => {
+    const probe = `const { devOtpEnabled } = await import('./src/core/otp/devOtp.js'); console.log('RESULT:' + devOtpEnabled());`;
+    const run = (env) => runNode(probe, env).out.match(/RESULT:(true|false)/)?.[1];
+    assert.equal(run({ NODE_ENV: 'development' }), 'false', 'on by default in development');
+    assert.equal(run({ NODE_ENV: '' }), 'false', 'on when NODE_ENV is unset');
+    assert.equal(run({ NODE_ENV: 'development', USE_DEFAULT_OTP: 'true' }), 'true', 'opt-in does not work');
 });
 
 check('the razorpay mock bypass is not reachable via useDefaultOtp', () => {

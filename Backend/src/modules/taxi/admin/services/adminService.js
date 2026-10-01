@@ -3224,11 +3224,8 @@ export const forgotPassword = async (email) => {
     `,
   });
 
-  // Development only: a reset code in the production log is a way into the admin
-  // panel for anyone who can read the logs.
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`[ADMIN FORGOT PASSWORD] OTP for ${email}: ${otp}`);
-  }
+  // The reset code is never logged: it is a way into the admin panel for anyone
+  // who can read the logs, and NODE_ENV defaults to development when unset.
 
   return { message: 'OTP sent to your email' };
 };

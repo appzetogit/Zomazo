@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { devOtpEnabled } from "../otp/devOtp.js";
 import ms from "ms";
 import { FoodUser } from "../users/user.model.js";
 import { FoodAdmin } from "../admin/admin.model.js";
@@ -66,8 +67,7 @@ export const requestUserOtp = async (phone) => {
 
   const existingUser = await FoodUser.findOne({ phone }).select("_id name").lean();
   const otp = await createOrUpdateOtp(phone, "user");
-  const shouldExposeOtp =
-    config.nodeEnv !== "production" || config.useDefaultOtp;
+  const shouldExposeOtp = devOtpEnabled();
   return {
     ...(shouldExposeOtp ? { otp } : {}),
     isExistingUser: Boolean(existingUser?._id),
@@ -360,8 +360,7 @@ export const requestRestaurantOtp = async (phone) => {
   }
   const otp = await createOrUpdateOtp(phone, "restaurant");
   // Only expose OTP in response when in default/dev mode — never in production with real SMS
-  const shouldExposeOtp =
-    config.nodeEnv !== "production" || config.useDefaultOtp;
+  const shouldExposeOtp = devOtpEnabled();
   return shouldExposeOtp ? { otp } : {};
 };
 
@@ -485,8 +484,7 @@ export const requestDeliveryOtp = async (phone) => {
   }
   const otp = await createOrUpdateOtp(phone, "delivery");
   // Only expose OTP in response when in default/dev mode — never in production with real SMS
-  const shouldExposeOtp =
-    config.nodeEnv !== "production" || config.useDefaultOtp;
+  const shouldExposeOtp = devOtpEnabled();
   return shouldExposeOtp ? { otp } : {};
 };
 
@@ -915,10 +913,6 @@ export const requestAdminForgotPasswordOtp = async (email) => {
     { upsert: true, new: true },
   );
 
-  // A reset code in the log is a credential; development only.
-  if (staticAdminOtp) {
-    logger.info(`Admin reset OTP for ${normalizedEmail}: ${otp}`);
-  }
 
   const sent = await sendAdminResetOtpEmail(normalizedEmail, otp);
   if (!sent && !staticAdminOtp) {

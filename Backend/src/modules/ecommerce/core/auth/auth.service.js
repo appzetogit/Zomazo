@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { devOtpEnabled } from "../../../../core/otp/devOtp.js";
 import ms from "ms";
 import { User } from "../users/user.model.js";
 import { resolveShopCustomerId, shopCustomerForPhone } from "../../../../core/identity/shopCustomer.js";
@@ -139,8 +140,7 @@ export const requestUserOtp = async (phone) => {
   }
 
   const otp = await createOrUpdateOtp(phone);
-  const shouldExposeOtp =
-    config.nodeEnv !== "production" || config.useDefaultOtp;
+  const shouldExposeOtp = devOtpEnabled();
   return shouldExposeOtp ? { otp } : {};
 };
 
@@ -368,7 +368,7 @@ export const requestSellerOtp = async (phone) => {
   // it in production whenever USE_DEFAULT_OTP was on -- the coupling the
   // platform removed (tests/security.bypass.smoke.mjs): one stray env flag on a
   // live box and every seller's code is in the HTTP response.
-  return config.nodeEnv !== "production" ? { otp } : {};
+  return devOtpEnabled() ? { otp } : {};
 };
 
 export const verifySellerOtpAndLogin = async (phone, otp, fcmToken, platform) => {
@@ -488,8 +488,7 @@ export const requestDeliveryOtp = async (phone) => {
   }
   const otp = await createOrUpdateOtp(phone);
   // Only expose OTP in response when in default/dev mode — never in production with real SMS
-  const shouldExposeOtp =
-    config.nodeEnv !== "production" || config.useDefaultOtp;
+  const shouldExposeOtp = devOtpEnabled();
   return shouldExposeOtp ? { otp } : {};
 };
 
@@ -893,10 +892,6 @@ export const requestAdminForgotPasswordOtp = async (email) => {
     { upsert: true, new: true },
   );
 
-  // A reset code in the log is a credential; development only.
-  if (staticAdminOtp) {
-    logger.info(`Admin reset OTP for ${normalizedEmail}: ${otp}`);
-  }
 
   const sent = await sendAdminResetOtpEmail(normalizedEmail, otp);
   if (!sent && !staticAdminOtp) {

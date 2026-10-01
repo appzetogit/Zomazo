@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { devOtpEnabled } from '../../../../core/otp/devOtp.js';
 import { rejectWrongOtp, resetOtpAttempts } from '../../services/otpAttempts.js';
 import { ApiError } from '../../../../utils/ApiError.js';
 import { env } from '../../../../config/env.js';
@@ -240,31 +241,29 @@ const getRequiredVehicleFieldMap = async (role) => {
     }, {});
 };
 
-const generateOtp = () => String(Math.floor(1000 + Math.random() * 9000));
+const generateOtp = () => String(crypto.randomInt(1000, 10000));
 
 const hashOtp = (otp) => crypto.createHash('sha256').update(String(otp)).digest('hex');
-const isTruthy = (value) => ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
 const getStaticDriverOtpConfig = () => ({
   phone: normalizePhone(env.sms?.staticOtpPhone || ''),
   otp: String(env.sms?.staticOtpCode || '').trim(),
 });
+// A known code instead of a random one is a sign-in bypass for whoever knows it,
+// so it needs the explicit development opt-in (core/otp/devOtp.js), never just a
+// non-production NODE_ENV: env.js defaults NODE_ENV to development, which made
+// the hard-coded test phones that used to live here ('0000') live on any server
+// started without it. A test phone now has to be named in STATIC_OTP_PHONE.
 const resolveDriverOnboardingOtpForPhone = (phone) => {
   const normalizedPhone = normalizePhone(phone);
   const staticOtpConfig = getStaticDriverOtpConfig();
-  const defaultOtpEnabled = isTruthy(env.sms?.useDefaultOtp);
 
-  if (defaultOtpEnabled && staticOtpConfig.otp) {
-    return {
-      otp: staticOtpConfig.otp,
-      isStatic: true,
-    };
-  }
-
-  if (staticOtpConfig.phone && staticOtpConfig.otp && normalizedPhone === staticOtpConfig.phone) {
-    return {
-      otp: staticOtpConfig.otp,
-      isStatic: true,
-    };
+  if (devOtpEnabled() && staticOtpConfig.otp) {
+    if (!staticOtpConfig.phone || normalizedPhone === staticOtpConfig.phone) {
+      return {
+        otp: staticOtpConfig.otp,
+        isStatic: true,
+      };
+    }
   }
 
   return {
@@ -573,11 +572,8 @@ export const startDriverOnboarding = async ({ phone, role = 'driver' }) => {
       otp,
       purpose: 'driver onboarding OTP',
     });
-  const debugOtp = process.env.NODE_ENV !== 'production' ? otp : null;
-
-  if (debugOtp) {
-    console.log(`[onboardingService] OTP for ${normalizedPhone} = ${debugOtp} (${smsDispatch.mode})`);
-  }
+  // The code goes back in the response only with the development opt-in.
+  const debugOtp = devOtpEnabled() ? otp : null;
 
   return {
     message: smsDispatch.mode === 'live' ? 'OTP sent successfully' : 'OTP generated successfully',

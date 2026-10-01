@@ -102,11 +102,6 @@ const sendOTP = async (req, res) => {
     // 4. Send OTP via SMS
     const smsResult = await sendSMSOTP(phone, otp);
 
-    // Log OTP in development mode
-    if (process.env.NODE_ENV === 'development' || process.env.USE_DEFAULT_OTP === 'true') {
-      console.log(`[DEV] Vendor OTP for ${phone}: ${otp}`);
-    }
-
     if (!smsResult.success) {
       console.warn(`[OTP] SMS failed for vendor ${phone}, but OTP stored`);
     }

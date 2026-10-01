@@ -89,11 +89,6 @@ const sendOTP = async (req, res) => {
     // 4. Send OTP via SMS
     const smsResult = await sendSMSOTP(phone, otp);
 
-    // Log OTP in development mode only (NEVER in production)
-    if (process.env.NODE_ENV === 'development' || process.env.USE_DEFAULT_OTP === 'true') {
-      console.log(`[DEV] OTP for ${phone}: ${otp}`);
-    }
-
     // 5. Email copy -- only to the address already on this phone's account.
     // The request's email used to be trusted as-is, so anyone could have the
     // code for a victim's phone mailed to themselves and sign in as them (the

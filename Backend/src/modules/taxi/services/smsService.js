@@ -1,3 +1,4 @@
+import { devOtpEnabled } from '../../../core/otp/devOtp.js';
 import { env } from '../../../config/env.js';
 import { smsCredentials } from '../../../core/settings/platformProfile.service.js';
 import { managedBrand } from '../../../core/settings/platformProfile.service.js';
@@ -9,7 +10,6 @@ const DLT_TEMPLATE_TEXT =
   'Welcome to ##var## Powered by IIDMTB. Use OTP ##var## to verify your login.';
 const DEFAULT_BRAND_NAME = 'App';
 
-const isTruthy = (value) => ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
 
 const readValue = (...values) => {
   for (const value of values) {
@@ -112,7 +112,8 @@ const logSmsPayloadDebug = (payload) => {
 
   const debugPayload = {};
   for (const [key, value] of payload.entries()) {
-    debugPayload[key] = ['password'].includes(key) ? maskSecret(value) : value;
+    // `text` is the message, which carries the OTP.
+    debugPayload[key] = ['password', 'APIKey', 'text'].includes(key) ? maskSecret(value) : value;
   }
 
   console.log('[smsService] final payload before request =', debugPayload);
@@ -213,7 +214,8 @@ const buildSmsPayload = ({ phone, otp, appName, authMode = 'apiKey' }) => {
 };
 
 export const sendOtpSms = async ({ phone, otp, purpose = 'otp' }) => {
-  if (isTruthy(env.sms.useDefaultOtp)) {
+  // Same switch that hands out the known code; production always sends.
+  if (devOtpEnabled()) {
     return {
       mode: 'debug',
       message: 'Default OTP mode enabled',
@@ -265,7 +267,7 @@ export const sendOtpSms = async ({ phone, otp, purpose = 'otp' }) => {
 
     if (isAuthParsingError(primaryResponse, primaryResponseText)) {
       if (process.env.NODE_ENV !== 'production') {
-        console.log('[smsService] retrying with POST query-string fallback =', queryRequestUrl.replace(/password=[^&]+/, `password=${maskSecret(payload.get('password'))}`));
+        console.log('[smsService] retrying with POST query-string fallback =', SMS_INDIA_HUB_ENDPOINT);
       }
 
       const fallbackResponse = await fetch(queryRequestUrl, {
@@ -292,7 +294,7 @@ export const sendOtpSms = async ({ phone, otp, purpose = 'otp' }) => {
         if (process.env.NODE_ENV !== 'production') {
           console.log(
             '[smsService] retrying with GET query-string fallback =',
-            queryRequestUrl.replace(/password=[^&]+/, `password=${maskSecret(payload.get('password'))}`),
+            SMS_INDIA_HUB_ENDPOINT,
           );
         }
 

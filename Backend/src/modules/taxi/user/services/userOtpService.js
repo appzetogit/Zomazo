@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { devOtpEnabled } from '../../../../core/otp/devOtp.js';
 import { ApiError } from '../../../../utils/ApiError.js';
 import { env } from '../../../../config/env.js';
 import { UserAuthSession } from '../models/UserAuthSession.js';
@@ -23,36 +24,26 @@ export const validateUserPhone = (phone) => {
   }
 };
 
-const generateOtp = () => String(Math.floor(1000 + Math.random() * 9000));
+const generateOtp = () => String(crypto.randomInt(1000, 10000));
 
 const hashOtp = (otp) => crypto.createHash('sha256').update(String(otp)).digest('hex');
-const getVisibleOtp = (otp) => (process.env.NODE_ENV !== 'production' ? String(otp) : null);
-const isTruthy = (value) => ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
-const TEST_LOGIN_OTP_PHONE = '7610416911';
-const TEST_LOGIN_OTP_CODE = '0000';
+// The code goes back in the response only with the development opt-in.
+const getVisibleOtp = (otp) => (devOtpEnabled() ? String(otp) : null);
 const getStaticUserOtpConfig = () => ({
-  phone: normalizeUserPhone(env.sms?.staticOtpPhone || TEST_LOGIN_OTP_PHONE),
-  otp: String(env.sms?.staticOtpCode || TEST_LOGIN_OTP_CODE).trim(),
+  phone: normalizeUserPhone(env.sms?.staticOtpPhone || ''),
+  otp: String(env.sms?.staticOtpCode || '').trim(),
 });
+// A known code instead of a random one is a sign-in bypass for whoever knows it,
+// so it needs the explicit development opt-in (core/otp/devOtp.js), never just a
+// non-production NODE_ENV: env.js defaults NODE_ENV to development, which made
+// the hard-coded test phones that used to live here ('0000') live on any server
+// started without it. A test phone now has to be named in STATIC_OTP_PHONE.
 const resolveUserOtpForPhone = (phone) => {
   const normalizedPhone = normalizeUserPhone(phone);
   const staticOtpConfig = getStaticUserOtpConfig();
-  const defaultOtpEnabled = isTruthy(env.sms?.useDefaultOtp);
 
-  // Both shortcuts below hand out a KNOWN code instead of a random one, so either is a
-  // sign-in bypass for whoever knows it. Neither was gated before, which meant the
-  // TEST_LOGIN_OTP_PHONE / TEST_LOGIN_OTP_CODE fallbacks above ('7610416911' / '0000')
-  // applied on the live system whenever STATIC_OTP_PHONE was left unset -- and it is
-  // unset by default. Production always gets a random OTP now.
-  if (process.env.NODE_ENV !== 'production') {
-    if (defaultOtpEnabled && staticOtpConfig.otp) {
-      return {
-        otp: staticOtpConfig.otp,
-        isStatic: true,
-      };
-    }
-
-    if (staticOtpConfig.phone && staticOtpConfig.otp && normalizedPhone === staticOtpConfig.phone) {
+  if (devOtpEnabled() && staticOtpConfig.otp) {
+    if (!staticOtpConfig.phone || normalizedPhone === staticOtpConfig.phone) {
       return {
         otp: staticOtpConfig.otp,
         isStatic: true,
@@ -153,10 +144,6 @@ export const startUserOtp = async ({ phone }) => {
         purpose: 'user OTP',
       });
   const debugOtp = getVisibleOtp(otp);
-
-  if (debugOtp) {
-    console.log(`[userOtpService] OTP for ${normalizedPhone} = ${debugOtp} (${smsDispatch.mode})`);
-  }
 
   return {
     message: smsDispatch.mode === 'live' ? 'OTP sent successfully' : 'OTP generated successfully',

@@ -11,6 +11,8 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
 process.env.NODE_ENV = 'test';
+// Sign-in codes come back in the response only with the development opt-in.
+process.env.USE_DEFAULT_OTP = 'true';
 process.env.MONGOMS_STARTUP_TIMEOUT ||= '180000';
 
 let failed = 0;
