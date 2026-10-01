@@ -268,6 +268,10 @@ export const verifyWalletTopupPayment = async (userId, payload) => {
         { guard: { 'transactions.razorpayOrderId': { $ne: orderId } } }
     );
 
+    // Admin > Wallet Bonus, once per Razorpay order (its own wallet row).
+    const { applyTopupBonus } = await import('../../../../../../core/promotions/walletBonus.service.js');
+    await applyTopupBonus({ customerId: oid, topupAmount: amount, reference: orderId, service: 'ecommerce' });
+
     return { wallet: await getUserWallet(userId) };
 };
 

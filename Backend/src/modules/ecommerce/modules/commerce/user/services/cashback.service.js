@@ -60,6 +60,19 @@ export const awardOrderCashback = async (orderId) => {
             return { awarded: false, reason: 'not_delivered' };
         }
 
+        // Loyalty points and the platform's cashback offers (admin > Cashback),
+        // paid into the one wallet. This service's own older cashback settings
+        // below only pay when no platform offer applies to the order.
+        const { rewardCompletedOrder } = await import('../../../../../../core/promotions/orderRewards.js');
+        const platform = await rewardCompletedOrder({
+            service: 'ecommerce',
+            customerId: order.userId,
+            orderId: order._id,
+            orderDisplayId: order.order_id,
+            amount: order.pricing?.subtotal
+        });
+        if (platform.cashback.reason !== 'no_offer') return platform.cashback;
+
         const settings = await getActiveCashbackSettings();
         if (!settings.isEnabled) return { awarded: false, reason: 'disabled' };
 
@@ -130,6 +143,9 @@ const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 export const reverseOrderCashback = async (orderId, { refundedAmount, orderTotal, key }) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(String(orderId))) return { reversed: 0 };
+        // The loyalty points the order earned go back with it, by the same share.
+        const { reverseOrderRewards } = await import('../../../../../../core/promotions/orderRewards.js');
+        await reverseOrderRewards({ service: 'ecommerce', orderId, refundedAmount, orderTotal, key });
         const order = await Order.findById(orderId).select('_id userId order_id').lean();
         if (!order?.userId) return { reversed: 0 };
         const wallet = await UserWallet.findOne({ userId: order.userId }).lean();

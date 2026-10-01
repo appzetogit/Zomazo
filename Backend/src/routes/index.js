@@ -50,6 +50,8 @@ import homeContentRoutes from '../core/cms/homeContent.routes.js';
 import commissionOverviewRoutes from '../core/finance/commissionOverview.routes.js';
 import myOrdersRoutes from '../core/orders/myOrders.routes.js';
 import customerSupportRoutes from '../core/support/customerSupport.routes.js';
+import rewardsRoutes from '../core/promotions/rewards.routes.js';
+import loyaltyRoutes from '../core/loyalty/loyalty.routes.js';
 import { getPublicAppLegal } from '../core/settings/appLegal.js';
 import { adminZoneScope } from '../core/admin/adminZoneScope.js';
 import { refuseRestrictedAdminWrites } from '../core/admin/enforceAdminAccess.middleware.js';
@@ -127,6 +129,8 @@ router.use('/v1/platform/admins', platformAdminRoutes);
 router.use('/v1/platform/support', supportInboxRoutes);
 // Every service's coupons in one list (Master > Coupons).
 router.use('/v1/platform/coupons', couponListRoutes);
+// Cashback offers, wallet bonuses and loyalty points, paid into the one wallet.
+router.use('/v1/platform/rewards', rewardsRoutes);
 // What the platform kept, across every service (Master > Platform Earnings).
 router.use('/v1/platform/pnl', platformPnlRoutes);
 // Every home-screen banner in one list (Master > Home Screen Banners).
@@ -139,6 +143,8 @@ router.use('/v1/platform/partner', partnerHandoffRoutes);
 router.use('/v1/platform/me', authMiddleware, requireRoles('USER'), myOrdersRoutes);
 // The customer's help centre: tickets about any service (core/support).
 router.use('/v1/platform/me/support', authMiddleware, requireRoles('USER'), customerSupportRoutes);
+// The customer's loyalty points, earned in every service (core/loyalty).
+router.use('/v1/platform/me/loyalty', authMiddleware, requireRoles('USER'), loyaltyRoutes);
 // Terms and privacy for one app, public (shown before sign-in).
 router.get('/v1/platform/legal/:app/:kind', getPublicAppLegal);
 
