@@ -324,10 +324,20 @@ const startServer = async () => {
             // scheduler has no competing instance. Tying it to the same switch
             // meant SP dispatch was collateral damage: no wave promotion, no
             // notifiedWorkers, and no realtime alert to any vendor or worker.
-            if (process.env.SP_SCHEDULER_ENABLED !== 'false') {
+            //
+            // Each wave promotion is now a conditional claim in the database
+            // (bookingScheduler.js), so two instances cannot both promote or alert,
+            // and the scheduler follows BACKGROUND_JOBS_ENABLED like the other
+            // sweeps. An instance that has the SP module but leaves background jobs
+            // off (to avoid doubling the food/taxi sweeps) must set
+            // SP_SCHEDULER_ENABLED=true, or SP dispatch stops there.
+            const spFlag = process.env.SP_SCHEDULER_ENABLED;
+            if (spFlag === 'false') {
+                logger.warn('SP_SCHEDULER_ENABLED=false — SP wave alerting is OFF; partners will only see work by polling');
+            } else if (config.backgroundJobsEnabled || spFlag === 'true') {
                 startSPScheduler();
             } else {
-                logger.warn('SP_SCHEDULER_ENABLED=false — SP wave alerting is OFF; partners will only see work by polling');
+                logger.warn('BACKGROUND_JOBS_ENABLED=false — SP wave alerting is OFF here; set SP_SCHEDULER_ENABLED=true to run it on this instance');
             }
 
             // Master ledger nightly reconciliation. Its own flag, off by default, and

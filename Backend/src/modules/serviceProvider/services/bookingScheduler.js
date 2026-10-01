@@ -216,10 +216,26 @@ class BookingScheduler {
             const notifyIds = partnersToNotify.map(p => p.vendorId || p.workerId);
             const notifiedField = bookingModel === 'worker' ? 'notifiedWorkers' : 'notifiedVendors';
 
-            await Booking.findByIdAndUpdate(booking._id, {
-              $set: { currentWave: nextWave, waveStartedAt: new Date() },
-              $addToSet: { [notifiedField]: { $each: notifyIds } }
-            });
+            // Claim the promotion: only if the booking is still in the wave this tick
+            // read, started at the time it read, and still unassigned. Two instances
+            // (or two overlapping ticks) used to both promote and both alert the
+            // same partners; now the second one matches nothing and stops here.
+            const claimed = await Booking.findOneAndUpdate(
+              {
+                _id: booking._id,
+                currentWave: booking.currentWave == null ? { $in: [null, 1] } : booking.currentWave,
+                waveStartedAt: booking.waveStartedAt,
+                status: { $in: [BOOKING_STATUS.SEARCHING, BOOKING_STATUS.CONFIRMED] },
+                vendorId: null,
+                workerId: null
+              },
+              {
+                $set: { currentWave: nextWave, waveStartedAt: new Date() },
+                $addToSet: { [notifiedField]: { $each: notifyIds } }
+              },
+              { new: true, projection: { _id: 1 } }
+            );
+            if (!claimed) return;
 
             if (partnersToNotify.length === 0) {
               console.log(`[BookingScheduler] Booking ${booking.bookingNumber}: Wave ${nextWave} all offline, advancing quietly`);
