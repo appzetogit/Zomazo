@@ -247,9 +247,16 @@ const startServer = async () => {
                 return res.status(500).send('Deploy webhook secret is not configured.');
             }
 
+            // Over the raw request bytes (captured in app.js), not JSON.stringify(req.body):
+            // the body has been through the sanitizers by now and re-serialising it does
+            // not reproduce what GitHub signed, so valid hooks failed and the check
+            // depended on key order rather than the payload.
+            if (!Buffer.isBuffer(req.rawBody)) {
+                return res.status(400).send('Missing body');
+            }
             const hash = 'sha256=' + crypto
                 .createHmac('sha256', secret)
-                .update(JSON.stringify(req.body))
+                .update(req.rawBody)
                 .digest('hex');
 
             // timingSafeEqual, not ===: a plain compare leaks how many leading bytes

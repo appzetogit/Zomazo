@@ -121,13 +121,22 @@ app.use(morgan('dev'));
 app.use(express.json({
     limit: config.requestJsonLimit,
     verify: (req, res, buf) => {
-        // ✅ Store rawBody for signature verification (Razorpay Webhooks)
-        if (req.originalUrl && req.originalUrl.includes('/webhook/razorpay')) {
+        // Store rawBody for signature verification (Razorpay webhooks, and the
+        // /api/deploy hook): the signature is over the bytes as sent, which a
+        // re-serialised req.body does not reproduce.
+        if (req.originalUrl && (req.originalUrl.includes('/webhook/razorpay') || req.originalUrl.split('?')[0] === '/api/deploy')) {
             req.rawBody = buf;
         }
     }
 }));
-app.use(express.urlencoded({ extended: true, limit: config.requestUrlencodedLimit }));
+app.use(express.urlencoded({
+    extended: true,
+    limit: config.requestUrlencodedLimit,
+    // GitHub can send the deploy hook form-encoded; same raw-body rule as above.
+    verify: (req, _res, buf) => {
+        if (req.originalUrl && req.originalUrl.split('?')[0] === '/api/deploy') req.rawBody = buf;
+    },
+}));
 
 // Protect against NoSQL injection and XSS
 app.use((req, _res, next) => {

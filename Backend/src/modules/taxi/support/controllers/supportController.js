@@ -19,6 +19,9 @@ const TYPE_SET = new Set(SUPPORT_TICKET_TYPES);
 const USER_TYPE_SET = new Set(SUPPORT_TICKET_USER_TYPES);
 
 const toText = (value) => String(value || '').trim();
+// Admin search text is matched literally: unescaped, '(a+)+$' or '.*' is a
+// regex the database has to run (slow patterns, or match-everything).
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const toLowerText = (value) => toText(value).toLowerCase();
 
 const toInt = (value, fallback) => {
@@ -451,7 +454,7 @@ export const adminSupportTicketStats = async (_req, res) => {
 export const adminListSupportTickets = async (req, res) => {
   const statusList = normalizeStatusFilter(req.query.status);
   const userType = toLowerText(req.query.userType);
-  const search = toText(req.query.search);
+  const search = escapeRegex(toText(req.query.search).slice(0, 100));
   const page = toInt(req.query.page, 1);
   const limit = toInt(req.query.limit, 20);
 

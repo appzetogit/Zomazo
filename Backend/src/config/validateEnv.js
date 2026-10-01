@@ -185,7 +185,14 @@ export const validateConfig = () => {
             }
         }
 
-        if (config.socketCorsOrigin === '*') {
+        // With neither variable set, env.js falls back to "*" and every origin is
+        // allowed, with credentials. That is never what a live server wants, and
+        // nobody chose it, so refuse to boot. An explicit "*" is a choice: warn.
+        const originsConfigured = [process.env.SOCKET_CORS_ORIGIN, process.env.FRONTEND_URL]
+            .some((v) => String(v || '').trim());
+        if (!originsConfigured) {
+            missing.push('SOCKET_CORS_ORIGIN or FRONTEND_URL (the allowed frontend origins; without them CORS accepts every origin)');
+        } else if (config.socketCorsOrigin === '*') {
             warnings.push('SOCKET_CORS_ORIGIN is "*" — restrict it to your frontend origin(s)');
         }
     }

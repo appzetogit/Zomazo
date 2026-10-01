@@ -50,6 +50,8 @@ const check = (name, fn) => {
 const BLANKED = {
     USE_DEFAULT_OTP: '',
     ALLOW_INSECURE_DEFAULT_OTP: '',
+    SOCKET_CORS_ORIGIN: '',
+    FRONTEND_URL: '',
     STATIC_OTP_PHONE: '',
     STATIC_OTP_CODE: '',
     DEFAULT_USER_PHONE: '',
@@ -148,10 +150,23 @@ check('a correct signature is still accepted', () => {
 
 console.log('\n[2] Environment validation refuses an unsafe production config');
 
+// Production needs its allowed origins; every boot below has them unless a check
+// says otherwise.
 const bootWith = (env) => runNode(
     "const m = await import('./src/config/validateEnv.js'); m.validateConfig(); console.log('BOOTED');",
-    env,
+    { FRONTEND_URL: 'https://app.example.com', ...env },
 );
+
+check('production with no CORS origins configured is fatal', () => {
+    const r = bootWith({ NODE_ENV: 'production', FRONTEND_URL: '' });
+    assert.equal(r.exited, true, `expected a non-zero exit, got:\n${r.out}`);
+    assert.match(r.out, /SOCKET_CORS_ORIGIN or FRONTEND_URL/);
+});
+
+check('development with no CORS origins still boots', () => {
+    const r = bootWith({ NODE_ENV: 'development', FRONTEND_URL: '' });
+    assert.equal(r.exited, false, `local dev must boot without origins, got:\n${r.out}`);
+});
 
 check('USE_DEFAULT_OTP=true in production is fatal', () => {
     const r = bootWith({ NODE_ENV: 'production', USE_DEFAULT_OTP: 'true' });
@@ -237,6 +252,18 @@ check('the taxi sign-in flows gate their static OTP on devOtpEnabled()', () => {
 check('no OTP value is logged by the core OTP service', () => {
     const src = srcOf('core/otp/otp.service.js');
     assert.ok(!/(logger\.\w+|console\.log)\([^\n]*\$\{otp\}/.test(src), 'an OTP value is logged');
+});
+
+check('the deploy webhook signs the raw body and compares in constant time', () => {
+    const src = stripComments(readFileSync(path.join(backendDir, 'server.js'), 'utf8'));
+    const route = src.indexOf("app.post('/api/deploy'");
+    assert.ok(route !== -1, 'the deploy route is gone');
+    const body = src.slice(route, src.indexOf('exec(', route));
+    assert.match(body, /\.update\(req\.rawBody\)/, 'HMAC is not over the raw body');
+    assert.doesNotMatch(body, /JSON\.stringify\(req\.body\)/, 'HMAC over re-serialised JSON is back');
+    assert.match(body, /timingSafeEqual/);
+    const app = srcOf('app.js');
+    assert.match(app, /'\/api\/deploy'/, 'app.js no longer captures the raw body for /api/deploy');
 });
 
 check('devOtpEnabled needs USE_DEFAULT_OTP AND a non-production NODE_ENV', () => {
