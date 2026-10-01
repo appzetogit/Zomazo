@@ -28,6 +28,7 @@ import {
     getRazorpayKeyId,
     isRazorpayConfigured,
     initiateRazorpayRefund,
+    findRazorpayRefundByKey,
     fetchRazorpayPayment
 } from '../helpers/razorpay.helper.js';
 import { getIO, rooms } from '../../../../config/socket.js';
@@ -3048,44 +3049,102 @@ export async function markOrderDeliveredAdmin(orderId, adminId, note = "") {
     return normalizeOrderForClient(order);
 }
 
-export async function processRefundAdmin(orderId, amount, adminId) {
+/**
+ * Admin refund on a paid order: full or partial, any number of times.
+ *
+ * The cap is what was paid minus everything already refunded -- by returns, by a
+ * cancellation, by earlier admin refunds -- which all add up on
+ * payment.refund.amount. Checking the order total alone let two admin refunds, or
+ * one after a return, pay out more than the order was worth.
+ *
+ * Claim, pay, record through core/orders/adminRefundClaim.js on order.adminRefund:
+ * one atomic claim so two clicks cannot both pay, a history row per refund, and a
+ * claim a crash left behind taken over after ten minutes, its payout looked up by
+ * key before anything is paid again.
+ */
+export async function processRefundAdmin(orderId, amount, adminId, reason = '') {
     const identity = buildOrderIdentityFilter(orderId);
-    let order = await Order.findOne(identity);
+    const order = await Order.findOne(identity).lean();
     if (!order) throw new NotFoundError("Order not found");
 
+    const paymentMethod = String(order.payment?.method || 'cash').toLowerCase();
+    if (paymentMethod === 'cash' || paymentMethod === 'cod') {
+        throw new ValidationError('Cash on Delivery orders do not require a refund');
+    }
     const currentPaymentStatus = String(order.payment?.status || "").toLowerCase();
-
-    if (currentPaymentStatus === "refunded") {
-        throw new ValidationError("Order is already refunded");
+    if (currentPaymentStatus !== 'paid' && currentPaymentStatus !== 'refunded') {
+        throw new ValidationError('Nothing has been paid on this order, so there is nothing to refund');
+    }
+    const paymentId = String(order.payment?.razorpay?.paymentId || '').trim();
+    if (paymentMethod === 'razorpay' && !paymentId) {
+        throw new ValidationError('This online payment has no Razorpay payment id, so it cannot be refunded');
+    }
+    if (paymentMethod !== 'razorpay' && paymentMethod !== 'wallet') {
+        throw new ValidationError(`Refunds are not supported for ${paymentMethod} payments`);
     }
 
-    const refundAmount = Number(amount) || order.pricing?.total || 0;
-    if (refundAmount <= 0) throw new ValidationError("Invalid refund amount");
-    const orderTotal = Number(order.pricing?.total) || 0;
-    if (orderTotal > 0 && refundAmount > orderTotal + 0.01) {
-        throw new ValidationError(`Refund cannot exceed the order total of ₹${orderTotal}`);
-    }
-
-    const refundResult = await applyCancellationRefund(order, {
-        cancelledBy: 'admin',
-        refundAmount,
+    const toPaise = (rupees) => Math.round((Number(rupees) || 0) * 100);
+    const note = String(reason || '').trim() || 'Admin refund';
+    const { runAdminRefund } = await import('../../../../../../core/orders/adminRefundClaim.js');
+    const { UserWallet } = await import('../../user/models/userWallet.model.js');
+    const { entry, full } = await runAdminRefund({
+        Model: Order,
+        docId: order._id,
+        paths: {
+            status: 'adminRefund.status',
+            counter: 'adminRefund.refundedPaise',
+            claim: 'adminRefund.claim',
+            history: 'adminRefund.history',
+        },
+        paidPaise: toPaise(order.pricing?.total),
+        seedPaise: () => 0,
+        // Refunded by returns and cancellations: payment.refund.amount less the
+        // admin refunds already added to it. A full cancellation refund may predate
+        // the running amount, so a payment marked refunded counts as all of it.
+        othersPaise: (doc) => {
+            const refund = doc.payment?.refund || {};
+            const recorded = (doc.adminRefund?.history || []).reduce((s, h) => s + toPaise(h.amount), 0);
+            const total = String(doc.payment?.status) === 'refunded' && !recorded
+                ? toPaise(doc.pricing?.total)
+                : (refund.status === 'processed' ? toPaise(refund.amount) : 0);
+            return Math.max(0, total - recorded);
+        },
+        amount,
+        meta: { method: paymentMethod, reason: note, byAdminId: String(adminId || '') },
+        pay: async ({ rupees, key }) => {
+            if (paymentMethod === 'razorpay') {
+                const result = await initiateRazorpayRefund(paymentId, rupees, { key, reason: note });
+                if (!result?.success) throw new Error(result?.error || 'gateway refused the refund');
+                return { refundId: String(result.refundId || '') };
+            }
+            await userWalletService.refundWalletBalance(
+                order.userId,
+                rupees,
+                `Refund for order #${order.order_id || order._id}`,
+                { orderId: order._id, source: 'admin_refund', byAdminId: String(adminId || ''), claimKey: key }
+            );
+            return {};
+        },
+        findPaid: async (claim) => {
+            if (paymentMethod === 'razorpay') return findRazorpayRefundByKey(paymentId, claim.key);
+            const hit = await UserWallet.exists({ userId: order.userId, 'transactions.metadata.claimKey': claim.key });
+            return hit ? {} : null;
+        },
+        recordSet: ({ full: isFull, refundId: rid }) => ({
+            'payment.refund.status': 'processed',
+            'payment.refund.method': 'original',
+            'payment.refund.processedAt': new Date(),
+            ...(rid ? { 'payment.refund.refundId': rid } : {}),
+            ...(isFull ? { 'payment.status': 'refunded' } : {}),
+        }),
+        recordInc: (claim) => ({ 'payment.refund.amount': (Number(claim.amountPaise) || 0) / 100 }),
     });
-
-    if (!refundResult.processed) {
-        if (order.isModified()) {
-            await order.save();
-        }
-        if (refundResult.reason === 'cash_payment') {
-            throw new ValidationError('Cash on Delivery orders do not require a refund');
-        }
-        throw new Error('Refund processing failed');
-    }
-
-    await order.save();
+    const refundAmount = entry.amount;
 
     try {
         await orderTransactionService.updateTransactionStatus(order._id, order.orderStatus, {
-            status: 'refunded',
+            // A partial refund leaves the payment captured; only the last one marks it refunded.
+            status: full ? 'refunded' : undefined,
             note: `Refund of ₹${refundAmount} processed by admin`,
             recordedByRole: 'ADMIN',
             recordedById: adminId
@@ -3094,7 +3153,8 @@ export async function processRefundAdmin(orderId, amount, adminId) {
         logger.warn(`Admin refund transaction sync failed: ${err?.message || err}`);
     }
 
-    return { success: true, order: normalizeOrderForClient(order) };
+    const updated = await Order.findById(order._id);
+    return { success: true, order: normalizeOrderForClient(updated), refund: entry };
 }
 
 export async function createOrderShipmentSeller(orderId, sellerId) {

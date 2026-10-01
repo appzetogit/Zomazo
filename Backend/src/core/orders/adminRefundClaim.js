@@ -39,7 +39,10 @@ export const refundError = (message, statusCode) => Object.assign(new Error(mess
  * @param {object} o.meta                         { method, reason, byAdminId } kept on claim + history
  * @param {(p: {rupees: number, key: string}) => Promise<{refundId?: string}>} o.pay
  * @param {(claim) => Promise<{refundId?: string}|null>} o.findPaid  a payout made under claim.key, or null
+ * @param {(doc) => number} [o.othersPaise]     refunded outside this engine and not on the counter
+ *   (the Shop's returns), read fresh on every run and counted against the cap
  * @param {(p: {full: boolean, totalPaise: number, refundId: string}) => object} [o.recordSet] extra $set on record
+ * @param {(claim) => object} [o.recordInc]      extra $inc on record
  * @param {object} [o.labels]                     { left: (leftPaise, paidPaise) => string } wording
  * @param {number} [o.now]                        clock, for tests
  * @returns {Promise<{entry, alreadyPaise, totalPaise, full, recovered}>}
@@ -59,7 +62,8 @@ export async function runAdminRefund(o) {
 
   const prevStatus = get(doc, paths.status) || 'none';
   const rawCounter = Number.isFinite(get(doc, paths.counter)) ? get(doc, paths.counter) : null;
-  const alreadyPaise = rawCounter ?? (Number(await o.seedPaise?.(doc)) || 0);
+  const counterPaise = rawCounter ?? (Number(await o.seedPaise?.(doc)) || 0);
+  const alreadyPaise = counterPaise + (Number(o.othersPaise?.(doc)) || 0);
   const leftPaise = paidPaise - alreadyPaise;
   if (leftPaise <= 0) throw refundError('Everything paid has already been refunded', 400);
 
@@ -82,7 +86,7 @@ export async function runAdminRefund(o) {
       [paths.status]: prevStatus === 'none' ? { $in: [null, 'none'] } : prevStatus,
       [paths.counter]: rawCounter,
     },
-    { $set: { [paths.status]: 'pending', [paths.counter]: totalPaise, [paths.claim]: claim } },
+    { $set: { [paths.status]: 'pending', [paths.counter]: counterPaise + wantedPaise, [paths.claim]: claim } },
     { new: true },
   );
   if (!claimed) throw refundError('Another refund is in progress or just finished. Refresh and try again.', 409);
@@ -120,6 +124,7 @@ async function record(o, id, claim, { refundId, full, totalPaise }) {
     { _id: id, [`${paths.claim}.key`]: claim.key },
     {
       $set: { [paths.status]: 'processed', ...(o.recordSet?.({ full, totalPaise, refundId: entry.refundId }) || {}) },
+      ...(o.recordInc ? { $inc: o.recordInc(claim) } : {}),
       $unset: { [paths.claim]: 1 },
       $push: { [paths.history]: entry },
     },
@@ -156,8 +161,8 @@ async function recoverStaleClaim(o, doc, now) {
 
   const paid = await o.findPaid(claim);
   if (paid) {
-    const full = counter >= o.paidPaise;
-    await record(o, doc._id, claim, { refundId: paid.refundId || '', full, totalPaise: counter });
+    const total = counter + (Number(o.othersPaise?.(takenOver)) || 0);
+    await record(o, doc._id, claim, { refundId: paid.refundId || '', full: total >= o.paidPaise, totalPaise: total });
     return { claimKey: claim.key, outcome: 'recorded' };
   }
   await Model.updateOne(

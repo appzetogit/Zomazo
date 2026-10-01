@@ -243,6 +243,30 @@ const deliveryVerificationSchema = new mongoose.Schema(
 
 const orderSchema = new mongoose.Schema(
     {
+        /*
+         * Admin refunds (order.service.js processRefundAdmin), kept apart from
+         * payment.refund because the cancellation and return paths replace that
+         * object wholesale. refundedPaise counts admin refunds only; each one is
+         * also added to payment.refund.amount, so every path sees the total.
+         */
+        adminRefund: {
+            status: { type: String, enum: ['none', 'pending', 'processed'], default: undefined },
+            refundedPaise: { type: Number, min: 0 },
+            claim: { type: mongoose.Schema.Types.Mixed },
+            history: {
+                type: [{
+                    _id: false,
+                    amount: { type: Number, required: true },
+                    method: { type: String, default: '' },
+                    refundId: { type: String, default: '' },
+                    reason: { type: String, default: '' },
+                    byAdminId: { type: String, default: '' },
+                    claimKey: { type: String, default: '' },
+                    at: { type: Date, default: Date.now }
+                }],
+                default: undefined
+            }
+        },
         order_id: {
             type: String,
             unique: true,
