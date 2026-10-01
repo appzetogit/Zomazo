@@ -1,3 +1,4 @@
+import { recordAdminReply } from '../../../../core/support/supportThread.js';
 import mongoose from 'mongoose';
 import { referralSettingsFor } from '../../../../core/referral/referralSettings.service.js';
 import { zoneMatchFrom } from '../../../../core/admin/adminZoneScope.js';
@@ -1510,6 +1511,8 @@ export async function updateSupportTicket(id, body = {}) {
     }
     if (!Object.keys(set).length) return null;
     const model = source === 'restaurant' ? FoodRestaurantSupportTicket : FoodSupportTicket;
+    // Into the ticket's conversation first, whichever screen answered (core/support/supportThread.js).
+    await recordAdminReply(`food_${source === 'restaurant' ? 'restaurant' : 'customer'}`, model, id, set.adminResponse, body.author);
     const updated = await model.findByIdAndUpdate(id, { $set: set }, { new: true }).lean();
     return updated || null;
 }
@@ -4214,6 +4217,8 @@ export async function updateDeliverySupportTicket(id, body = {}) {
     const ticket = await DeliverySupportTicket.findById(id);
     if (!ticket) return null;
     const { status, adminResponse } = body || {};
+    // Into the ticket's conversation first, whichever screen answered (core/support/supportThread.js).
+    await recordAdminReply('food_rider', DeliverySupportTicket, id, adminResponse, body?.author);
     if (status !== undefined) {
         const allowed = ['open', 'in_progress', 'resolved', 'closed'];
         if (allowed.includes(String(status))) ticket.status = String(status);

@@ -3,7 +3,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { decideAdminAccess } from '../admin/adminAccessPolicy.js';
 import { isModuleEnabled } from '../modules/moduleState.service.js';
 import { MODULES } from '../modules/moduleRegistry.js';
-import { threadFor, appendMessage } from './supportThread.js';
+import { threadFor } from './supportThread.js';
 
 /**
  * One support inbox for the whole platform (Master > Help & Support).
@@ -30,6 +30,9 @@ export const INBOX_STATUSES = ['open', 'in_progress', 'resolved'];
 
 const PER_SOURCE_LIMIT = 500;
 
+// Who wrote a reply, for the ticket's conversation (supportThread.js).
+const authorOf = (admin) => ({ id: admin?._id || null, name: admin?.name || '' });
+
 const model = async (path, name) => (await import(path))[name];
 const foodAdmin = () => import('../../modules/food/admin/services/admin.service.js');
 const quickAdmin = () => import('../../modules/quickCommerce/modules/food/admin/services/admin.service.js');
@@ -47,7 +50,7 @@ const SOURCES = {
     people: { field: 'userId', collection: 'users', name: (d) => d.name, phone: (d) => d.phone },
     toInbox: (s) => ({ 'in-progress': 'in_progress' }[s] || s),
     toOwn: (s) => ({ in_progress: 'in-progress' }[s] || s),
-    update: async (id, { status, reply }) => (await foodAdmin()).updateSupportTicket(id, { source: 'user', status, adminResponse: reply }),
+    update: async (id, { status, reply }, admin) => (await foodAdmin()).updateSupportTicket(id, { source: 'user', status, adminResponse: reply, author: authorOf(admin) }),
   },
   food_restaurant: {
     label: 'Food · Restaurant',
@@ -57,7 +60,7 @@ const SOURCES = {
     people: { field: 'restaurantId', collection: 'food_restaurants', name: (d) => d.restaurantName, phone: (d) => d.ownerPhone || d.phone },
     toInbox: (s) => ({ 'in-progress': 'in_progress' }[s] || s),
     toOwn: (s) => ({ in_progress: 'in-progress' }[s] || s),
-    update: async (id, { status, reply }) => (await foodAdmin()).updateSupportTicket(id, { source: 'restaurant', status, adminResponse: reply }),
+    update: async (id, { status, reply }, admin) => (await foodAdmin()).updateSupportTicket(id, { source: 'restaurant', status, adminResponse: reply, author: authorOf(admin) }),
   },
   food_rider: {
     label: 'Food · Rider',
@@ -67,7 +70,7 @@ const SOURCES = {
     people: { field: 'deliveryPartnerId', collection: 'food_delivery_partners', name: (d) => d.name, phone: (d) => d.phone },
     toInbox: (s) => (s === 'closed' ? 'resolved' : s),
     toOwn: (s) => s,
-    update: async (id, { status, reply }) => (await foodAdmin()).updateDeliverySupportTicket(id, { status, adminResponse: reply }),
+    update: async (id, { status, reply }, admin) => (await foodAdmin()).updateDeliverySupportTicket(id, { status, adminResponse: reply, author: authorOf(admin) }),
   },
   quick_customer: {
     label: 'Quick · Customer',
@@ -77,7 +80,7 @@ const SOURCES = {
     people: { field: 'userId', collection: 'qc_users', name: (d) => d.name, phone: (d) => d.phone },
     toInbox: (s) => ({ 'in-progress': 'in_progress' }[s] || s),
     toOwn: (s) => ({ in_progress: 'in-progress' }[s] || s),
-    update: async (id, { status, reply }) => (await quickAdmin()).updateSupportTicket(id, { source: 'user', status, adminResponse: reply }),
+    update: async (id, { status, reply }, admin) => (await quickAdmin()).updateSupportTicket(id, { source: 'user', status, adminResponse: reply, author: authorOf(admin) }),
   },
   quick_store: {
     label: 'Quick · Store',
@@ -87,7 +90,7 @@ const SOURCES = {
     people: { field: 'restaurantId', collection: 'qc_restaurants', name: (d) => d.restaurantName, phone: (d) => d.ownerPhone || d.phone },
     toInbox: (s) => ({ 'in-progress': 'in_progress' }[s] || s),
     toOwn: (s) => ({ in_progress: 'in-progress' }[s] || s),
-    update: async (id, { status, reply }) => (await quickAdmin()).updateSupportTicket(id, { source: 'restaurant', status, adminResponse: reply }),
+    update: async (id, { status, reply }, admin) => (await quickAdmin()).updateSupportTicket(id, { source: 'restaurant', status, adminResponse: reply, author: authorOf(admin) }),
   },
   quick_rider: {
     label: 'Quick · Rider',
@@ -97,7 +100,7 @@ const SOURCES = {
     people: { field: 'deliveryPartnerId', collection: 'qc_delivery_partners', name: (d) => d.name, phone: (d) => d.phone },
     toInbox: (s) => (s === 'closed' ? 'resolved' : s),
     toOwn: (s) => s,
-    update: async (id, { status, reply }) => (await quickAdmin()).updateDeliverySupportTicket(id, { status, adminResponse: reply }),
+    update: async (id, { status, reply }, admin) => (await quickAdmin()).updateDeliverySupportTicket(id, { status, adminResponse: reply, author: authorOf(admin) }),
   },
   // The Shop's customers, raised from the help centre or the Shop itself. Only
   // while the Shop's module is on (see shopFilter).
@@ -109,9 +112,9 @@ const SOURCES = {
     people: { field: 'userId', collection: 'ecom_users', name: (d) => d.name, phone: (d) => d.phone },
     toInbox: (s) => ({ 'in-progress': 'in_progress' }[s] || s),
     toOwn: (s) => ({ in_progress: 'in-progress' }[s] || s),
-    update: async (id, { status, reply }) =>
+    update: async (id, { status, reply }, admin) =>
       (await import('../../modules/ecommerce/modules/commerce/admin/services/admin.service.js'))
-        .updateSupportTicket(id, { source: 'user', status, adminResponse: reply }),
+        .updateSupportTicket(id, { source: 'user', status, adminResponse: reply, author: authorOf(admin) }),
   },
   taxi: {
     label: 'Taxi',
@@ -317,11 +320,9 @@ export async function updateInboxTicket(admin, source, id, body = {}) {
   const Model = await def.load();
   const before = await Model.findById(id).lean();
   if (!before) throw new ApiError(404, 'Ticket not found');
-  // Recorded before the service overwrites adminResponse, so an older answer
-  // is kept as the earlier message rather than lost.
-  if (reply && source !== 'taxi') {
-    await appendMessage(source, before, { from: 'admin', message: reply, authorId: admin?._id, authorName: admin?.name || '' });
-  }
+  // The reply goes into the conversation inside each service's own update
+  // function (supportThread.recordAdminReply), so it is recorded once, the
+  // same way as an answer from that service's own screen.
 
   await def.update(id, { status: status === undefined ? undefined : def.toOwn(status), reply: reply || undefined }, admin);
   return getInboxTicket(admin, source, id);

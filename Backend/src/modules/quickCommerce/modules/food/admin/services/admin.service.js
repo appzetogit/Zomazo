@@ -1,3 +1,4 @@
+import { recordAdminReply } from '../../../../../../core/support/supportThread.js';
 import mongoose from 'mongoose';
 // NotFoundError was already used further down this file (deleteDeliveryPartner)
 // without ever being imported — that path threw a ReferenceError instead of a 404
@@ -1986,6 +1987,8 @@ export async function updateSupportTicket(id, body = {}) {
     }
     if (!Object.keys(set).length) return null;
     const model = source === 'restaurant' ? FoodRestaurantSupportTicket : FoodSupportTicket;
+    // Into the ticket's conversation first, whichever screen answered (core/support/supportThread.js).
+    await recordAdminReply(`quick_${source === 'restaurant' ? 'store' : 'customer'}`, model, id, set.adminResponse, body.author);
     const updated = await model.findByIdAndUpdate(id, { $set: set }, { new: true }).lean();
 
     // Send notification if admin response was added
@@ -4803,6 +4806,8 @@ export async function updateDeliverySupportTicket(id, body = {}) {
     const ticket = await DeliverySupportTicket.findById(id);
     if (!ticket) return null;
     const { status, adminResponse } = body || {};
+    // Into the ticket's conversation first, whichever screen answered (core/support/supportThread.js).
+    await recordAdminReply('quick_rider', DeliverySupportTicket, id, adminResponse, body?.author);
     if (status !== undefined) {
         const allowed = ['open', 'in_progress', 'resolved', 'closed'];
         if (allowed.includes(String(status))) ticket.status = String(status);

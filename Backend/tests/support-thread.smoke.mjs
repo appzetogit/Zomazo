@@ -72,6 +72,29 @@ await check('the customer sees the thread and writes back; the old answer keeps 
   assert.deepEqual(texts(again).slice(1), ['admin:Sorry, credited Rs 50', 'requester:Not received yet', 'admin:Sent again']);
 });
 
+await check('a reply from the service\'s own ticket screen joins the thread; re-sending it with a status does not repeat it', async () => {
+  const foodAdmin = await import('../src/modules/food/admin/services/admin.service.js');
+  const t = await FoodSupportTicket.create({ userId: me, type: 'other', issueType: 'App', description: 'App crashes' });
+  await foodAdmin.updateSupportTicket(String(t._id), { source: 'user', adminResponse: 'Please update the app' });
+  await foodAdmin.updateSupportTicket(String(t._id), { source: 'user', adminResponse: 'Please update the app', status: 'resolved' });
+  const seen = await inbox.getInboxTicket(owner, 'food_customer', String(t._id));
+  assert.deepEqual(texts(seen), ['requester:App crashes', 'admin:Please update the app']);
+  assert.equal(seen.status, 'resolved');
+});
+
+await check('a rider ticket answered from the rider tickets screen keeps both answers', async () => {
+  const foodAdmin = await import('../src/modules/food/admin/services/admin.service.js');
+  const { DeliverySupportTicket } = await import('../src/modules/food/delivery/models/supportTicket.model.js');
+  const doc = await DeliverySupportTicket.collection.insertOne({
+    deliveryPartnerId: oid(), subject: 'Payout', description: 'Payout late', status: 'open', createdAt: new Date(), updatedAt: new Date(),
+  });
+  const id = String(doc.insertedId);
+  await foodAdmin.updateDeliverySupportTicket(id, { adminResponse: 'Checking' });
+  await foodAdmin.updateDeliverySupportTicket(id, { adminResponse: 'Paid today' });
+  const seen = await inbox.getInboxTicket(owner, 'food_rider', id);
+  assert.deepEqual(texts(seen), ['requester:Payout late', 'admin:Checking', 'admin:Paid today']);
+});
+
 await check('nobody else can read or answer the ticket', async () => {
   await assert.rejects(() => help.getCustomerTicket(String(stranger), `food:${old._id}`), (e) => e.statusCode === 404);
   await assert.rejects(() => help.replyCustomerTicket(String(stranger), `food:${old._id}`, { message: 'hi' }), (e) => e.statusCode === 404);

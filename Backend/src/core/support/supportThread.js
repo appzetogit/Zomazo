@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { logger } from '../../utils/logger.js';
 
 /**
  * The conversation on a Food, Quick or Shop support ticket.
@@ -46,6 +47,28 @@ export async function threadFor(source, ticket) {
     out.push({ from: 'admin', name: '', message: ticket.adminResponse, at: ticket.updatedAt || null });
   }
   return out.concat(rows.map(shape));
+}
+
+/**
+ * An admin answered a ticket: called by each service's own update function
+ * (Food, Quick, Shop admin services) before it overwrites adminResponse, so
+ * the conversation is complete whether the answer came from that service's
+ * screen, Help & Support or Chattings -- all of which go through it.
+ *
+ * Sending the current answer again (a status change from a form that posts
+ * the whole ticket) is not a new message. Never throws: the answer itself must
+ * still be saved and sent if the thread cannot be written.
+ */
+export async function recordAdminReply(source, Model, id, reply, author = {}) {
+  const message = typeof reply === 'string' ? reply.trim() : '';
+  if (!message || !mongoose.Types.ObjectId.isValid(String(id || ''))) return;
+  try {
+    const before = await Model.findById(id).lean();
+    if (!before || String(before.adminResponse || '').trim() === message) return;
+    await appendMessage(source, before, { from: 'admin', message, authorId: author.id || null, authorName: author.name || '' });
+  } catch (err) {
+    logger.error(`Support thread not updated for ${source}:${id}: ${err.message}`);
+  }
 }
 
 /** Add one message, first keeping any old single answer in its place. */

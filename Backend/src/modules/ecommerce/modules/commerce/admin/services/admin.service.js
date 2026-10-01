@@ -1,3 +1,4 @@
+import { recordAdminReply } from '../../../../../../core/support/supportThread.js';
 import mongoose from 'mongoose';
 import { orderFulfilmentModeFilter } from '../validators/adminPanel.validator.js';
 import { applyCategoryAttributes } from './attribute.service.js';
@@ -1983,6 +1984,8 @@ export async function updateSupportTicket(id, body = {}) {
     }
     if (!Object.keys(set).length) return null;
     const model = source === 'seller' ? SellerSupportTicket : SupportTicket;
+    // Into the ticket's conversation first, whichever screen answered (core/support/supportThread.js).
+    await recordAdminReply(`shop_${source === 'seller' ? 'seller' : 'customer'}`, model, id, set.adminResponse, body.author);
     const updated = await model.findByIdAndUpdate(id, { $set: set }, { new: true }).lean();
 
     // Send notification if admin response was added
