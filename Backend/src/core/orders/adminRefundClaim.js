@@ -43,6 +43,8 @@ export const refundError = (message, statusCode) => Object.assign(new Error(mess
  *   (the Shop's returns), read fresh on every run and counted against the cap
  * @param {(p: {full: boolean, totalPaise: number, refundId: string}) => object} [o.recordSet] extra $set on record
  * @param {(claim) => object} [o.recordInc]      extra $inc on record
+ * @param {{service: string, customerId: *, orderId: *}} [o.rewards]  take back the order's cashback
+ *   and loyalty points in proportion to each refund recorded (core/promotions/orderRewards.js)
  * @param {object} [o.labels]                     { left: (leftPaise, paidPaise) => string } wording
  * @param {number} [o.now]                        clock, for tests
  * @returns {Promise<{entry, alreadyPaise, totalPaise, full, recovered}>}
@@ -129,6 +131,21 @@ async function record(o, id, claim, { refundId, full, totalPaise }) {
       $push: { [paths.history]: entry },
     },
   );
+  /*
+   * The refund's share of the cashback and points goes back with it. Here, not
+   * at each caller, because a payout recovered by a takeover is recorded here
+   * too. Keyed by the claim, so a record that runs twice takes back once; a
+   * full refund takes back whatever is left. Never throws.
+   */
+  if (o.rewards) {
+    const { takeBackForRefund } = await import('../promotions/orderRewards.js');
+    await takeBackForRefund({
+      ...o.rewards,
+      refundedPaise: full ? o.paidPaise : claim.amountPaise,
+      paidPaise: o.paidPaise,
+      key: `admin_refund:${claim.key}`,
+    });
+  }
   return entry;
 }
 

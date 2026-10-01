@@ -3302,6 +3302,8 @@ export async function processRefundAdmin(orderId, amount, adminId, reason = '') 
         paidPaise,
         amount,
         meta: { method: paymentMethod, reason: note, byAdminId: String(adminId || '') },
+        // The refund's share of the order's cashback and points goes back with it.
+        rewards: { service: 'quickCommerce', customerId: order.userId, orderId: order._id },
         pay: async ({ rupees, key }) => {
             if (paymentMethod === 'razorpay') {
                 const result = await initiateRazorpayRefund(paymentId, rupees, { key, reason: note });

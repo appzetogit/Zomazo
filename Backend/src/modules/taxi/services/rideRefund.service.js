@@ -138,6 +138,8 @@ export const refundRideByAdmin = async (rideId, { amount, reason, adminId } = {}
     paidPaise: payment.paidPaise,
     amount,
     meta: { method, reason: note, byAdminId: String(adminId || '') },
+    // The refund's share of the ride's cashback and points goes back with it.
+    rewards: { service: 'taxi', customerId: ride.userId, orderId: ride._id },
     pay: async ({ rupees, key }) => {
       if (method === 'razorpay') return refundThroughRazorpay(payment.paymentId, rupees, note, key);
       const result = await applyUserWalletAdjustment({

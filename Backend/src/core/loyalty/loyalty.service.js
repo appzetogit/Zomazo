@@ -93,6 +93,9 @@ export async function reverseOrderPoints({ service, orderId, share = 1, key = 'f
         const prior = await LoyaltyLedger.find({ type: 'reverse', service, orderId: String(orderId) }).select('points').lean();
         const already = prior.reduce((n, r) => n + (Number(r.points) || 0), 0);
         const ratio = Math.min(1, Math.max(0, Number(share) || 0));
+        // Only from the points still held: points already converted into wallet
+        // money stay converted (a product decision, 2026-10-01), so a refund can
+        // take back less than the order earned.
         const account = await LoyaltyAccount.findOne({ platformUserId: earn.platformUserId }).lean();
         const points = Math.min(Math.round(earn.points * ratio), earn.points - already, Number(account?.balance) || 0);
         if (points <= 0) return 0;

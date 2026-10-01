@@ -17,7 +17,7 @@ import { getLoyaltySettings, loyaltyReport, saveLoyaltySettings } from '../loyal
 
 const WALLET_SERVICES = ['food', 'quickCommerce', 'ecommerce', 'taxi'];
 // The services whose completed orders call rewardCompletedOrder (orderRewards.js).
-const CASHBACK_SERVICES = WALLET_SERVICES;
+const CASHBACK_SERVICES = REWARD_SERVICES;
 
 const mustSee = (admin) => {
     if (!canSeePlatformCoupons(admin)) throw new ApiError(403, 'You do not have access to offers');
@@ -68,9 +68,8 @@ function readCashback(body = {}, { creating }) {
     if (creating || body.services !== undefined) {
         const services = [...new Set((Array.isArray(body.services) ? body.services : []).map(String))];
         if (!services.length) throw new ApiError(400, 'Pick at least one service');
-        // Services bookings have no completion hook paying cashback yet.
         const unknown = services.filter((s) => !CASHBACK_SERVICES.includes(s));
-        if (unknown.length) throw new ApiError(400, `Cashback is not paid in: ${unknown.join(', ')}`);
+        if (unknown.length) throw new ApiError(400, `Unknown service: ${unknown.join(', ')}`);
         out.services = services;
     }
     if (creating || body.cashbackType !== undefined) {

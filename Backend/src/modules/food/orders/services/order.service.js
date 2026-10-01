@@ -1064,6 +1064,8 @@ export async function adminRefundOrder(orderId, { amount, reason, adminId } = {}
     seedPaise: (doc) => (doc.payment?.refund?.status === "processed" ? refundToPaise(doc.payment.refund.amount) : 0),
     amount,
     meta: { method: destination === "gateway" ? "razorpay" : "wallet", reason: note, byAdminId: String(adminId || "") },
+    // The refund's share of the order's cashback and points goes back with it.
+    rewards: { service: "food", customerId: order.userId, orderId: order._id },
     pay: async ({ rupees, key }) => {
       if (destination === "gateway") {
         const result = await initiateRazorpayRefund(paymentId, rupees, { key, reason: note });

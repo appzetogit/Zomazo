@@ -57,6 +57,19 @@ export async function reverseOrderCashbackShare({ customerId, orderId, refundedA
     }
 }
 
+/**
+ * An admin refund's share of an order's cashback and loyalty points, taken back
+ * once per `key` (admin_refund:<claim key>). Called by runAdminRefund when a
+ * refund is recorded; a full refund passes refundedPaise = paidPaise, which
+ * takes back whatever earlier refunds and returns left. Never throws.
+ */
+export async function takeBackForRefund({ service, customerId, orderId, refundedPaise, paidPaise, key }) {
+    const args = { orderId, refundedAmount: Number(refundedPaise) / 100, orderTotal: Number(paidPaise) / 100, key };
+    const cashback = customerId ? await reverseOrderCashbackShare({ customerId, ...args }) : 0;
+    const points = await reverseOrderRewards({ service, ...args });
+    return { cashback, points };
+}
+
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 /** A refund's share of the order: the loyalty points it earned go back pro rata. */
