@@ -29,6 +29,7 @@ import {
     getRazorpayKeyId,
     isRazorpayConfigured,
     initiateRazorpayRefund,
+    findRazorpayRefundByKey,
     fetchRazorpayPayment
 } from '../helpers/razorpay.helper.js';
 import { getIO, rooms } from '../../../../config/socket.js';
@@ -3193,7 +3194,7 @@ export async function markOrderDeliveredAdmin(orderId, adminId, note = "") {
     return normalizeOrderForClient(order);
 }
 
-export async function processRefundAdmin(orderId, amount, adminId) {
+export async function processRefundAdmin(orderId, amount, adminId, reason = '') {
     const identity = buildOrderIdentityFilter(orderId);
     const order = await FoodOrder.findOne(identity).lean();
     if (!order) throw new NotFoundError("Order not found");
@@ -3225,66 +3226,55 @@ export async function processRefundAdmin(orderId, amount, adminId) {
     const { seedRefundCounter } = await import('../../returns/services/return.service.js');
     await seedRefundCounter(order);
     const paidPaise = toPaise(order.pricing?.total);
-    const hasAmount = !(amount === undefined || amount === null || amount === '');
 
-    // The claim: a compare-and-swap on the counter, all or nothing, so two clicks
-    // cannot both spend the same headroom. Retried only when someone else moved it.
-    let alreadyPaise = 0;
-    let wantedPaise = 0;
-    let claimed = false;
-    for (let attempt = 0; attempt < 8 && !claimed; attempt += 1) {
-        const fresh = await FoodOrder.findById(order._id).select('returnRefundedPaise').lean();
-        alreadyPaise = Number(fresh?.returnRefundedPaise) || 0;
-        const leftPaise = paidPaise - alreadyPaise;
-        if (leftPaise <= 0) throw new ValidationError("Order is already refunded");
-        wantedPaise = hasAmount ? toPaise(amount) : leftPaise;
-        if (!(wantedPaise > 0)) throw new ValidationError("Invalid refund amount");
-        if (wantedPaise > leftPaise) {
-            throw new ValidationError(`Refund cannot be more than ₹${(leftPaise / 100).toFixed(2)}, what is left of the ₹${(paidPaise / 100).toFixed(2)} paid`);
-        }
-        const res = await FoodOrder.updateOne(
-            { _id: order._id, returnRefundedPaise: alreadyPaise },
-            { $inc: { returnRefundedPaise: wantedPaise } },
-        );
-        claimed = res.modifiedCount === 1;
-    }
-    if (!claimed) {
-        throw Object.assign(new Error('Another refund on this order is in progress. Try again.'), { statusCode: 409 });
-    }
-
-    const refundAmount = wantedPaise / 100;
-    let refundId = '';
-    try {
-        if (paymentMethod === 'razorpay') {
-            const result = await initiateRazorpayRefund(paymentId, refundAmount);
-            if (!result?.success) throw new Error(result?.error || 'gateway refused the refund');
-            refundId = String(result.refundId || '');
-        } else {
+    // Claim, pay, record (core/orders/adminRefundClaim.js): the claim is a
+    // compare-and-swap on that counter plus status 'pending', all or nothing, so two
+    // clicks cannot both spend the same headroom; a claim a crash left behind is
+    // taken over after ten minutes and its payout looked up before paying again.
+    const note = String(reason || '').trim() || 'Admin refund';
+    const { runAdminRefund } = await import('../../../../../../core/orders/adminRefundClaim.js');
+    const { FoodUserWallet } = await import('../../user/models/userWallet.model.js');
+    const { entry, full } = await runAdminRefund({
+        Model: FoodOrder,
+        docId: order._id,
+        paths: {
+            status: 'payment.refund.status',
+            counter: 'returnRefundedPaise',
+            claim: 'payment.refund.claim',
+            history: 'payment.refund.history',
+        },
+        paidPaise,
+        amount,
+        meta: { method: paymentMethod, reason: note, byAdminId: String(adminId || '') },
+        pay: async ({ rupees, key }) => {
+            if (paymentMethod === 'razorpay') {
+                const result = await initiateRazorpayRefund(paymentId, rupees, { key, reason: note });
+                if (!result?.success) throw new Error(result?.error || 'gateway refused the refund');
+                return { refundId: String(result.refundId || '') };
+            }
             await userWalletService.refundWalletBalance(
                 order.userId,
-                refundAmount,
+                rupees,
                 `Refund for order #${order.orderId || order._id}`,
-                { orderId: order._id, source: 'admin_refund', byAdminId: String(adminId || '') }
+                { orderId: order._id, source: 'admin_refund', byAdminId: String(adminId || ''), claimKey: key }
             );
-        }
-    } catch (err) {
-        // Nothing moved: give the headroom back so the admin can retry.
-        await FoodOrder.updateOne({ _id: order._id }, { $inc: { returnRefundedPaise: -wantedPaise } });
-        logger.error(`Admin refund payout failed for QC order ${order._id}: ${err?.message || err}`);
-        throw Object.assign(new Error(`The refund could not be paid (${err?.message || 'payout error'}). Nothing was refunded; try again.`), { statusCode: 424 });
-    }
-
-    const adminPaidPaise = (order.payment?.refund?.status === 'processed' ? toPaise(order.payment.refund.amount) : 0) + wantedPaise;
-    const full = alreadyPaise + wantedPaise >= paidPaise;
-    await FoodOrder.updateOne({ _id: order._id }, {
-        $set: {
-            'payment.refund.status': 'processed',
-            'payment.refund.amount': adminPaidPaise / 100,
-            'payment.refund.processedAt': new Date(),
-            ...(refundId ? { 'payment.refund.refundId': refundId } : {}),
-            ...(full ? { 'payment.status': 'refunded' } : {}),
+            return {};
         },
+        findPaid: async (claim) => {
+            if (paymentMethod === 'razorpay') return findRazorpayRefundByKey(paymentId, claim.key);
+            const hit = await FoodUserWallet.exists({ userId: order.userId, 'transactions.metadata.claimKey': claim.key });
+            return hit ? {} : null;
+        },
+        // payment.refund.amount reads the total refunded on the order (returns
+        // included), the same figure the cap is checked against.
+        recordSet: ({ full: isFull, totalPaise, refundId: rid }) => ({
+            'payment.refund.amount': totalPaise / 100,
+            'payment.refund.processedAt': new Date(),
+            ...(rid ? { 'payment.refund.refundId': rid } : {}),
+            ...(isFull ? { 'payment.status': 'refunded' } : {}),
+        }),
     });
+    const refundAmount = entry.amount;
     const updated = await FoodOrder.findById(order._id);
 
     try {

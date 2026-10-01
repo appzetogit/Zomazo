@@ -508,7 +508,7 @@ export async function processRefundAdminController(req, res, next) {
         const adminId = req.user?.userId;
         const orderId = req.params.orderId;
         const amount = req.body?.amount ?? req.body?.refundAmount;
-        const result = await orderService.processRefundAdmin(orderId, amount, adminId);
+        const result = await orderService.processRefundAdmin(orderId, amount, adminId, req.body?.reason);
         return sendResponse(res, 200, 'Refund processed successfully', result);
     } catch (err) {
         next(err);

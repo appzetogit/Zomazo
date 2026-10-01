@@ -197,7 +197,23 @@ const paymentSchema = new mongoose.Schema(
             },
             amount: { type: Number, default: 0 },
             refundId: { type: String, default: '' },
-            processedAt: { type: Date }
+            processedAt: { type: Date },
+            // The admin refund being paid right now (core/orders/adminRefundClaim.js).
+            claim: { type: mongoose.Schema.Types.Mixed },
+            // One row per admin refund that actually paid out.
+            history: {
+                type: [{
+                    _id: false,
+                    amount: { type: Number, required: true },
+                    method: { type: String, default: '' },
+                    refundId: { type: String, default: '' },
+                    reason: { type: String, default: '' },
+                    byAdminId: { type: String, default: '' },
+                    claimKey: { type: String, default: '' },
+                    at: { type: Date, default: Date.now }
+                }],
+                default: undefined
+            }
         }
     },
     { _id: false }

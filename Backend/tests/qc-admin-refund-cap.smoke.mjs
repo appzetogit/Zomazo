@@ -125,6 +125,42 @@ await check('cash orders are still refused', async () => {
   assert.equal(err?.statusCode, 400);
 });
 
+await check('each admin refund is kept on payment.refund.history', async () => {
+  const { _id } = await makeOrder();
+  await processRefundAdmin(String(_id), 40, adminId, 'damaged pack');
+  await processRefundAdmin(String(_id), 60, adminId, 'late delivery');
+  const o = await FoodOrder.findById(_id).lean();
+  assert.deepEqual(o.payment.refund.history.map((h) => [h.amount, h.reason, h.byAdminId]),
+    [[40, 'damaged pack', adminId], [60, 'late delivery', adminId]]);
+});
+
+await check('a stale claim whose payout happened is recorded, not paid again', async () => {
+  const { _id, userId } = await makeOrder({ extra: { returnRefundedPaise: 10000 } });
+  const key = 'rf_test_qc';
+  await FoodOrder.collection.updateOne({ _id }, { $set: {
+    'payment.refund': { status: 'pending', claim: { key, at: new Date(Date.now() - 11 * 60000), amountPaise: 10000, prevStatus: 'none', method: 'wallet', reason: 'crashed' } },
+  } });
+  await FoodUserWallet.collection.insertOne({ userId, balance: 100, transactions: [{ type: 'refund', amount: 100, metadata: { claimKey: key } }] });
+  const fresh = await thrownBy(() => processRefundAdmin(String(_id), 250, adminId, 'too much'));
+  assert.equal(fresh?.statusCode, 400, 'the crashed 100 still counts against the cap');
+  await processRefundAdmin(String(_id), 200, adminId, 'the rest');
+  const o = await FoodOrder.findById(_id).lean();
+  assert.deepEqual(o.payment.refund.history.map((h) => h.amount), [100, 200]);
+  assert.equal(o.returnRefundedPaise, 30000);
+  assert.equal(await walletOf(userId), 300);
+});
+
+await check('a stale claim that never paid is released', async () => {
+  const { _id, userId } = await makeOrder();
+  await FoodOrder.collection.updateOne({ _id }, { $set: {
+    returnRefundedPaise: 10000,
+    'payment.refund': { status: 'pending', claim: { key: 'rf_test_qc2', at: new Date(Date.now() - 11 * 60000), amountPaise: 10000, prevStatus: 'none' } },
+  } });
+  await processRefundAdmin(String(_id), undefined, adminId, 'all of it');
+  assert.equal(await walletOf(userId), 300);
+  assert.equal((await FoodOrder.findById(_id).lean()).returnRefundedPaise, 30000);
+});
+
 await mongoose.disconnect();
 await mongo.stop();
 console.log(failed ? `\n${failed} check(s) failed\n` : '\nall checks passed\n');
