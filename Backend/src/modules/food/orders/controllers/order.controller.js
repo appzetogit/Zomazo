@@ -187,6 +187,20 @@ export async function getOrderByIdRestaurantController(req, res, next) {
  * Admins act across restaurants, so no restaurantId scoping — but the same kitchen-status
  * whitelist applies (picked_up / delivered stay owned by the delivery + OTP flow).
  */
+/** Admin refund, full or partial (see orderService.adminRefundOrder for the guards). */
+export async function adminRefundOrderController(req, res, next) {
+    try {
+        const result = await orderService.adminRefundOrder(req.params.orderId, {
+            amount: req.body?.amount ?? req.body?.refundAmount,
+            reason: req.body?.reason,
+            adminId: req.user?.userId || req.auth?.sub || null,
+        });
+        return sendResponse(res, 200, result.message, result);
+    } catch (err) {
+        next(err);
+    }
+}
+
 export async function updateOrderStatusAdminController(req, res, next) {
     try {
         const orderId = req.params.orderId;

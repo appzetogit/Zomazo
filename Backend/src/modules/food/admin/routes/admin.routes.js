@@ -282,6 +282,8 @@ router.get('/orders', orderController.listOrdersAdminController);
 router.get('/orders/:orderId', orderController.getOrderByIdAdminController);
 router.patch('/orders/:orderId/status', orderController.updateOrderStatusAdminController);
 router.delete('/orders/:orderId', orderController.deleteOrderAdminController);
+// Moves money: 'orders' write through enforceAdminAccess above, and audited as a finance action.
+router.post('/orders/:orderId/refund', requireFinancePermission('ORDER_REFUND'), orderController.adminRefundOrderController);
 
 // ----- Order cancellation after the restaurant accepts -----
 router.get('/order-cancellation', async (_req, res, next) => {

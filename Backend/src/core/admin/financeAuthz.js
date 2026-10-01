@@ -36,6 +36,9 @@ export const FINANCE_ACTIONS = Object.freeze({
     PARTNER_WALLET_ADJUST: { resource: 'wallet', action: 'write', targetType: 'partner' },
     PARTNER_BONUS_GRANT: { resource: 'wallet', action: 'write', targetType: 'partner' },
     EARNING_CREDIT: { resource: 'wallet', action: 'write', targetType: 'partner' },
+    // An admin refund on an order or a ride: same permission as the order screen's
+    // other writes, recorded here because it pays money to a customer.
+    ORDER_REFUND: { resource: 'orders', action: 'write', targetType: 'order' },
     CASH_LIMIT_SET: { resource: 'fee_settings', action: 'write', targetType: 'platform' },
     COMMISSION_RULE_SET: { resource: 'fee_settings', action: 'write', targetType: 'platform' },
     /*
@@ -57,7 +60,7 @@ export const FINANCE_ACTIONS = Object.freeze({
  * like an audit trail and is not one.
  */
 export const REASON_REQUIRED = Object.freeze(
-    new Set(['WITHDRAWAL_DECIDE', 'PARTNER_WALLET_ADJUST', 'PARTNER_BONUS_GRANT', 'EARNING_CREDIT']),
+    new Set(['WITHDRAWAL_DECIDE', 'PARTNER_WALLET_ADJUST', 'PARTNER_BONUS_GRANT', 'EARNING_CREDIT', 'ORDER_REFUND']),
 );
 
 export const MIN_REASON_LENGTH = 4;

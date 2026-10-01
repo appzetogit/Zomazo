@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Wallet, X } from "lucide-react"
+import { Wallet } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -9,18 +9,29 @@ import {
 } from "@food/components/ui/dialog"
 import { Button } from "@food/components/ui/button"
 
+/**
+ * Admin refund: an amount (full or partial) and a reason. The server is the
+ * authority on how much is left (it caps at paid minus already refunded and
+ * refuses a second refund racing this one); the cap here only saves a round trip.
+ */
 export default function RefundModal({ isOpen, onOpenChange, order, onConfirm, isProcessing }) {
   const [refundAmount, setRefundAmount] = useState("")
+  const [reason, setReason] = useState("")
   const [error, setError] = useState("")
 
-  // Set default refund amount when order changes
+  const maxAmount = Math.max(0, (Number(order?.totalAmount) || 0) - (Number(order?.refundedSoFar) || 0))
+  const method = String(order?.payment?.method || "").toLowerCase()
+  const isWallet = order?.paymentType === "Wallet" || method === "wallet"
+  const isCash = method === "cash"
+
+  // Default to everything still refundable when the dialog opens
   useEffect(() => {
     if (order && isOpen) {
-      const defaultAmount = order.totalAmount || 0
-      setRefundAmount(defaultAmount.toString())
+      setRefundAmount(maxAmount.toFixed(2))
+      setReason("")
       setError("")
     }
-  }, [order, isOpen])
+  }, [order, isOpen, maxAmount])
 
   const handleAmountChange = (e) => {
     const value = e.target.value
@@ -33,29 +44,25 @@ export default function RefundModal({ isOpen, onOpenChange, order, onConfirm, is
 
   const handleConfirm = () => {
     const amount = parseFloat(refundAmount)
-    const maxAmount = order?.totalAmount || 0
-
-    if (!refundAmount || refundAmount.trim() === "") {
-      setError("Refund राशि डालना अनिवार्य है")
+    if (!refundAmount || isNaN(amount) || amount <= 0) {
+      setError("Enter a refund amount above zero")
       return
     }
-
-    if (isNaN(amount) || amount <= 0) {
-      setError("कृपया सही राशि डालें")
+    if (amount > maxAmount + 0.001) {
+      setError(`Refund cannot be more than ₹${maxAmount.toFixed(2)}`)
       return
     }
-
-    if (amount > maxAmount) {
-      setError(`Refund राशि कुल राशि (₹${maxAmount.toFixed(2)}) से अधिक नहीं हो सकती`)
+    if (reason.trim().length < 4) {
+      setError("Give a reason for the refund (at least 4 characters)")
       return
     }
-
-    onConfirm(amount)
+    onConfirm(amount, reason.trim())
   }
 
   const handleClose = () => {
     if (!isProcessing) {
       setRefundAmount("")
+      setReason("")
       setError("")
       onOpenChange(false)
     }
@@ -63,7 +70,11 @@ export default function RefundModal({ isOpen, onOpenChange, order, onConfirm, is
 
   if (!order) return null
 
-  const maxAmount = order.totalAmount || 0
+  const destination = isWallet
+    ? "The amount is credited to the customer's wallet."
+    : isCash
+      ? "This order was paid in cash, so the amount is credited to the customer's wallet."
+      : "The amount is refunded to the customer's original payment method through Razorpay (5-7 working days)."
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -71,24 +82,25 @@ export default function RefundModal({ isOpen, onOpenChange, order, onConfirm, is
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900">
             <Wallet className="w-5 h-5 text-purple-600" />
-            Wallet Refund
+            Refund order
           </DialogTitle>
           <DialogDescription className="text-slate-600">
             Order ID: <span className="font-semibold">{order.orderId}</span>
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">
-              Refund Amount (?)
+              Refund Amount (₹)
             </label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium">
-                ?
+                ₹
               </span>
               <input
                 type="text"
+                inputMode="decimal"
                 value={refundAmount}
                 onChange={handleAmountChange}
                 placeholder="0.00"
@@ -100,17 +112,32 @@ export default function RefundModal({ isOpen, onOpenChange, order, onConfirm, is
                 } ${isProcessing ? "bg-slate-100 cursor-not-allowed" : "bg-white"}`}
               />
             </div>
-            {error && (
-              <p className="text-sm text-red-600 mt-1">{error}</p>
-            )}
             <p className="text-xs text-slate-500">
-              Maximum refundable amount: ₹{maxAmount.toFixed(2)}
+              Refundable now: ₹{maxAmount.toFixed(2)}
+              {Number(order.refundedSoFar) > 0 ? ` (₹${Number(order.refundedSoFar).toFixed(2)} already refunded)` : ""}
             </p>
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">Reason</label>
+            <textarea
+              value={reason}
+              onChange={(e) => { setReason(e.target.value); setError("") }}
+              rows={2}
+              maxLength={300}
+              disabled={isProcessing}
+              placeholder="e.g. items missing from the order"
+              className="w-full px-3 py-2 border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:border-purple-500 focus:ring-purple-200"
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-600">{error}</p>
+          )}
+
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
             <p className="text-sm text-purple-800">
-              <span className="font-semibold">Note:</span> यह पैसा ग्राहक के वॉलेट में क्रेडिट हो जाएगा और ऑर्डर का स्टेटस "Refunded" हो जाएगा।
+              <span className="font-semibold">Note:</span> {destination}
             </p>
           </div>
         </div>

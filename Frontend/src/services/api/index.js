@@ -1361,6 +1361,9 @@ export const adminAPI = {
   acceptOrder: (orderId) =>
     apiClient.patch(`/food/admin/orders/${String(orderId)}/status`,
       { orderStatus: "confirmed" }, { contextModule: "admin" }),
+  /** Admin refund, full or partial: body { amount?, reason }. The server caps it at what is left to refund. */
+  processRefund: (orderId, body = {}) =>
+    apiClient.post(`/food/admin/orders/${String(orderId)}/refund`, body, { contextModule: "admin" }),
   rejectOrder: (orderId, note = "") =>
     apiClient.patch(`/food/admin/orders/${String(orderId)}/status`,
       { orderStatus: "cancelled_by_restaurant", note }, { contextModule: "admin" }),

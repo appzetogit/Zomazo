@@ -1668,34 +1668,6 @@ export async function deleteZone(req, res, next) {
     }
 }
 
-export async function processRefund(req, res, next) {
-    try {
-        const { orderId } = req.params;
-        if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) {
-            return res.status(400).json({ success: false, message: 'Invalid order id' });
-        }
-
-        /*
-         * Deliberately not implemented, rather than wired to the wrong thing.
-         *
-         * This called adminService.processRefund, which has never existed, so
-         * every call threw -- and had it not, it would then have pushed the
-         * customer "Refund processed" for a refund nobody made. The food side's
-         * only real refund path is processOrderRefundOnce in
-         * orders/services/order.service.js: private to that module, full-amount
-         * only, and run as part of cancelling an order. A standalone admin refund
-         * needs its own guarded service there -- amount <= paid, one claim per
-         * order -- before this can be switched on. No route mounts this handler
-         * today; the 501 is for when one does.
-         */
-        return res.status(501).json({
-            success: false,
-            message: 'Admin refunds are not available here yet. Cancel the order to refund a paid order in full.'
-        });
-    } catch (error) {
-        next(error);
-    }
-}
 export async function getWithdrawals(req, res, next) {
     try {
         const data = await adminService.getWithdrawals(req.query || {});
