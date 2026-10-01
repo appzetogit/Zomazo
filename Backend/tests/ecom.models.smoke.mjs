@@ -79,8 +79,8 @@ const refsOf = (schema, prefix = '') => {
 for (const m of ecomModels) {
     for (const [path, ref] of refsOf(m.schema)) {
         if (!mongoose.models[ref]) fail(`${m.modelName}.${path} refs unknown model '${ref}'`);
-        // Customers ARE platform accounts since the ecom_users merge (core/identity/shopCustomer.js).
-        else if (!ref.startsWith('Ecom') && ref !== 'FoodUser' && !PLATFORM_REFS.has(`${m.modelName}.${path}:${ref}`)) fail(`${m.modelName}.${path} refs platform model '${ref}'`);
+        // Customers and admins ARE platform accounts since the ecom_users and ecom_admins merges.
+        else if (!ref.startsWith('Ecom') && ref !== 'FoodUser' && ref !== 'FoodAdmin' && !PLATFORM_REFS.has(`${m.modelName}.${path}:${ref}`)) fail(`${m.modelName}.${path} refs platform model '${ref}'`);
     }
 }
 

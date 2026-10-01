@@ -3,6 +3,20 @@ import ms from "ms";
 import { User } from "../users/user.model.js";
 import { resolveShopCustomerId, shopCustomerForPhone } from "../../../../core/identity/shopCustomer.js";
 import { Admin } from "../admin/admin.model.js";
+import { shopAdmins } from "../../../../core/admin/shopAdmin.js";
+import { isRestrictedAdmin } from "../../../../core/admin/adminAccessPolicy.js";
+import { ADMIN_ACTIONS, ADMIN_PERMISSION_SECTIONS } from "../../constants/permissions.js";
+
+/**
+ * The Shop's { section: [actions] } view of an admin, for its panel. Admins
+ * are platform admins since the ecom_admins merge; their sections are
+ * enforced by the shared policy, and this mirrors it.
+ */
+const shopPanelPermissions = (admin) => shopAdmins.toSectionPermissions(admin, {
+  restricted: isRestrictedAdmin(admin),
+  sections: ADMIN_PERMISSION_SECTIONS,
+  actions: ADMIN_ACTIONS,
+});
 import { AdminResetOtp } from "../admin/adminResetOtp.model.js";
 import { Seller } from "../../modules/commerce/seller/models/seller.model.js";
 import { DeliveryPartner } from "../../modules/commerce/delivery/models/deliveryPartner.model.js";
@@ -303,7 +317,9 @@ export const adminLogin = async (email, password) => {
     throw new ValidationError("Email and password are required");
   }
 
-  const admin = await Admin.findOne({ email });
+  // A Shop admin the merge has not reached yet is merged first.
+  await shopAdmins.mergeWaitingByEmail(email);
+  const admin = await Admin.findOne({ email: String(email).trim().toLowerCase() });
   if (!admin) {
     throw new AuthError("Invalid credentials");
   }
@@ -317,14 +333,12 @@ export const adminLogin = async (email, password) => {
     throw new AuthError("Invalid credentials");
   }
 
-  const effectivePermissions = admin.adminType === "super_admin"
-    ? ADMIN_FULL_PERMISSIONS
-    : sanitizeAdminPermissions(admin.permissions || {});
+  const effectivePermissions = shopPanelPermissions(admin);
 
   const payload = {
     userId: admin._id.toString(),
     role: admin.role,
-    adminType: admin.adminType || "super_admin",
+    adminType: isRestrictedAdmin(admin) ? "sub_admin" : "super_admin",
   };
 
   const accessToken = signAccessToken(payload);
@@ -604,10 +618,8 @@ export const getProfile = async (userId, role) => {
         // adminType (older rows, the create-admin script) would come back with
         // no permissions at all and an empty admin panel. Fall back to the
         // schema's default, exactly as login does.
-        profile.adminType = profile.adminType || "super_admin";
-        profile.effectivePermissions = profile.adminType === "super_admin"
-          ? ADMIN_FULL_PERMISSIONS
-          : sanitizeAdminPermissions(profile.permissions || {});
+        profile.adminType = isRestrictedAdmin(profile) ? "sub_admin" : "super_admin";
+        profile.effectivePermissions = shopPanelPermissions(profile);
       }
       break;
     case ROLES.SELLER:

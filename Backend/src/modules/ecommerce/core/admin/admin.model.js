@@ -102,5 +102,17 @@ adminSchema.methods.comparePassword = function (candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
 };
 
-export const Admin = ecomModel('Admin', adminSchema);
+/**
+ * The old Shop admins. Read only by the merge (core/admin/shopAdmin.js,
+ * scripts/migrations/mergeEcomAdmins.mjs); nothing writes a new one.
+ */
+export const LegacyEcomAdmin = ecomModel('Admin', adminSchema);
+
+/*
+ * The Shop's admins ARE platform admins: the shared `admins` collection, with
+ * the shared permission model (servicesAccess + resource.read/write, enforced
+ * by core/admin/enforceAdminAccess.middleware.js). An old ecom_admins id in a
+ * token is translated at the edge (auth.middleware.js -> resolveShopAdminId).
+ */
+export { FoodAdmin as Admin } from '../../../../core/admin/admin.model.js';
 

@@ -35,7 +35,7 @@ const orderEmergencyRequestSchema = new mongoose.Schema(
         resolvedAt: { type: Date, default: null },
         resolvedBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'EcomAdmin',
+            ref: 'FoodAdmin',
             default: null
         }
     },

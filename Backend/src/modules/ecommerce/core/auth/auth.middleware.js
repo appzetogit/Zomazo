@@ -4,6 +4,7 @@ import { sendError } from '../../utils/response.js';
 // The shared `users` collection: the Shop's customers since the ecom_users merge.
 import { User } from '../users/user.model.js';
 import { resolveShopCustomerId } from '../../../../core/identity/shopCustomer.js';
+import { resolveShopAdminId } from '../../../../core/admin/shopAdmin.js';
 import { Seller } from '../../modules/commerce/seller/models/seller.model.js';
 
 export const requireAdmin = (req, res, next) => {
@@ -110,7 +111,17 @@ export const authMiddleware = (req, res, next) => {
         if (!req.user.userId && !isAdmin) {
             return sendError(res, 401, 'Invalid token for this service');
         }
-        return next();
+        if (!isAdmin || !req.user.userId) return next();
+        // Admins are the platform's (the ecom_admins merge). A token naming an
+        // old ecom_admins id is translated here, merging that admin on the spot
+        // if the script has not yet.
+        return resolveShopAdminId(req.user.userId)
+            .then((adminId) => {
+                if (!adminId) return sendError(res, 401, 'Account not found');
+                req.user.userId = adminId;
+                return next();
+            })
+            .catch(() => sendError(res, 401, 'Authentication failed'));
     }
 
     resolveSessionAccount(model, normalizedDecoded)

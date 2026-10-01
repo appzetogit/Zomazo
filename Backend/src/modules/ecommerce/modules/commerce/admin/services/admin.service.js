@@ -59,7 +59,8 @@ import { Admin } from '../../../../core/admin/admin.model.js';
 import { assertStrongAdminPassword } from '../../../../core/admin/adminPassword.js';
 import { getAdminSellerSubscriptionHistory as getAdminSellerSubscriptionHistoryFromSeller } from '../../seller/services/subscriptionHistory.service.js';
 import { SellerSubscriptionHistory } from '../../seller/models/subscriptionHistory.model.js';
-import { ADMIN_FULL_PERMISSIONS, isValidPermissionPayload, sanitizeAdminPermissions } from '../../../../constants/permissions.js';
+import { ADMIN_ACTIONS, ADMIN_FULL_PERMISSIONS, ADMIN_PERMISSION_SECTIONS, isValidPermissionPayload, sanitizeAdminPermissions } from '../../../../constants/permissions.js';
+import { shopAdmins, SHOP_ADMIN_SERVICES } from '../../../../../../core/admin/shopAdmin.js';
 import {
     backfillLegacyCategoryWorkflow,
     serializeCategoryForResponse
@@ -6224,6 +6225,51 @@ export async function deleteSeller(id) {
 
 const toEmail = (value) => String(value || '').trim().toLowerCase();
 
+/*
+ * The Shop's sub-admins are platform admins (the ecom_admins merge,
+ * core/admin/shopAdmin.js): sub-admins of the 'ecommerce' module with
+ * servicesAccess ['ecommerce'], held to the shared permissions by
+ * enforceAdminAccess. These screens keep their old shape -- adminType and a
+ * { section: [actions] } object -- translated both ways here.
+ */
+const SHOP_SUBADMINS = Object.freeze({ module: 'ecommerce', admin_type: 'subadmin' });
+const notDeleted = { isDeleted: { $ne: true } };
+
+const asShopSubAdmin = (doc) => {
+    if (!doc) return doc;
+    const { password, ...rest } = doc;
+    return {
+        ...rest,
+        adminType: 'sub_admin',
+        isDeleted: doc.isDeleted === true,
+        permissions: shopAdmins.toSectionPermissions(doc, {
+            restricted: true,
+            sections: ADMIN_PERMISSION_SECTIONS,
+            actions: ADMIN_ACTIONS,
+        }),
+    };
+};
+
+const findShopSubAdmin = async (id, { includeDeleted = false } = {}) => {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        throw new ValidationError('Invalid sub-admin id');
+    }
+    const doc = await Admin.findOne({ _id: id, ...SHOP_SUBADMINS, ...(includeDeleted ? {} : notDeleted) }).select('-password').lean();
+    if (!doc) throw new ValidationError('Sub-admin not found');
+    return doc;
+};
+
+// The Shop's admins are platform documents: a raw update keeps fields the
+// platform schema does not declare (isDeleted) and skips nothing else.
+const setOnShopSubAdmin = async (id, set) => {
+    await findShopSubAdmin(id);
+    await mongoose.connection.collection('admins').updateOne(
+        { _id: new mongoose.Types.ObjectId(String(id)) },
+        { $set: { ...set, updatedAt: new Date() } },
+    );
+    return asShopSubAdmin(await Admin.findById(id).select('-password').lean());
+};
+
 export async function createSubAdmin(payload = {}, actorId) {
     const email = toEmail(payload.email);
     const password = String(payload.password || '').trim();
@@ -6239,37 +6285,39 @@ export async function createSubAdmin(payload = {}, actorId) {
         throw new ValidationError('Admin with this email already exists');
     }
 
+    // A platform admin under the one who made it, with no sections until given.
     const subAdmin = await Admin.create({
         email,
         password,
         name,
         phone: String(payload.phone || '').trim(),
         role: 'ADMIN',
-        adminType: 'sub_admin',
-        permissions: {},
+        servicesAccess: [...SHOP_ADMIN_SERVICES],
+        adminLevel: 'subadmin',
+        module: 'ecommerce',
+        admin_type: 'subadmin',
+        parentAdminId: mongoose.Types.ObjectId.isValid(String(actorId || '')) ? actorId : null,
+        permissions: [],
+        canDelete: false,
         isActive: true,
-        isDeleted: false,
-        createdBy: actorId || null,
-        updatedBy: actorId || null,
     });
 
-    return Admin.findById(subAdmin._id).select('-password').lean();
+    return asShopSubAdmin(await Admin.findById(subAdmin._id).select('-password').lean());
 }
 
 export async function getSubAdmins(query = {}) {
-    const filter = { adminType: 'sub_admin' };
-    if (query.includeDeleted !== 'true') {
-        filter.isDeleted = false;
-    }
+    const filter = { ...SHOP_SUBADMINS };
+    if (query.includeDeleted !== 'true') Object.assign(filter, notDeleted);
     if (query.status === 'active') filter.isActive = true;
     if (query.status === 'inactive') filter.isActive = false;
 
     const search = String(query.search || '').trim();
     if (search) {
+        const term = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         filter.$or = [
-            { name: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
-            { phone: { $regex: search, $options: 'i' } },
+            { name: { $regex: term, $options: 'i' } },
+            { email: { $regex: term, $options: 'i' } },
+            { phone: { $regex: term, $options: 'i' } },
         ];
     }
 
@@ -6277,77 +6325,35 @@ export async function getSubAdmins(query = {}) {
         .select('-password')
         .sort({ createdAt: -1 })
         .lean();
-    return { items };
+    return { items: items.map(asShopSubAdmin) };
 }
 
 export async function getSubAdminById(id) {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-        throw new ValidationError('Invalid sub-admin id');
-    }
-    const item = await Admin.findOne({ _id: id, adminType: 'sub_admin' }).select('-password').lean();
-    if (!item) throw new ValidationError('Sub-admin not found');
-    return item;
+    return asShopSubAdmin(await findShopSubAdmin(id));
 }
 
-export async function updateSubAdminProfile(id, payload = {}, actorId) {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-        throw new ValidationError('Invalid sub-admin id');
-    }
-    const update = { updatedBy: actorId || null };
+export async function updateSubAdminProfile(id, payload = {}) {
+    const update = {};
     if (payload.name !== undefined) update.name = String(payload.name || '').trim();
     if (payload.phone !== undefined) update.phone = String(payload.phone || '').trim();
     if (payload.email !== undefined) update.email = toEmail(payload.email);
-
-    const updated = await Admin.findOneAndUpdate(
-        { _id: id, adminType: 'sub_admin', isDeleted: false },
-        { $set: update },
-        { new: true }
-    ).select('-password').lean();
-    if (!updated) throw new ValidationError('Sub-admin not found');
-    return updated;
+    return setOnShopSubAdmin(id, update);
 }
 
-export async function updateSubAdminPermissions(id, rawPermissions = {}, actorId) {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-        throw new ValidationError('Invalid sub-admin id');
-    }
+export async function updateSubAdminPermissions(id, rawPermissions = {}) {
     if (!isValidPermissionPayload(rawPermissions)) {
         throw new ValidationError('Invalid permissions payload');
     }
-    const permissions = sanitizeAdminPermissions(rawPermissions);
-    const updated = await Admin.findOneAndUpdate(
-        { _id: id, adminType: 'sub_admin', isDeleted: false },
-        { $set: { permissions, updatedBy: actorId || null } },
-        { new: true }
-    ).select('-password').lean();
-    if (!updated) throw new ValidationError('Sub-admin not found');
-    return updated;
+    const mapped = shopAdmins.toPlatformPermissions({ adminType: 'sub_admin', permissions: sanitizeAdminPermissions(rawPermissions) });
+    return setOnShopSubAdmin(id, { permissions: mapped.permissions, canDelete: mapped.canDelete });
 }
 
-export async function updateSubAdminStatus(id, isActive, actorId) {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-        throw new ValidationError('Invalid sub-admin id');
-    }
-    const updated = await Admin.findOneAndUpdate(
-        { _id: id, adminType: 'sub_admin', isDeleted: false },
-        { $set: { isActive: Boolean(isActive), updatedBy: actorId || null } },
-        { new: true }
-    ).select('-password').lean();
-    if (!updated) throw new ValidationError('Sub-admin not found');
-    return updated;
+export async function updateSubAdminStatus(id, isActive) {
+    return setOnShopSubAdmin(id, { isActive: Boolean(isActive) });
 }
 
-export async function deleteSubAdmin(id, actorId) {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-        throw new ValidationError('Invalid sub-admin id');
-    }
-    const updated = await Admin.findOneAndUpdate(
-        { _id: id, adminType: 'sub_admin', isDeleted: false },
-        { $set: { isDeleted: true, isActive: false, updatedBy: actorId || null } },
-        { new: true }
-    ).select('-password').lean();
-    if (!updated) throw new ValidationError('Sub-admin not found');
-    return updated;
+export async function deleteSubAdmin(id) {
+    return setOnShopSubAdmin(id, { isDeleted: true, isActive: false });
 }
 
 export function getAdminPermissionCatalog() {

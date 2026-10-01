@@ -1,5 +1,4 @@
 import { sendError } from '../../utils/response.js';
-import { Admin } from '../admin/admin.model.js';
 
 const isSuperAdmin = (admin) =>
     !admin?.adminType || admin?.adminType === 'super_admin' || admin?.isSuperAdmin === true;
@@ -13,19 +12,11 @@ const isAdminRole = (role) => role === 'ADMIN' || role === 'SUPER_ADMIN';
 
 const hydrateAdmin = async (req) => {
     if (req.adminAccess) return req.adminAccess;
-    const admin = await Admin.findById(req.user?.userId)
-        .select('adminType permissions isActive isDeleted')
-        .lean();
-    if (admin) {
-        req.adminAccess = admin;
-        return admin;
-    }
-
-    // Not an e-commerce-native admin. Platform admins live in the shared `admins`
-    // collection, not ecom_admins; without this every one of them read as
-    // "inactive" and the whole panel 403'd. Same bridge quick-commerce uses: a
-    // platform admin is admitted when servicesAccess names this vertical, and an
-    // empty list means unrestricted.
+    // Every admin is a platform admin since the ecom_admins merge
+    // (core/admin/shopAdmin.js): one is admitted when servicesAccess names this
+    // vertical (an empty list means unrestricted). Which sections a sub-admin
+    // may open was decided earlier, by enforceAdminAccess, against the shared
+    // permissions.
     const { FoodAdmin: PlatformAdmin } = await import('../../../../core/admin/admin.model.js');
     const platform = await PlatformAdmin.findById(req.user?.userId)
         .select('servicesAccess isActive isDeleted adminLevel admin_type role parentAdminId module permissions')
@@ -40,8 +31,7 @@ const hydrateAdmin = async (req) => {
     if (access.length > 0 && !access.includes('ecommerce') && !isPlatformSuperadmin(platform)) return null;
 
     const bridged = {
-        // Full e-commerce access for admitted platform admins. Per-section
-        // permissions only exist on ecom_admins documents.
+        // Sections are enforced by enforceAdminAccess; nothing more to check here.
         adminType: 'super_admin',
         permissions: {},
         isActive: platform.isActive !== false,

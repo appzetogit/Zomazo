@@ -10,7 +10,9 @@ export const ADMIN_MODULES = {
   FOOD: 'food',
   TAXI: 'taxi',
   QUICK_COMMERCE: 'quickCommerce',
-  SERVICE_PROVIDER: 'serviceProvider'
+  SERVICE_PROVIDER: 'serviceProvider',
+  // The Shop's own admins became platform sub-admins of this module (core/admin/shopAdmin.js).
+  ECOMMERCE: 'ecommerce'
 };
 
 // The module each per-service superadmin level owns. Adding a service means adding

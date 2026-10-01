@@ -22,7 +22,6 @@ import {
     downloadBulkMenuTemplateController,
     uploadAdminBulkMenuController,
 } from '../../seller/controllers/bulkUpload.controller.js';
-import { Admin } from '../../../../core/admin/admin.model.js';
 import { requireAdminPermission, requireAnyAdminPermission } from '../../../../core/roles/adminPermission.middleware.js';
 import * as driverRegField from '../../delivery/controllers/driverRegistrationField.controller.js';
 import * as cashbackSettings from '../controllers/cashbackSettings.controller.js';
@@ -58,17 +57,8 @@ router.use(requireAdmin);
 // Platform sub-admins get only the sections they were given (see shopAdminAccess.js);
 // superadmins and Shop-native admins pass through to the checks below.
 router.use(enforceAdminAccess('ecommerce', resolveShopAdminResource));
-router.use(async (req, _res, next) => {
-    try {
-        const admin = await Admin.findById(req.user?.userId)
-            .select('adminType permissions isActive isDeleted')
-            .lean();
-        req.adminAccess = admin;
-        return next();
-    } catch (error) {
-        return next(error);
-    }
-});
+// requireAdminPermission (core/roles/adminPermission.middleware.js) loads the
+// admin itself: every Shop admin is a platform admin since the ecom_admins merge.
 
 const resolveSectionFromRequest = (path = '', method = '') => {
     if (path.startsWith('/sub-admins')) return 'sub_admin_management';

@@ -75,7 +75,7 @@ const pushCampaignSchema = new mongoose.Schema(
             ],
             default: [],
         },
-        createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomAdmin', default: null },
+        createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodAdmin', default: null },
     },
     { collection: 'push_campaigns', timestamps: true }
 );

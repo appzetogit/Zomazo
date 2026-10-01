@@ -42,6 +42,12 @@ export const requireServiceAccess = (vertical) => async (req, res, next) => {
             const merged = await resolveQuickAdminId(userId);
             if (merged) admin = await FoodAdmin.findById(merged).select(select).lean();
         }
+        // The Shop's admins likewise since the ecom_admins merge (core/admin/shopAdmin.js).
+        if (!admin && vertical === 'ecommerce') {
+            const { resolveShopAdminId } = await import('../admin/shopAdmin.js');
+            const merged = await resolveShopAdminId(userId);
+            if (merged) admin = await FoodAdmin.findById(merged).select(select).lean();
+        }
         if (!admin) return sendError(res, 403, 'Admin account not found');
 
         if (admin.isDeleted || admin.isActive === false) {
