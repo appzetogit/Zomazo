@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { isMergedCustomerCollection } from '../identity/mergedCustomers.js';
+import { isBackfilled } from './platformOrders.service.js';
 
 /**
  * One "My Orders" for the customer, across every service.
@@ -136,7 +137,8 @@ async function storeOrders({ collection, sellers, userIds, before, limit, key, r
 
 const TAXI_SERVICE = (d) => {
   const t = String(d.serviceType || '').toLowerCase();
-  if (t.includes('parcel') || t === 'delivery' || d.parcel) return 'parcel';
+  // serviceType says it; every ride carries an (empty) parcel block by default.
+  if (t.includes('parcel') || t === 'delivery' || d.parcel?.category) return 'parcel';
   if (t.includes('rental')) return 'rental';
   return 'taxi';
 };
@@ -212,8 +214,84 @@ const SERVICE_GROUPS = {
  * @param {object} query   { service?, state?: 'ongoing'|'past', before?: ISO date, limit? }
  * @returns {{ items, nextBefore, ongoingCount }}
  */
+/* ------------------------------------------------- the common record */
+
+// platform_orders (core/orders/platformOrder.model.js) -> this list's shape.
+const COMMON_KEY = { food: 'food', quickCommerce: 'quick', ecommerce: 'shop', taxi: 'taxi', serviceProvider: 'services' };
+const commonService = (r) => {
+  if (r.service === 'quickCommerce') return r.kind === 'medical' ? 'medical' : 'quick';
+  if (r.service === 'taxi') return r.kind === 'parcel' || r.kind === 'rental' ? r.kind : 'taxi';
+  return COMMON_KEY[r.service];
+};
+const commonState = (status) => (['delivered', 'completed'].includes(status) ? 'completed' : ['cancelled', 'refunded'].includes(status) ? 'cancelled' : 'ongoing');
+function commonLabel(r) {
+  if (r.status === 'refunded') return 'Refunded';
+  if (r.service === 'taxi') return r.rawStatus === 'completed' ? 'Completed' : String(r.rawStatus).startsWith('cancel') ? 'Cancelled' : humanize(r.rawStatus);
+  if (r.service === 'serviceProvider') return SERVICE_STATUS_LABEL[r.rawStatus] || humanize(r.rawStatus);
+  return storeLabel(r.rawStatus);
+}
+
+async function commonOrders({ userId, before, limit, kinds, state }) {
+  const filter = { platformUserId: oid(userId), visible: true, createdAt: { $lt: before } };
+  const KIND = {
+    food: { service: 'food' },
+    quick: { service: 'quickCommerce', kind: { $ne: 'medical' } },
+    medical: { service: 'quickCommerce', kind: 'medical' },
+    shop: { service: 'ecommerce' },
+    taxi: { service: 'taxi', kind: { $nin: ['parcel', 'rental'] } },
+    parcel: { service: 'taxi', kind: 'parcel' },
+    rental: { service: 'taxi', kind: 'rental' },
+    services: { service: 'serviceProvider' },
+  };
+  const byKind = kinds.length ? { $or: kinds.map((k) => KIND[k]).filter(Boolean) } : {};
+  Object.assign(filter, byKind);
+  if (state === 'ongoing') filter.status = { $nin: ['delivered', 'completed', 'cancelled', 'refunded'] };
+  if (state === 'past') filter.status = { $in: ['delivered', 'completed', 'cancelled', 'refunded'] };
+  const docs = await coll('platform_orders').find(filter).sort({ createdAt: -1 }).limit(limit + 1).toArray();
+  const rows = docs.map((r) => {
+    const service = commonService(r);
+    return {
+      key: `${COMMON_KEY[r.service]}:${r.sourceId}`,
+      id: String(r.sourceId),
+      service,
+      serviceLabel: SERVICE_LABEL[service],
+      number: r.number || String(r.sourceId).slice(-6).toUpperCase(),
+      title: r.title,
+      subtitle: r.summary,
+      amount: Number(r.amounts?.total) || 0,
+      state: commonState(r.status),
+      statusLabel: commonLabel(r),
+      createdAt: r.createdAt,
+      route: r.route,
+    };
+  });
+  const items = rows.slice(0, limit);
+  let ongoingCount;
+  if (state !== 'past') {
+    ongoingCount = await coll('platform_orders').countDocuments({
+      platformUserId: oid(userId), visible: true, ...byKind,
+      status: { $nin: ['delivered', 'completed', 'cancelled', 'refunded'] },
+    });
+  }
+  return {
+    items,
+    nextBefore: rows.length > limit && items.length ? new Date(items[items.length - 1].createdAt).toISOString() : null,
+    ongoingCount,
+  };
+}
+
 export async function listMyOrders(userId, query = {}) {
   if (!isId(userId)) return { items: [], nextBefore: null, ongoingCount: 0 };
+  // Once platform_orders is backfilled (scripts/migrations/backfillPlatformOrders.mjs)
+  // it is the one place to read; until then each service is read as before.
+  if (await isBackfilled().catch(() => false)) {
+    const limit = Math.min(50, Math.max(1, Number(query.limit) || 20));
+    const before = query.before && !Number.isNaN(Date.parse(query.before)) ? new Date(query.before) : new Date(Date.now() + 60_000);
+    const service = SERVICE_FILTERS.includes(query.service) || SERVICE_GROUPS[query.service] ? query.service : '';
+    const kinds = SERVICE_GROUPS[service] || (service ? [service] : []);
+    const state = query.state === 'ongoing' || query.state === 'past' ? query.state : '';
+    return commonOrders({ userId, before, limit, kinds, state });
+  }
   const limit = Math.min(50, Math.max(1, Number(query.limit) || 20));
   const before = query.before && !Number.isNaN(Date.parse(query.before)) ? new Date(query.before) : new Date(Date.now() + 60_000);
   const service = SERVICE_FILTERS.includes(query.service) || SERVICE_GROUPS[query.service] ? query.service : '';

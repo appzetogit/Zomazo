@@ -47,6 +47,7 @@ import platformAdminRoutes from '../core/admin/platformAdmins.routes.js';
 import supportInboxRoutes from '../core/support/supportInbox.routes.js';
 import couponListRoutes from '../core/promotions/couponList.routes.js';
 import platformPnlRoutes from '../core/finance/platformPnl.routes.js';
+import platformOrdersRoutes from '../core/orders/platformOrders.routes.js';
 import homeContentRoutes from '../core/cms/homeContent.routes.js';
 import commissionOverviewRoutes from '../core/finance/commissionOverview.routes.js';
 import myOrdersRoutes from '../core/orders/myOrders.routes.js';
@@ -138,6 +139,8 @@ router.use('/v1/platform/coupons', couponListRoutes);
 router.use('/v1/platform/rewards', rewardsRoutes);
 // What the platform kept, across every service (Master > Platform Earnings).
 router.use('/v1/platform/pnl', platformPnlRoutes);
+// Master > All orders: the one common order record (core/orders/platformOrder.model.js).
+router.use('/v1/platform/orders', platformOrdersRoutes);
 // Every home-screen banner in one list (Master > Home Screen Banners).
 router.use('/v1/platform/home-content', homeContentRoutes);
 // What the platform takes from every partner (Master > Commission Overview).

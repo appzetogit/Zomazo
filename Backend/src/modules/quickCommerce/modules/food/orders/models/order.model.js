@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { attachPlatformOrderSync } from '../../../../../../core/orders/platformOrderSync.cjs';
 
 const orderItemSchema = new mongoose.Schema(
     {
@@ -614,6 +615,9 @@ orderSchema.pre('save', async function (next) {
         next(err);
     }
 });
+
+// One common order record across the platform (core/orders/platformOrder.model.js).
+attachPlatformOrderSync(orderSchema, 'quickCommerce');
 
 export const FoodOrder = mongoose.models.QCOrder || mongoose.model('QCOrder', orderSchema, 'qc_orders');
 

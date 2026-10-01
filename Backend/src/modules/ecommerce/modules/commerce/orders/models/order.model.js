@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { attachPlatformOrderSync } from '../../../../../../core/orders/platformOrderSync.cjs';
 
 import { ecomModel } from '../../../../config/ecomModel.js';
 const orderItemSchema = new mongoose.Schema(
@@ -496,6 +497,9 @@ orderSchema.pre('save', async function (next) {
         next(err);
     }
 });
+
+// One common order record across the platform (core/orders/platformOrder.model.js).
+attachPlatformOrderSync(orderSchema, 'ecommerce');
 
 export const Order = ecomModel('Order', orderSchema);
 

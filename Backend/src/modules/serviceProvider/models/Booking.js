@@ -471,4 +471,7 @@ bookingSchema.index({ 'potentialVendors.vendorId': 1 });
 // Dashboard: $or on { vendorId: null, serviceCategory: ..., status: ... }
 bookingSchema.index({ vendorId: 1, serviceCategory: 1, status: 1 });
 
+// One common order record across the platform (core/orders/platformOrder.model.js).
+require('../../../core/orders/platformOrderSync.cjs').attachPlatformOrderSync(bookingSchema, 'serviceProvider');
+
 module.exports = mongoose.models.SPBooking || mongoose.model('SPBooking', bookingSchema, 'sp_bookings');

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { attachPlatformOrderSync } from '../../../../core/orders/platformOrderSync.cjs';
 import { RIDE_LIVE_STATUS, RIDE_STATUS } from '../../constants/index.js';
 
 const rideMessageSchema = new mongoose.Schema(
@@ -955,5 +956,8 @@ const rideSchema = new mongoose.Schema(
 rideSchema.index({ userId: 1, createdAt: -1 });
 rideSchema.index({ driverId: 1, createdAt: -1 });
 rideSchema.index({ poolGroupId: 1 });
+
+// One common order record across the platform (core/orders/platformOrder.model.js).
+attachPlatformOrderSync(rideSchema, 'taxi');
 
 export const Ride = mongoose.models.TaxiRide || mongoose.model('TaxiRide', rideSchema);
