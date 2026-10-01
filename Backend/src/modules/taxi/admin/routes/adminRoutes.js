@@ -43,6 +43,7 @@ import {
   deleteRentalPackageType,
   deleteLanguage,
   deleteOngoingRide,
+  refundRide,
   deleteOwner,
   deleteOwnerBooking,
   deleteOwnerNeededDocument,
@@ -454,6 +455,8 @@ adminRouter.patch('/admin/safety/alerts/:id/resolve', authenticate(['admin']), r
 adminRouter.get('/admin/ongoing-rides', getOngoingRides);
 adminRouter.get('/admin/ride-requests', getRideRequests);
 adminRouter.delete('/admin/ongoing-rides/:id', deleteOngoingRide);
+// Moves money: 'orders' write via enforceAdminAccess, audited as a finance action.
+adminRouter.post('/admin/ride-requests/:id/refund', requireFinancePermission('ORDER_REFUND'), refundRide);
 adminRouter.get('/admin/deliveries', getDeliveries);
 adminRouter.get('/admin/trips', getIntercityTrips);
 
