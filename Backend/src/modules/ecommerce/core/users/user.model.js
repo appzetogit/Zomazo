@@ -168,5 +168,20 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ phone: 1 }, { unique: true });
 userSchema.index({ 'addresses.location': '2dsphere' });
 
-export const User = ecomModel('User', userSchema);
+/**
+ * The old Shop customer rows. Read only by the merge
+ * (core/identity/shopCustomer.js, scripts/migrations/mergeEcomUsers.mjs);
+ * nothing writes a new one.
+ */
+export const LegacyEcomUser = ecomModel('User', userSchema);
+
+/*
+ * The Shop's customers ARE the platform's: the shared `users` collection. Every
+ * importer of this file reads and writes that, and a Shop customer id is the
+ * platform id. Old ecom_users ids are translated once, at the edge
+ * (auth.middleware.js -> resolveShopCustomerId). The Shop's own fields are
+ * shop* on the account (shopJoinedAt, shopBlocked, shopReferredBy,
+ * shopReferralCount, shopTokenVersion).
+ */
+export { FoodUser as User } from '../../../../core/users/user.model.js';
 

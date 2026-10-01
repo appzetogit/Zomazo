@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { isMergedCustomerCollection } from '../identity/mergedCustomers.js';
 
 /**
  * One "My Orders" for the customer, across every service.
@@ -83,7 +84,7 @@ export async function linkedIds(collection, platformId, phone) {
   const ids = rows.map((r) => r._id);
   // Quick keys its rows by the platform id since the qc_users merge; a row
   // not merged yet still names its qc_users id, so both are asked for.
-  if (collection === 'qc_users' && isId(platformId)) ids.unshift(oid(platformId));
+  if (isMergedCustomerCollection(collection) && isId(platformId)) ids.unshift(oid(platformId));
   return ids;
 }
 

@@ -34,7 +34,7 @@ const productReviewSchema = new mongoose.Schema(
     {
         productId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomProduct', required: true },
         sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomSeller', required: true, index: true },
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', required: true, index: true },
         /** The delivered order that made the customer eligible. */
         orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomOrder', default: null },
         /** Channel that order was fulfilled in ('quick' | 'shop'); the admin panels filter on it. */

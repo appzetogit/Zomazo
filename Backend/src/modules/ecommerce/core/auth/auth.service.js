@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import ms from "ms";
 import { User } from "../users/user.model.js";
+import { resolveShopCustomerId, shopCustomerForPhone } from "../../../../core/identity/shopCustomer.js";
 import { Admin } from "../admin/admin.model.js";
 import { AdminResetOtp } from "../admin/adminResetOtp.model.js";
 import { Seller } from "../../modules/commerce/seller/models/seller.model.js";
@@ -106,13 +107,17 @@ const saveLoginFcmToken = async ({ ownerType, ownerId, fcmToken, platform, owner
  * browser tabs and machines, and evicting those would be a regression, not a
  * safeguard.
  */
-const bumpTokenVersion = async (model, id) => {
+const bumpTokenVersion = async (model, id, field = 'tokenVersion') => {
   const updated = await model
-    .findByIdAndUpdate(id, { $inc: { tokenVersion: 1 } }, { new: true })
-    .select('tokenVersion')
+    .findByIdAndUpdate(id, { $inc: { [field]: 1 } }, { new: true })
+    .select(field)
     .lean();
-  return Number(updated?.tokenVersion) || 0;
+  return Number(updated?.[field]) || 0;
 };
+
+// A customer is a platform account (the ecom_users merge): the Shop's own
+// single-device counter, apart from Quick's.
+const CUSTOMER_TOKEN_VERSION = 'shopTokenVersion';
 
 export const requestUserOtp = async (phone) => {
   if (!phone) {
@@ -142,22 +147,23 @@ export const verifyUserOtpAndLogin = async (
     throw new AuthError(result.reason || "OTP verification failed");
   }
 
-  let userDoc = await User.findOne({ phone });
-  
-  // Ensure user exists and mark as verified on successful OTP.
-  // Check if user is new or hasn't provided a name yet
-  const needsNamePrompt = !userDoc || !userDoc.name || String(userDoc.name).trim() === "" || String(userDoc.name).toLowerCase() === "null";
-  const isNewUser = needsNamePrompt;
+  // The customer's platform account (the ecom_users merge): matched on the last
+  // ten digits, any ecom_users row of theirs still waiting merged first, made
+  // when there is none.
   const trimmedName = typeof name === "string" ? name.trim() : "";
+  let userDoc = await shopCustomerForPhone(phone, { name: trimmedName });
 
-  if (!userDoc) {
-    userDoc = await User.create({
-      phone,
-      isVerified: true,
-      ...(trimmedName ? { name: trimmedName } : {}),
-    });
-  } else {
+  // New to the Shop (never used it, or just made), or no name given yet -- as
+  // before the merge, when "new" meant no ecom_users row.
+  const needsNamePrompt = !userDoc.name || String(userDoc.name).trim() === "" || String(userDoc.name).toLowerCase() === "null";
+  const isNewUser = needsNamePrompt || !userDoc.shopJoinedAt || userDoc.$locals?.createdNow === true;
+
+  {
     let needsSave = false;
+    if (!userDoc.shopJoinedAt) {
+      userDoc.shopJoinedAt = new Date();
+      needsSave = true;
+    }
     if (!userDoc.isVerified) {
       userDoc.isVerified = true;
       needsSave = true;
@@ -170,7 +176,7 @@ export const verifyUserOtpAndLogin = async (
   }
 
   // Block login for deactivated users
-  if (userDoc.isActive === false) {
+  if (userDoc.isActive === false || userDoc.shopBlocked === true) {
     throw new AuthError(
       "Your account has been deactivated. Please contact support.",
     );
@@ -197,11 +203,13 @@ export const verifyUserOtpAndLogin = async (
   const refRaw = typeof ref === "string" ? String(ref).trim() : "";
   if (isNewUser && refRaw) {
     try {
-      if (mongoose.Types.ObjectId.isValid(refRaw)) {
-        const referrerId = new mongoose.Types.ObjectId(refRaw);
+      // An old Shop code (an ecom_users id) names the platform account it was merged into.
+      const referrerKey = mongoose.Types.ObjectId.isValid(refRaw) ? await resolveShopCustomerId(refRaw) : null;
+      if (referrerKey && !userDoc.shopReferredBy) {
+        const referrerId = new mongoose.Types.ObjectId(referrerKey);
         if (String(referrerId) !== String(userDoc._id)) {
           const [referrer, settingsDoc] = await Promise.all([
-            User.findById(referrerId).select("_id referralCount").lean(),
+            User.findById(referrerId).select("_id shopReferralCount").lean(),
             ReferralSettings.findOne({ isActive: true })
               .sort({ createdAt: -1 })
               .lean(),
@@ -220,9 +228,9 @@ export const verifyUserOtpAndLogin = async (
             if (
               reward > 0 &&
               limit > 0 &&
-              Number(referrer.referralCount || 0) < limit
+              Number(referrer.shopReferralCount || 0) < limit
             ) {
-              userDoc.referredBy = referrerId;
+              userDoc.shopReferredBy = referrerId;
               await userDoc.save();
 
               const log = await ReferralLog.create({
@@ -236,7 +244,7 @@ export const verifyUserOtpAndLogin = async (
               await Promise.all([
                 User.updateOne(
                   { _id: referrerId },
-                  { $inc: { referralCount: 1 } },
+                  { $inc: { shopReferralCount: 1 } },
                 ),
                 creditReferralReward(referrerId, reward, {
                   role: "USER",
@@ -272,7 +280,7 @@ export const verifyUserOtpAndLogin = async (
   const payload = {
     userId: user._id.toString(),
     role: user.role || "USER",
-    tokenVersion: await bumpTokenVersion(User, user._id),
+    tokenVersion: await bumpTokenVersion(User, user._id, CUSTOMER_TOKEN_VERSION),
   };
 
   const accessToken = signAccessToken(payload);
@@ -967,8 +975,11 @@ export const refreshAccessToken = async (token) => {
 
   // If deactivated user, do not issue fresh access tokens (forces logout on client)
   if (payload?.role === "USER") {
-    const u = await User.findById(payload.userId).select("isActive").lean();
-    if (!u || u.isActive === false) {
+    // A refresh token from before the ecom_users merge names the old Shop id.
+    const customerId = await resolveShopCustomerId(payload.userId);
+    if (customerId) payload = { ...payload, userId: customerId };
+    const u = await User.findById(payload.userId).select("isActive shopBlocked").lean();
+    if (!u || u.isActive === false || u.shopBlocked === true) {
       throw new AuthError("User account is deactivated");
     }
   }
@@ -984,11 +995,12 @@ export const refreshAccessToken = async (token) => {
 
   let tokenVersion = payload?.tokenVersion;
   if (sessionModel) {
+    const versionField = payload?.role === 'USER' ? CUSTOMER_TOKEN_VERSION : 'tokenVersion';
     const owner = await sessionModel
       .findById(payload.userId)
-      .select('tokenVersion')
+      .select(versionField)
       .lean();
-    const stored = Number(owner?.tokenVersion) || 0;
+    const stored = Number(owner?.[versionField]) || 0;
     if (tokenVersion !== undefined && Number(tokenVersion) !== stored) {
       throw new AuthError(
         'You have been signed out because this account was used on another device',

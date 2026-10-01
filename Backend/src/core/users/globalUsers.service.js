@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { isMergedCustomerCollection } from '../identity/mergedCustomers.js';
 import { logger } from '../../utils/logger.js';
 import { FoodUser } from './user.model.js';
 import { toTenDigits } from '../identity/phoneMatch.js';
@@ -215,7 +216,7 @@ export async function enrichUsers(users = []) {
                 if (owner) ownerOf.set(String(q._id), owner);
             }
             // Quick keys orders by the platform id since the qc_users merge.
-            if (usersColl === 'qc_users') for (const id of ids) ownerOf.set(String(id), String(id));
+            if (isMergedCustomerCollection(usersColl)) for (const id of ids) ownerOf.set(String(id), String(id));
             if (!ownerOf.size) return;
             const rows = await mongoose.connection.collection(ordersColl).aggregate([
                 { $match: { userId: { $in: [...ownerOf.keys()].map((id) => new mongoose.Types.ObjectId(id)) } } },

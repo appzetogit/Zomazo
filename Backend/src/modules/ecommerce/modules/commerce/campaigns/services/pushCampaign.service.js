@@ -211,7 +211,8 @@ export async function setNotificationPreferences(ownerType, ownerId, body = {}) 
 const users = (ids) => ids.map((id) => ({ ownerType: 'USER', ownerId: String(id) }));
 
 async function activeCustomerIds(filterIds = null) {
-    const query = { isActive: { $ne: false } };
+    // The Shop's customers in the shared users collection (the ecom_users merge).
+    const query = { isActive: { $ne: false }, shopBlocked: { $ne: true }, shopJoinedAt: { $ne: null } };
     if (filterIds) query._id = { $in: filterIds };
     const rows = await User.find(query).select('_id').lean();
     return rows.map((r) => r._id);
@@ -264,7 +265,7 @@ export async function resolveAudience(audience = {}, now = new Date()) {
 
     if (type === 'never_ordered') {
         const ordered = await Order.distinct('userId', { orderStatus: { $nin: NOT_REAL } });
-        const rows = await User.find({ isActive: { $ne: false }, _id: { $nin: ordered } }).select('_id').lean();
+        const rows = await User.find({ isActive: { $ne: false }, shopBlocked: { $ne: true }, shopJoinedAt: { $ne: null }, _id: { $nin: ordered } }).select('_id').lean();
         return users(rows.map((r) => r._id));
     }
 

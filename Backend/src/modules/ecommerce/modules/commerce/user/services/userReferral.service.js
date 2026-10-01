@@ -10,6 +10,10 @@ import { referralSettingsFor } from '../../../../../../core/referral/referralSet
 import { invitesOfPerson } from '../../../../../../core/referral/referralActivity.service.js';
 import { inviteCodeForRow, resolveInviter } from '../../../../../../core/referral/inviteCode.service.js';
 import { ensureShopCustomer } from '../../../../core/auth/auth.middleware.js';
+import { resolveShopCustomerId } from '../../../../../../core/identity/shopCustomer.js';
+
+// Since the ecom_users merge a Shop customer id IS the platform id; the Shop's
+// own counter and inviter are shopReferralCount / shopReferredBy on the account.
 import { claimReferralForPhone, releaseReferralClaim } from '../../../../../../core/referral/referralClaim.service.js';
 
 // What the Shop pays: its own settings, with Master > Referral's values in place.
@@ -22,17 +26,17 @@ export const getUserReferralStats = async (userId) => {
     }
     const oid = new mongoose.Types.ObjectId(id);
     const [user, wallet, settingsDoc] = await Promise.all([
-        User.findById(oid).select('_id referralCount referralCode').lean(),
+        User.findById(oid).select('_id shopReferralCount referralCode').lean(),
         UserWallet.findOne({ userId: oid }).select('referralEarnings').lean(),
         shopReferralSettings()
     ]);
-    // The person's one invite code (core/referral/inviteCode.service.js), else this row's own.
-    const shareCode = String((await inviteCodeForRow('ecom_users', id).catch(() => null)) || user?.referralCode || user?._id || '');
+    // The person's one invite code (core/referral/inviteCode.service.js).
+    const shareCode = String((await inviteCodeForRow('users', id).catch(() => null)) || user?.referralCode || user?._id || '');
 
     return {
         referralCode: shareCode,
         referralLink: buildReferralLinkFromTemplate(settingsDoc?.referralLinkUser, shareCode, ''),
-        referralCount: Number(user?.referralCount) || 0,
+        referralCount: Number(user?.shopReferralCount) || 0,
         totalReferralEarnings: Number(wallet?.referralEarnings) || 0,
         rewardAmount: Math.max(0, Number(settingsDoc?.referralRewardUser) || 0),
         referralLimit: Math.max(0, Number(settingsDoc?.referralLimitUser) || 0)
@@ -47,7 +51,7 @@ export const getUserReferralDetails = async (userId) => {
 
     const oid = new mongoose.Types.ObjectId(id);
     const [user, wallet, settingsDoc, logs] = await Promise.all([
-        User.findById(oid).select('_id referralCount referralCode').lean(),
+        User.findById(oid).select('_id shopReferralCount referralCode').lean(),
         UserWallet.findOne({ userId: oid }).select('referralEarnings').lean(),
         shopReferralSettings(),
         ReferralLog.find({ referrerId: oid, role: 'USER' })
@@ -55,7 +59,7 @@ export const getUserReferralDetails = async (userId) => {
             .limit(100)
             .lean()
     ]);
-    const shareCode = String((await inviteCodeForRow('ecom_users', id).catch(() => null)) || user?.referralCode || user?._id || '');
+    const shareCode = String((await inviteCodeForRow('users', id).catch(() => null)) || user?.referralCode || user?._id || '');
 
     const refereeIds = Array.from(
         new Set(
@@ -98,8 +102,7 @@ export const getUserReferralDetails = async (userId) => {
 
     // A customer with a platform account has one code, so their friends may
     // have joined through any service: list them all.
-    const platformId = (await User.findById(oid).select('platformUserId').lean())?.platformUserId;
-    const invitedFriends = platformId ? await invitesOfPerson(platformId) : shopOnly;
+    const invitedFriends = user ? await invitesOfPerson(oid) : shopOnly;
 
     const totalInvited = invitedFriends.length;
     const creditedCount = invitedFriends.filter((entry) => entry.status === 'credited').length;
@@ -110,7 +113,7 @@ export const getUserReferralDetails = async (userId) => {
         stats: {
             referralCode: shareCode,
             referralLink: buildReferralLinkFromTemplate(settingsDoc?.referralLinkUser, shareCode, ''),
-            referralCount: Number(user?.referralCount) || 0,
+            referralCount: Number(user?.shopReferralCount) || 0,
             totalReferralEarnings: Number(wallet?.referralEarnings) || 0,
             rewardAmount: Math.max(0, Number(settingsDoc?.referralRewardUser) || 0),
             referralLimit: Math.max(0, Number(settingsDoc?.referralLimitUser) || 0),
@@ -139,31 +142,28 @@ export const getUserReferralDetails = async (userId) => {
 export const creditShopSignupReferral = async ({ refereeId, ref } = {}) => {
     const code = String(ref || '').trim();
     if (!code || !mongoose.Types.ObjectId.isValid(String(refereeId || ''))) return { credited: false, reason: 'no_referral' };
-    const referee = await User.findById(refereeId).select('_id referredBy platformUserId phone').lean();
+    // An old Shop row id is translated (and that row merged) first.
+    const refereeKey = await resolveShopCustomerId(refereeId);
+    const referee = refereeKey ? await User.findById(refereeKey).select('_id shopReferredBy phone').lean() : null;
     if (!referee) return { credited: false, reason: 'no_referee' };
-    if (referee.referredBy) return { credited: false, reason: 'already_referred' };
+    if (referee.shopReferredBy) return { credited: false, reason: 'already_referred' };
     // One reward per phone number, ever, as on the platform sign-in: deleting
     // the Shop account and signing up again makes a new row (a new refereeId),
     // which the unique index alone would pay again.
     const refereePhone = String(referee.phone || '').replace(/\D/g, '').slice(-10);
 
-    const or = [{ referralCode: code }];
-    if (mongoose.Types.ObjectId.isValid(code)) {
-        const oid = new mongoose.Types.ObjectId(code);
-        or.push({ _id: oid }, { platformUserId: oid });
-    }
-    let referrer = await User.findOne({ $or: or }).select('_id platformUserId').lean();
+    // A platform id, or an old Shop code (an ecom_users id), merged on the spot.
+    const asId = mongoose.Types.ObjectId.isValid(code) ? await resolveShopCustomerId(code) : null;
+    let referrer = asId ? await User.findById(asId).select('_id').lean() : null;
     if (!referrer) {
         // Any code the platform knows the friend by (one code per person,
         // core/referral/inviteCode.service.js); they get a Shop row if they have none.
         const platformId = await resolveInviter(code);
         const rowId = platformId ? await ensureShopCustomer(String(platformId)) : null;
-        referrer = rowId ? await User.findById(rowId).select('_id platformUserId').lean() : null;
+        referrer = rowId ? await User.findById(rowId).select('_id').lean() : null;
     }
     if (!referrer) return { credited: false, reason: 'unknown_referrer' };
-    const self = String(referrer._id) === String(referee._id)
-        || (referrer.platformUserId && String(referrer.platformUserId) === String(referee.platformUserId));
-    if (self) return { credited: false, reason: 'self_referral' };
+    if (String(referrer._id) === String(referee._id)) return { credited: false, reason: 'self_referral' };
 
     const settings = await shopReferralSettings();
     const reward = Math.max(0, Number(settings?.referralRewardUser) || 0);
@@ -205,8 +205,8 @@ export const creditShopSignupReferral = async ({ refereeId, ref } = {}) => {
 
     const claimed = reward > 0 && limit > 0
         ? await User.updateOne(
-            { _id: referrer._id, $or: [{ referralCount: { $lt: limit } }, { referralCount: { $exists: false } }] },
-            { $inc: { referralCount: 1 } }
+            { _id: referrer._id, $or: [{ shopReferralCount: { $lt: limit } }, { shopReferralCount: { $exists: false } }] },
+            { $inc: { shopReferralCount: 1 } }
         )
         : null;
     if (claimed?.modifiedCount !== 1) {
@@ -216,7 +216,7 @@ export const creditShopSignupReferral = async ({ refereeId, ref } = {}) => {
         return { credited: false, reason };
     }
 
-    await User.updateOne({ _id: referee._id }, { $set: { referredBy: referrer._id } });
+    await User.updateOne({ _id: referee._id }, { $set: { shopReferredBy: referrer._id } });
     await creditReferralReward(referrer._id, reward, {
         role: 'USER',
         refereeId: String(referee._id),

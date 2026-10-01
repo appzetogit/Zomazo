@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import { User } from '../users/user.model.js';
+import { User, LegacyEcomUser } from '../users/user.model.js';
 import { recordCustomerNotification } from '../../../../core/notifications/customerInbox.js';
 import { dropPlatformDeviceTokens, platformDeviceTokensFor } from '../../../../core/identity/platformUser.js';
 import { Seller } from '../../modules/commerce/seller/models/seller.model.js';
@@ -446,9 +446,13 @@ export const listOwnerTokens = async ({ ownerType, ownerId, platform }) => {
     if (!ownerType || !ownerId) return [];
     const model = getOwnerModel(ownerType);
     if (!model) return [];
-    const doc = await model.findById(ownerId).select('fcmTokens fcmTokenMobile').lean();
+    const isUser = String(ownerType).toUpperCase() === 'USER';
+    // A customer not merged into users yet (the ecom_users merge) is still
+    // addressed by their ecom_users id: their devices are on that row.
+    const doc = (await model.findById(ownerId).select('fcmTokens fcmTokenMobile').lean())
+        || (isUser ? await LegacyEcomUser.findOne({ _id: ownerId, mergedAt: { $exists: false } }).select('fcmTokens fcmTokenMobile').lean() : null);
     const own = readTokensFromDoc(doc, platform);
-    if (String(ownerType).toUpperCase() !== 'USER') return own;
+    if (!isUser) return own;
     // Customers sign in once, on the platform: their devices are on the platform
     // account, not on ecom_users.
     const shared = await platformDeviceTokensFor(ownerId, {

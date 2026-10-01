@@ -71,7 +71,8 @@ const buildDeliveryLabel = (doc) => ({
 const modelConfigMap = {
     USER: {
         model: User,
-        query: { isActive: true },
+        // The Shop's customers in the shared users collection (the ecom_users merge).
+        query: { isActive: true, shopBlocked: { $ne: true }, shopJoinedAt: { $ne: null } },
         select: '_id name phone email',
         buildLabel: buildUserLabel
     },

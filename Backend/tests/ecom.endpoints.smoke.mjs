@@ -58,7 +58,8 @@ const { default: app } = await import('../src/app.js');
 const { signAccessToken } = await import('../src/core/auth/token.util.js');
 const { FoodAdmin } = await import('../src/core/admin/admin.model.js');
 const { FoodUser: PlatformUser } = await import('../src/core/users/user.model.js');
-const { User: EcomUser } = await import('../src/modules/ecommerce/core/users/user.model.js');
+// Old Shop rows; customers are platform accounts since the ecom_users merge.
+const { LegacyEcomUser: EcomUser } = await import('../src/modules/ecommerce/core/users/user.model.js');
 const { Seller } = await import('../src/modules/ecommerce/modules/commerce/seller/models/seller.model.js');
 const { default: ecomRouter } = await import('../src/modules/ecommerce/routes/index.js');
 
@@ -132,18 +133,15 @@ const sellerToken = signAccessToken({ userId: String(sellerId), role: 'SELLER', 
 
 // ── Identity bridge ─────────────────────────────────────────────────────────
 console.log('\nidentity bridge');
-const before = await EcomUser.countDocuments();
 const profile = await call('/api/v1/ecom/user/profile', 'GET', null, customerToken);
-const satellites = await EcomUser.find({ platformUserId: customer._id }).lean();
+const satellites = [customer];
 check('platform customer token is accepted', () => assert.equal(profile.status, 200, profile.body.slice(0, 200)));
-check('first request creates exactly one linked satellite', () => {
-    assert.equal(satellites.length, 1);
-    assert.equal(before, 0);
+const shopRows = await EcomUser.countDocuments();
+const joined = (await PlatformUser.findById(customer._id).lean())?.shopJoinedAt;
+check('the first request makes no second account, only marks a Shop customer', () => {
+    assert.equal(shopRows, 0);
+    assert.ok(joined);
 });
-check('satellite phone is the last ten digits', () => assert.equal(satellites[0]?.phone, '9876543210'));
-await call('/api/v1/ecom/user/profile', 'GET', null, customerToken);
-const afterSecond = await EcomUser.countDocuments({ platformUserId: customer._id });
-check('a second request reuses the satellite', () => assert.equal(afterSecond, 1));
 
 const taxiShaped = signAccessToken({ sub: String(new mongoose.Types.ObjectId()), role: 'user' });
 const stranger = await call('/api/v1/ecom/user/profile', 'GET', null, taxiShaped);
@@ -153,9 +151,11 @@ const browse = await call('/api/v1/ecom/catalog/products', 'GET', null, signAcce
     userId: String((await PlatformUser.create({ phone: '9000000001', role: 'USER' }))._id), role: 'USER',
 }));
 const afterBrowse = await EcomUser.countDocuments();
-check('browsing while signed in does not create an account', () => {
+const browsedShopJoin = (await PlatformUser.findOne({ phone: '9000000001' }).lean())?.shopJoinedAt;
+check('browsing while signed in does not make anyone a Shop customer', () => {
     assert.ok(browse.status < 500, browse.body.slice(0, 200));
-    assert.equal(afterBrowse, 1);
+    assert.equal(afterBrowse, 0);
+    assert.ok(!browsedShopJoin);
 });
 
 // ── Front doors that must be closed ─────────────────────────────────────────

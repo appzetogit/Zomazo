@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { isMergedCustomerCollection } from '../identity/mergedCustomers.js';
 import { isModuleEnabled } from '../modules/moduleState.service.js';
 import { MODULES } from '../modules/moduleRegistry.js';
 
@@ -27,7 +28,7 @@ const STATUSES = ['pending', 'credited', 'rejected'];
 
 // Quick's customers are in `users` since the qc_users merge; rows not merged
 // yet are still in qc_users. ObjectIds are unique across the two.
-const lookIn = (collection) => (collection === 'qc_users' ? ['users', 'qc_users'] : [collection]);
+const lookIn = (collection) => (isMergedCustomerCollection(collection) ? ['users', collection] : [collection]);
 
 async function findIn(collection, filter, projection) {
   const lists = await Promise.all(lookIn(collection).map((c) => coll(c).find(filter).project(projection).toArray()));
@@ -134,7 +135,7 @@ async function rowsOfPerson(collection, platformId) {
   if (collection === 'sp_users' && phone.length === 10) or.push({ phone: { $in: [phone, `+91${phone}`, `91${phone}`] } });
   const rows = await coll(collection).find({ $or: or }).project({ _id: 1 }).toArray();
   // Quick keys its logs by the platform id since the merge.
-  return [...(collection === 'qc_users' ? [platformId] : []), ...rows.map((r) => r._id)];
+  return [...(isMergedCustomerCollection(collection) ? [platformId] : []), ...rows.map((r) => r._id)];
 }
 
 /**

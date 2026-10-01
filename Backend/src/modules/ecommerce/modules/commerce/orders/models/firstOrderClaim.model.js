@@ -16,7 +16,7 @@ import { ecomModel } from '../../../../config/ecomModel.js';
 const firstOrderClaimSchema = new mongoose.Schema(
     {
         /** Always set, for reference; not unique (the account signal may be off). */
-        ownerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
+        ownerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', required: true, index: true },
         /** Set only while the "account" signal is on. */
         userId: { type: mongoose.Schema.Types.ObjectId, default: undefined },
         phoneHash: { type: String, default: undefined },

@@ -27,7 +27,7 @@ const returnRequestSchema = new mongoose.Schema(
     {
         orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomOrder', required: true, index: true },
         orderReadableId: { type: String, default: '' },
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', required: true, index: true },
         sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomSeller', required: true, index: true },
         items: { type: [returnItemSchema], validate: (v) => Array.isArray(v) && v.length > 0 },
         reason: { type: String, required: true, trim: true, maxlength: 500 },

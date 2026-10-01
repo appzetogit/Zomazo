@@ -71,7 +71,8 @@ export const resolveCustomerIdentities = async (masterUserId) => {
     }
 
     try {
-        const { User: EcomUser } = await import('../../modules/ecommerce/core/users/user.model.js');
+        // Rows not merged into `users` yet (the ecom_users merge); merged ones use the master id.
+        const { LegacyEcomUser: EcomUser } = await import('../../modules/ecommerce/core/users/user.model.js');
         const shop = await EcomUser.findOne(bySatellite).select('_id').lean();
         if (shop?._id) { ids.push(shop._id); resolved.push('ecommerce'); }
     } catch (err) {

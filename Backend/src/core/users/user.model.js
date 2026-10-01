@@ -162,7 +162,20 @@ const userSchema = new mongoose.Schema(
         /** Bumped by Quick's own OTP sign-in; its tokens carry it (single device). */
         tokenVersion: { type: Number, default: 0 },
         /** The qc_users rows merged into this account (makes the merge idempotent). */
-        mergedQcIds: { type: [mongoose.Schema.Types.ObjectId], default: undefined }
+        mergedQcIds: { type: [mongoose.Schema.Types.ObjectId], default: undefined },
+
+        /*
+         * The Shop's customers, since the ecom_users merge (core/identity/shopCustomer.js),
+         * under the Shop's own names for the same reasons as Quick's above.
+         * shopTokenVersion is the Shop's single-device counter, apart from
+         * Quick's, so signing in to one does not sign the other out.
+         */
+        shopJoinedAt: { type: Date, default: null, index: true },
+        shopBlocked: { type: Boolean, default: false },
+        shopReferredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', default: null, index: true },
+        shopReferralCount: { type: Number, default: 0, min: 0 },
+        shopTokenVersion: { type: Number, default: 0 },
+        mergedEcomIds: { type: [mongoose.Schema.Types.ObjectId], default: undefined }
     },
     {
         collection: 'users',

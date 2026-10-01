@@ -13,6 +13,7 @@
  * the person they belong to.
  */
 import mongoose from 'mongoose';
+import { mappedCustomer } from '../identity/mergedCustomers.js';
 
 const isHexId = (v) => /^[a-f0-9]{24}$/i.test(String(v || ''));
 const tenDigits = (phone) => String(phone || '').replace(/\D/g, '').slice(-10);
@@ -78,9 +79,10 @@ export async function resolveInviter(ref) {
         const row = await mongoose.connection.collection(s.collection).findOne({ $or: or }, { projection });
         if (row) return platformIdOfRow(row);
     }
-    // A Quick code (its qc_users id) from before the merge, once the row is dropped.
+    // A service code (its old row id) from before that service's customers were
+    // merged into users, once the row is dropped (core/identity/mergedCustomers.js).
     if (oid) {
-        const merged = await mongoose.connection.collection('qc_user_id_map').findOne({ _id: oid }, { projection: { platformId: 1 } });
+        const merged = await mappedCustomer(oid);
         if (merged?.platformId) return merged.platformId;
     }
     return null;

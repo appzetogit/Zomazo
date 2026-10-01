@@ -7,7 +7,7 @@ import { ecomModel } from '../../../../config/ecomModel.js';
  */
 const savedForLaterSchema = new mongoose.Schema(
     {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', required: true },
         mode: { type: String, enum: ['shop', 'quick'], required: true },
         productId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomProduct', required: true },
         variantId: { type: String, trim: true, default: '' },

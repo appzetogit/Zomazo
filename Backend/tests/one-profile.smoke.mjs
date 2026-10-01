@@ -27,6 +27,7 @@ const db = mongoose.connection;
 
 // The session middleware translates a Quick id (the qc_users merge) before any service sees it.
 const { resolveQuickCustomerId } = await import('../src/core/identity/quickCustomer.js');
+const { resolveShopCustomerId } = await import('../src/core/identity/shopCustomer.js');
 const quick = await import('../src/modules/quickCommerce/modules/food/user/services/userProfile.service.js');
 const shop = await import('../src/modules/ecommerce/modules/commerce/user/services/userProfile.service.js');
 const { withSharedProfile, saveSharedProfile } = await import('../src/core/identity/sharedProfile.js');
@@ -43,7 +44,7 @@ await db.collection('sp_users').insertOne({ _id: spId, name: 'Old SP', phone: '9
 
 await check("Quick and the Shop show the account's name, email and photo", async () => {
     const q = (await quick.getCurrentUserProfile(await resolveQuickCustomerId(String(qcId)))).user;
-    const s = (await shop.getCurrentUserProfile(String(shopId))).user;
+    const s = (await shop.getCurrentUserProfile(await resolveShopCustomerId(String(shopId)))).user;
     for (const u of [q, s]) {
         assert.equal(u.name, 'Asha Rao');
         assert.equal(u.email, 'asha@x.in');
@@ -52,7 +53,7 @@ await check("Quick and the Shop show the account's name, email and photo", async
 });
 
 await check('a name changed in the Shop is the name Quick and the account show', async () => {
-    await shop.updateCurrentUserProfile(String(shopId), { name: 'Asha K' });
+    await shop.updateCurrentUserProfile(await resolveShopCustomerId(String(shopId)), { name: 'Asha K' });
     assert.equal((await db.collection('users').findOne({ _id: platformId })).name, 'Asha K');
     assert.equal((await quick.getCurrentUserProfile(await resolveQuickCustomerId(String(qcId)))).user.name, 'Asha K');
 });

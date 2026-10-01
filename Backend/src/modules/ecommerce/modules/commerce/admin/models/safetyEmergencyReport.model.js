@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { ecomModel } from '../../../../config/ecomModel.js';
 const safetyEmergencyReportSchema = new mongoose.Schema(
     {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', required: true, index: true },
         userName: { type: String, default: '' },
         userEmail: { type: String, default: '' },
         userPhone: { type: String, default: '' },

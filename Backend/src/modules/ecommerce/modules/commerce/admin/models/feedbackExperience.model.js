@@ -8,7 +8,8 @@ const feedbackExperienceSchema = new mongoose.Schema(
             required: true,
             // userModel keeps the source app's plain names ('User', 'Seller'...) as
             // stored data; the registered models carry the Ecom prefix.
-            ref: function () { return `Ecom${this.userModel}`; }
+            // Customers are platform accounts since the ecom_users merge.
+            ref: function () { return this.userModel === 'User' ? 'FoodUser' : `Ecom${this.userModel}`; }
         },
         userModel: {
             type: String,

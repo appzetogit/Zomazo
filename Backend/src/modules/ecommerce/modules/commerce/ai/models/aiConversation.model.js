@@ -24,7 +24,7 @@ const messageSchema = new mongoose.Schema(
  */
 const aiConversationSchema = new mongoose.Schema(
     {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', default: null, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', default: null, index: true },
         /** userId, or "ip:<addr>" for signed-out visitors: what the daily cap counts against. */
         userKey: { type: String, default: '', index: true },
         messages: { type: [messageSchema], default: [] },

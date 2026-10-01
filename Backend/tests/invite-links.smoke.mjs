@@ -128,30 +128,32 @@ await check('Taxi\'s code sets referredBy, counts for Ravi and pays Taxi\'s rewa
 });
 
 console.log('\nShop');
-await check('a Shop invite makes the new customer\'s Shop row and pays Ravi\'s', async () => {
+// Shop customers are platform accounts since the ecom_users merge: Ravi's old
+// Shop code (his ecom_users id) names his platform account, which keeps the
+// Shop's count as shopReferralCount.
+await check('a Shop invite makes the new customer a Shop customer and pays Ravi', async () => {
   const me = await signUp({ ref: String(raviShop), refService: 'shop' });
-  const mine = await ShopUser.findOne({ platformUserId: me.id }).lean();
-  assert.ok(mine, 'no Shop row made');
-  assert.equal(String(mine.referredBy), String(raviShop));
+  const mine = await ShopUser.findById(me.id).lean();
+  assert.ok(mine?.shopJoinedAt, 'not made a Shop customer');
+  assert.equal(String(mine.shopReferredBy), String(ravi));
   const log = await ShopReferralLog.findOne({ refereeId: mine._id }).lean();
   assert.equal(log?.status, 'credited');
   assert.equal(log.rewardAmount, 30);
-  assert.equal((await ShopUser.findById(raviShop).lean()).referralCount, 1);
+  assert.equal((await ShopUser.findById(ravi).lean()).shopReferralCount, 1);
   assert.equal(await FoodReferralLog.countDocuments({ refereeId: me.id }), 0);
 });
 await check('past the Shop\'s limit the invite is recorded, not paid', async () => {
   const me = await signUp({ ref: String(ravi), refService: 'shop' }); // his platform id works too
-  const mine = await ShopUser.findOne({ platformUserId: me.id }).lean();
-  const log = await ShopReferralLog.findOne({ refereeId: mine._id }).lean();
+  const log = await ShopReferralLog.findOne({ refereeId: me.id }).lean();
   assert.equal(log?.status, 'rejected');
   assert.equal(log.reason, 'limit_reached');
-  assert.equal((await ShopUser.findById(raviShop).lean()).referralCount, 1);
+  assert.equal((await ShopUser.findById(ravi).lean()).shopReferralCount, 1);
 });
 await check('nothing is redeemed for the Shop while its module is off', async () => {
   await setModuleEnabled('ecommerce', false, { reason: 'test' });
   try {
     const me = await signUp({ ref: String(raviShop), refService: 'shop' });
-    assert.equal(await ShopUser.countDocuments({ platformUserId: me.id }), 0);
+    assert.ok(!(await ShopUser.findById(me.id).lean())?.shopJoinedAt);
   } finally {
     await setModuleEnabled('ecommerce', true);
   }
@@ -218,9 +220,9 @@ await check('an old Services code still names its person, in Food and in the Sho
   const viaFood = await signUp({ ref: 'SPABC123' });
   assert.equal(String((await FoodReferralLog.findOne({ refereeId: viaFood.id }).lean())?.referrerId), String(meera));
   await signUp({ ref: 'SPABC123', refService: 'shop' });
-  const meeraShop = await ShopUser.findOne({ platformUserId: meera }).lean();
-  assert.ok(meeraShop, 'Meera gets a Shop row');
-  const shopLog = await ShopReferralLog.findOne({ referrerId: meeraShop._id }).lean();
+  const meeraShop = await ShopUser.findById(meera).lean();
+  assert.ok(meeraShop?.shopJoinedAt, 'Meera becomes a Shop customer');
+  const shopLog = await ShopReferralLog.findOne({ referrerId: meera }).lean();
   assert.equal(shopLog?.status, 'credited');
 });
 

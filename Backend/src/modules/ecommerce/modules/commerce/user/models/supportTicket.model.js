@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { ecomModel } from '../../../../config/ecomModel.js';
 const supportTicketSchema = new mongoose.Schema(
     {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', required: true, index: true },
         type: { type: String, enum: ['order', 'seller', 'other'], required: true },
         orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomOrder', default: null },
         sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomSeller', default: null },

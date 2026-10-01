@@ -109,7 +109,7 @@ const SOURCES = {
     service: 'ecommerce',
     requesterType: 'customer',
     load: () => model('../../modules/ecommerce/modules/commerce/user/models/supportTicket.model.js', 'SupportTicket'),
-    people: { field: 'userId', collection: 'ecom_users', name: (d) => d.name, phone: (d) => d.phone },
+    people: { field: 'userId', collection: ['users', 'ecom_users'], name: (d) => d.name, phone: (d) => d.phone },
     toInbox: (s) => ({ 'in-progress': 'in_progress' }[s] || s),
     toOwn: (s) => ({ in_progress: 'in-progress' }[s] || s),
     update: async (id, { status, reply }, admin) =>

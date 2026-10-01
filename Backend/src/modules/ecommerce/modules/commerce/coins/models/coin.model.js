@@ -13,7 +13,7 @@ import { ecomModel } from '../../../../config/ecomModel.js';
  */
 const coinLotSchema = new mongoose.Schema(
     {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', required: true, index: true },
         amount: { type: Number, required: true, min: 0 },
         /** The part of `amount` that can be spent: fixed when credited. */
         spendable: { type: Number, required: true, min: 0 },
@@ -47,7 +47,7 @@ coinLotSchema.index(
  */
 const coinLedgerSchema = new mongoose.Schema(
     {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', required: true, index: true },
         type: { type: String, enum: ['credit', 'debit', 'reversal', 'expire', 'adjust'], required: true },
         /** Coins moved; for a credit, what was credited (not what is spendable). */
         amount: { type: Number, required: true, min: 0 },

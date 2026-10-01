@@ -4,7 +4,7 @@ import { ecomModel } from '../../../../config/ecomModel.js';
 const offerUsageSchema = new mongoose.Schema(
     {
         offerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomOffer', index: true, required: true },
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', index: true, required: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', index: true, required: true },
         count: { type: Number, default: 0, min: 0 },
         lastUsedAt: { type: Date, default: null }
     },

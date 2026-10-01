@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { mappedCustomer } from './mergedCustomers.js';
 
 /**
  * The customer's one platform account, for any service's own customer id.
@@ -53,9 +54,10 @@ export async function platformUserIdFor(id) {
       .findOne({ phone: { $in: [phone, `+91${phone}`, `91${phone}`] } }, { projection: { _id: 1 } });
     return main ? { platformId: String(main._id), vertical } : null;
   }
-  // A Quick id from before the qc_users merge, once its row is dropped.
-  const merged = await db.collection('qc_user_id_map').findOne({ _id }, { projection: { platformId: 1 } });
-  if (merged?.platformId) return { platformId: String(merged.platformId), vertical: 'quickCommerce' };
+  // An id from before a service's customers were merged into users, once its
+  // row is dropped (core/identity/mergedCustomers.js).
+  const merged = await mappedCustomer(_id);
+  if (merged) return { platformId: String(merged.platformId), vertical: OWN_USERS.find(([c]) => c === merged.collection)?.[1] || null };
   return null;
 }
 

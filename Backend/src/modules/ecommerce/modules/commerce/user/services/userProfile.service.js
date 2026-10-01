@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { User } from '../../../../core/users/user.model.js';
 import { AuthError, ValidationError } from '../../../../core/auth/errors.js';
 import { uploadImageBuffer } from '../../../../services/cloudinary.service.js';
@@ -78,20 +79,22 @@ const own_uploadCurrentUserProfileImage = async (userId, file) => {
  * Delete a user and their associated wallet data permanently.
  */
 export const deleteCurrentUserAccount = async (userId) => {
-    // We import dynamically to avoid circular dependencies if any
-    const { UserWallet } = await import('../models/userWallet.model.js');
-    
     const user = await User.findById(userId);
     if (!user) throw new AuthError('Profile not found');
 
-    // Remove a wallet keyed by this Shop id only. A linked customer's wallet is
-    // the one they share with every other app, and deletes on the linked model
-    // are never translated to it (core/wallet/linkedWallet.js), so closing the
-    // Shop account leaves that balance where it is.
-    await UserWallet.findOneAndDelete({ userId });
-
-    // Remove User
-    await User.findByIdAndDelete(userId);
+    // Since the ecom_users merge the customer IS their platform account, which
+    // every other app still uses -- along with the one wallet. Closing the Shop
+    // leaves both: it empties the Shop's cart, favourites and saved-for-later,
+    // signs the Shop's sessions out and takes the customer off the Shop's lists
+    // until they come back.
+    const db = mongoose.connection;
+    await Promise.all([
+        db.collection('ecom_user_carts').deleteMany({ userId: user._id }),
+        db.collection('ecom_user_favorites').deleteMany({ userId: user._id }),
+        db.collection('ecom_user_saved_for_later').deleteMany({ userId: user._id }),
+        db.collection('ecom_refresh_tokens').deleteMany({ userId: user._id }),
+        User.updateOne({ _id: user._id }, { $set: { shopJoinedAt: null } }),
+    ]);
 
     return { success: true };
 };

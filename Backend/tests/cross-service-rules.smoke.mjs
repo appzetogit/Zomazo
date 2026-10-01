@@ -53,11 +53,15 @@ await check('a new Shop customer signing up with the invite pays once', async ()
 });
 
 await check('the same phone on a fresh Shop account is not paid again', async () => {
+    // Shop customers are platform accounts since the ecom_users merge: a fresh
+    // account for the same phone is a new platform account (the old one gone).
+    await db.collection('users').deleteOne({ phone: '9000000002' });
     await db.collection('ecom_users').deleteOne({ phone: '9000000002' });
     const again = await creditShopSignupReferral({ refereeId: String(await newShopRow('9000000002')), ref });
     assert.equal(again.credited, false);
     assert.equal(again.reason, 'phone_already_rewarded');
-    assert.equal((await db.collection('ecom_users').findOne({ _id: referrer.insertedId })).referralCount, 1);
+    // The referrer's old Shop id is its platform id (it had no platform account).
+    assert.equal((await db.collection('users').findOne({ _id: referrer.insertedId })).shopReferralCount, 1);
 });
 
 await check('a COD block on the account is seen from Quick and Shop ids', async () => {

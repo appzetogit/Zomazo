@@ -66,16 +66,14 @@ export const initSocket = async (rootIo) => {
         const role = String(decoded.role || '').toUpperCase();
         let userId = decoded.userId || decoded.sub;
 
-        // A customer signs in on the platform, so the token carries the platform
-        // id -- but every emit here targets user:<ecom_users id>. Translated once
-        // on connect, as the REST middleware does; a customer who has never used
-        // the shop has no satellite and nothing to be told about yet.
+        // Every emit here targets user:<customer id>, the platform id since the
+        // ecom_users merge. An old Shop token names an ecom_users id: translated
+        // here, once, as the REST middleware does.
         if (role === 'USER' && userId) {
             try {
-                const doc = await User.findOne({ $or: [{ _id: userId }, { platformUserId: userId }] })
-                    .select('_id')
-                    .lean();
-                if (doc) userId = String(doc._id);
+                const { resolveShopCustomerId } = await import('../../../core/identity/shopCustomer.js');
+                const customerId = await resolveShopCustomerId(userId);
+                if (customerId) userId = String(customerId);
             } catch {
                 return next(new Error('AUTH_INVALID'));
             }

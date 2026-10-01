@@ -663,7 +663,7 @@ export async function getDashboardStats(query = {}) {
         }),
         zoneId
             ? Order.distinct('userId', { ...orderMatch, userId: { $ne: null } }).then((ids) => ids.length)
-            : User.countDocuments({}),
+            : User.countDocuments(SHOP_CUSTOMER),
         Seller.find({ ...sellerMatch, status: 'pending' }).sort({ createdAt: -1 }).limit(5).select('sellerName createdAt').lean(),
         DeliveryPartner.find({ status: 'pending' }).sort({ createdAt: -1 }).limit(5).select('name createdAt').lean(),
         Order.find({ 
@@ -704,7 +704,7 @@ export async function getDashboardStats(query = {}) {
                     }
                 }
             ])
-            : User.find({}).sort({ createdAt: -1 }).limit(5).select('name createdAt').lean()
+            : User.find(SHOP_CUSTOMER).sort({ shopJoinedAt: -1 }).limit(5).select('name createdAt').lean()
     ]);
 
     const liveSignals = [];
@@ -1486,16 +1486,23 @@ export async function getTaxReportDetail(sellerId, query = {}) {
 }
 
 // ----- Customers / Users (admin) -----
+
+/** the Shop's customers in the shared users collection: those who have used the Shop. */
+const SHOP_CUSTOMER = Object.freeze({ shopJoinedAt: { $ne: null } });
+/** On in the Shop: not switched off everywhere, nor by the Shop's admin. */
+const activeInShop = (u) => u?.isActive !== false && u?.shopBlocked !== true;
 export async function getCustomers(query = {}) {
     const limit = Math.min(Math.max(parseInt(query.limit, 10) || 50, 1), 1000);
     const page = Math.max(parseInt(query.page, 10) || 1, 1);
     const skip = (page - 1) * limit;
 
-    const filter = { role: 'USER' };
+    // Customers live in the shared users collection (the ecom_users merge):
+    // Quick's are the ones who have used Quick.
+    const filter = { role: 'USER', ...SHOP_CUSTOMER };
 
     if (query.status) {
-        if (String(query.status) === 'active') filter.isActive = true;
-        if (String(query.status) === 'inactive') filter.isActive = false;
+        if (String(query.status) === 'active') Object.assign(filter, { isActive: { $ne: false }, shopBlocked: { $ne: true } });
+        if (String(query.status) === 'inactive') filter.$and = [{ $or: [{ isActive: false }, { shopBlocked: true }] }];
     }
 
     if (query.joiningDate && String(query.joiningDate).trim()) {
@@ -1567,6 +1574,7 @@ export async function getCustomers(query = {}) {
                         countryCode: 1,
                         isVerified: 1,
                         isActive: 1,
+                        shopBlocked: 1,
                         createdAt: 1,
                         profileImage: 1,
                         totalOrder: 1,
@@ -1582,7 +1590,7 @@ export async function getCustomers(query = {}) {
                 .sort(sort)
                 .skip(skip)
                 .limit(limit)
-                .select('name email phone countryCode isVerified isActive createdAt profileImage')
+                .select('name email phone countryCode isVerified isActive shopBlocked createdAt profileImage')
                 .lean(),
             User.countDocuments(filter),
         ]);
@@ -1638,8 +1646,8 @@ export async function getCustomers(query = {}) {
         phone: u.phone || '',
         profileImage: sanitizeUrl(u.profileImage || ''),
         countryCode: u.countryCode || '+91',
-        status: u.isActive !== false,
-        isActive: u.isActive !== false,
+        status: activeInShop(u),
+        isActive: activeInShop(u),
         isVerified: u.isVerified === true,
         totalOrder: stats.totalOrder,
         totalOrderAmount: stats.totalOrderAmount,
@@ -1690,8 +1698,8 @@ export async function getCustomerById(id) {
         phone: u.phone || '',
         profileImage: sanitizeUrl(u.profileImage || ''),
         countryCode: u.countryCode || '+91',
-        status: u.isActive !== false,
-        isActive: u.isActive !== false,
+        status: activeInShop(u),
+        isActive: activeInShop(u),
         isVerified: u.isVerified === true,
         totalOrders: Number(stats.totalOrders || 0),
         totalOrder: Number(stats.totalOrders || 0),
@@ -1704,13 +1712,16 @@ export async function getCustomerById(id) {
 
 export async function updateCustomerStatus(id, isActive) {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
+    // The Shop's switch, not the account's: the same person keeps Food, Rides and
+    // the rest. The account-wide isActive is the platform admin's.
     const updatedDoc = await User.findByIdAndUpdate(
         id,
-        { $set: { isActive: Boolean(isActive) } },
+        { $set: { shopBlocked: !isActive } },
         { new: true }
     );
     if (!updatedDoc) return null;
     const updated = updatedDoc.toObject();
+    updated.isActive = activeInShop(updated);
     if (updated.isActive === false) {
         await RefreshToken.deleteMany({ userId: updated._id });
     }

@@ -63,8 +63,13 @@ await check('a Shop credit lands in the one wallet', async () => {
 });
 
 await check('deleting the Shop account leaves the shared wallet alone', async () => {
-    await shopProfile.deleteCurrentUserAccount(String(shopId));
-    assert.equal(await db.collection('ecom_users').countDocuments({ _id: shopId }), 0);
+    // The session translates the Shop id first (the ecom_users merge); closing
+    // the Shop leaves the shared account and wallet, and leaves the Shop's lists.
+    const { resolveShopCustomerId } = await import('../src/core/identity/shopCustomer.js');
+    const customerId = await resolveShopCustomerId(String(shopId));
+    assert.equal(customerId, String(platformId));
+    await shopProfile.deleteCurrentUserAccount(customerId);
+    assert.ok(await db.collection('users').findOne({ _id: platformId, shopJoinedAt: null }));
     assert.equal(await sharedBalance(), 125);
 });
 
@@ -95,7 +100,8 @@ const runMove = (args = []) => new Promise((resolve, reject) => {
 
 await check('an old Shop balance moves once: dry run nothing, then once however often it runs', async () => {
     const shop2 = oid();
-    await db.collection('ecom_users').insertOne({ _id: shop2, name: 'Asha', phone: '9000000001', platformUserId: platformId, role: 'USER' });
+    // A second, older Shop row of Asha's (another number; the ecom_users merge keeps the first).
+    await db.collection('ecom_users').insertOne({ _id: shop2, name: 'Asha', phone: '9000000008', platformUserId: platformId, role: 'USER' });
     await db.collection('ecom_user_wallets').insertOne({ userId: shop2, balance: 50, referralEarnings: 5, transactions: [] });
 
     const dry = await runMove();

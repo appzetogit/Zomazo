@@ -5,7 +5,7 @@ const orderTransactionSchema = new mongoose.Schema({
     // Identifiers
     orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomOrder', required: true, unique: true, index: true },
 
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', required: true, index: true },
     sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomSeller', required: true, index: true },
     deliveryPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomDeliveryPartner', index: true },
 
