@@ -1,5 +1,6 @@
 import { searchUnified, searchProducts, searchNearbyStores, getAdminCategories } from '../services/search.service.js';
 import { sendResponse, sendError } from '../../../../utils/response.js';
+import { boostPromoted } from '../../../../../../core/spotlight/spotlight.service.js';
 import { smartSearchProducts } from '../services/smartSearch.service.js';
 
 /**
@@ -65,7 +66,10 @@ export const listAdminCategoriesController = async (req, res, next) => {
  */
 export const nearbyStoresController = async (req, res, next) => {
     try {
-        return sendResponse(res, 200, 'Stores fetched successfully', await searchNearbyStores(req.query));
+        const data = await searchNearbyStores(req.query);
+        // Running promoted listings (core/spotlight) first, marked -- as on /stores.
+        if (Array.isArray(data?.stores)) data.stores = await boostPromoted('shop', data.stores);
+        return sendResponse(res, 200, 'Stores fetched successfully', data);
     } catch (error) {
         next(error);
     }

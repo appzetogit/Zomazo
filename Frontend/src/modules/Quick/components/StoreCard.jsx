@@ -30,6 +30,8 @@ export default function StoreCard({ store, wide = false }) {
         </span>
         <span className="min-w-0">
           <span className="block truncate text-[14px] font-semibold text-wh-text">{name}</span>
+          {/* A paid promoted listing (Backend core/spotlight), labelled as Food's are. */}
+          {store.isPromoted ? <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-500">Promoted</span> : null}
           {wide && place ? <span className="block truncate text-[12px] text-wh-muted">{place}</span> : null}
           <span className="flex flex-wrap items-center gap-x-2 text-[12px] text-wh-muted">
             {Number(store.rating) ? <span className="inline-flex items-center gap-0.5"><Star className="h-3 w-3 fill-current text-amber-500" aria-hidden="true" />{Number(store.rating).toFixed(1)}</span> : null}

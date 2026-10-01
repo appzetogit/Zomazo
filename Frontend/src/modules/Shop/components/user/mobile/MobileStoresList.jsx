@@ -140,7 +140,11 @@ export default function MobileStoresList() {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-start justify-between gap-2">
-                      <span className="truncate text-[15px] font-bold text-gray-900">{s.sellerName}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[15px] font-bold text-gray-900">{s.sellerName}</span>
+                        {/* A paid promoted listing (Backend core/spotlight), labelled as Food's are. */}
+                        {s.isPromoted ? <span className="block text-[10px] font-semibold uppercase tracking-wide text-gray-500">Promoted</span> : null}
+                      </span>
                       <button
                         type="button"
                         aria-label={liked ? "Unsave store" : "Save store"}
