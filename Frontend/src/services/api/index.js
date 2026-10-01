@@ -366,6 +366,11 @@ export const homeContentAPI = {
     apiClient.delete(`/platform/home-content/quickTop/${encodeURIComponent(id)}`, { contextModule: "admin" }),
 };
 
+// Master > All orders: every service's orders, rides and bookings in one list (core/orders/platformOrder.model.js).
+export const platformOrdersAPI = {
+  list: (params) => apiClient.get("/platform/orders", { params, contextModule: "admin" }),
+};
+
 // Master > Platform Earnings: what the platform kept, per service (core/finance/platformPnl).
 export const platformPnlAPI = {
   get: (params) => apiClient.get("/platform/pnl", { params, contextModule: "admin" }),

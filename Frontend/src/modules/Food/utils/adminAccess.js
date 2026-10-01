@@ -220,6 +220,8 @@ export function resourceForPath(pathname = "") {
   if (pathname.startsWith("/admin/master/support")) return "support"
   // So is the coupon list, per service, under Offers & coupons.
   if (pathname.startsWith("/admin/master/coupons")) return "promotions"
+  // All orders, per service, under Orders (the server shows each admin only theirs).
+  if (pathname.startsWith("/admin/master/orders")) return "orders"
   // And the earnings report, per service, under Reports.
   if (pathname.startsWith("/admin/master/platform-earnings")) return "reports"
   // And home-screen banners, per service, under Banners & pages.

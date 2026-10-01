@@ -23,6 +23,7 @@ const MasterReferral = lazy(() => import("@food/pages/admin/master/MasterReferra
 const MasterBroadcast = lazy(() => import("@food/pages/admin/master/MasterBroadcast"))
 const MasterCoupons = lazy(() => import("@food/pages/admin/master/MasterCoupons"))
 const PlatformEarnings = lazy(() => import("@food/pages/admin/master/PlatformEarnings"))
+const AllOrders = lazy(() => import("@food/pages/admin/master/AllOrders"))
 const MasterFees = lazy(() => import("@food/pages/admin/master/MasterFees"))
 const MasterCancellation = lazy(() => import("@food/pages/admin/master/MasterCancellation"))
 const HomeScreenArtwork = lazy(() => import("@food/pages/admin/master/HomeScreenArtwork"))
@@ -407,6 +408,7 @@ export default function AdminRouter() {
           <Route path="master/broadcast" element={<MasterBroadcast />} />
           <Route path="master/coupons" element={<MasterCoupons />} />
           <Route path="master/platform-earnings" element={<PlatformEarnings />} />
+          <Route path="master/orders" element={<AllOrders />} />
           <Route path="master/fees" element={<MasterFees />} />
           <Route path="master/cancellation" element={<MasterCancellation />} />
           <Route path="master/home-screen" element={<HomeScreenArtwork />} />

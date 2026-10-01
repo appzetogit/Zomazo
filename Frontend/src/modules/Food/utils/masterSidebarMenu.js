@@ -51,6 +51,13 @@ export const masterSidebarMenu = [
         icon: "UserCog",
       },
       {
+        // Every service's orders, rides and bookings in one list (platform_orders).
+        type: "link",
+        label: "All Orders",
+        path: "/admin/master/orders",
+        icon: "Receipt",
+      },
+      {
         type: "expandable",
         label: "Delivery Management",
         icon: "Truck",
