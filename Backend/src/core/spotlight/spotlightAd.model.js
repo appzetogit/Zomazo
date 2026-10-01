@@ -19,7 +19,8 @@ const spotlightAdSchema = new mongoose.Schema(
   {
     service: { type: String, enum: SPOTLIGHT_SERVICES, required: true, index: true },
     // The restaurant (food_restaurants / qc_restaurants) or seller (ecom_sellers).
-    partnerId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+    // Empty for a platform-wide banner an admin made itself.
+    partnerId: { type: mongoose.Schema.Types.ObjectId, default: null, index: true },
     partnerName: { type: String, trim: true, default: '' },
     kind: { type: String, enum: SPOTLIGHT_KINDS, required: true },
     title: { type: String, trim: true, required: true, maxlength: 120 },
@@ -34,6 +35,8 @@ const spotlightAdSchema = new mongoose.Schema(
     rejectionReason: { type: String, trim: true, default: '', maxlength: 500 },
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, default: null },
     reviewedAt: { type: Date, default: null },
+    // Made by an admin from Advertisement > New, rather than asked for by a partner.
+    createdByAdmin: { type: Boolean, default: false },
   },
   { timestamps: true, collection: 'platform_spotlight_ads' },
 );

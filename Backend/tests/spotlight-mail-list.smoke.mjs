@@ -178,6 +178,27 @@ await check('a running banner ad joins the service\'s home promotion strip; paus
   assert.deepEqual(await read(), ['Own']);
 });
 
+console.log('\nAdmin-made ads');
+await check('an admin makes an ad for a business: approved at once, marked as admin-made', async () => {
+  const item = await spotlight.adminCreate(owner, {
+    service: 'shop', kind: 'listing', partnerId: String(seller), title: 'Festive pick', startDate: iso(-day), endDate: iso(day),
+  });
+  assert.equal(item.state, 'running');
+  assert.equal(item.partnerName, 'Dev Crafts');
+  assert.equal((await SpotlightAd.findById(item.id).lean()).createdByAdmin, true);
+});
+await check('admin-made ads are checked too, and need write access', async () => {
+  const base = { service: 'shop', title: 'x', startDate: iso(0), endDate: iso(day) };
+  await rejects(() => spotlight.adminCreate(owner, { ...base, kind: 'listing' }), 400); // no business
+  await rejects(() => spotlight.adminCreate(owner, { ...base, kind: 'listing', partnerId: String(kitchen) }), 400); // Food's
+  await rejects(() => spotlight.adminCreate(owner, { ...base, kind: 'banner' }), 400); // no image
+  await rejects(() => spotlight.adminCreate(foodPromoReader, { ...base, service: 'food', kind: 'listing', partnerId: String(kitchen) }), 403);
+});
+await check('the business picker searches one service by name', async () => {
+  const { items } = await spotlight.searchPartners(owner, { service: 'food', q: 'dev' });
+  assert.deepEqual(items.map((i) => i.name), ['Dev Kitchen']);
+});
+
 console.log('\nPromoted listings in customer lists');
 await check('running listings go first, marked, at most two, no duplicates; expired and paused are not boosted', async () => {
   const ids = Array.from({ length: 6 }, () => oid());

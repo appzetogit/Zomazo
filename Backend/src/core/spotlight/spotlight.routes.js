@@ -54,6 +54,12 @@ router.use(async (req, res, next) => {
 });
 
 router.get('/', handle((req) => spotlight.adminList(req.platformAdmin, req.query)));
+router.get('/partners', handle((req) => spotlight.searchPartners(req.platformAdmin, req.query)));
+// Multipart: service, kind, title, startDate, endDate, partnerId?, ctaLink?,
+// description?, budgetNote?, image (needed for a banner).
+router.post('/', upload.single('image'), handle(async (req) => ({
+  item: await spotlight.adminCreate(req.platformAdmin, req.body || {}, req.file || null),
+}), 'Ad created', 201));
 router.patch('/:id/review', handle((req) => spotlight.adminReview(req.platformAdmin, req.params.id, req.body), 'Saved'));
 router.patch('/:id', handle((req) => spotlight.adminUpdate(req.platformAdmin, req.params.id, req.body), 'Saved'));
 

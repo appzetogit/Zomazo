@@ -47,7 +47,7 @@ export function stateOf(doc, now = new Date()) {
 const toItem = (doc, now = new Date()) => ({
   id: String(doc._id),
   service: doc.service,
-  partnerId: String(doc.partnerId),
+  partnerId: doc.partnerId ? String(doc.partnerId) : '',
   partnerName: doc.partnerName || '',
   kind: doc.kind,
   title: doc.title,
@@ -187,6 +187,59 @@ async function loadFor(admin, id, write) {
   if (!doc) throw new ApiError(404, 'Ad not found');
   assertService(admin, doc.service, write);
   return doc;
+}
+
+/**
+ * An admin makes an ad itself (Advertisement > New): for one business, or a
+ * platform-wide banner with none. It is approved on creation -- the admin is
+ * the reviewer -- and then runs by its dates like any other.
+ */
+export async function adminCreate(admin, body = {}, file = null) {
+  const service = String(body.service || '').trim();
+  assertService(admin, service, true);
+  const kind = String(body.kind || '').trim();
+  if (!SPOTLIGHT_KINDS.includes(kind)) throw new ApiError(400, 'Pick a banner or a promoted listing');
+  const partnerIdIn = String(body.partnerId || '').trim();
+  if (kind === 'listing' && !partnerIdIn) throw new ApiError(400, 'A promoted listing needs a business to promote');
+  const partner = partnerIdIn ? await partnerOf(service, partnerIdIn).catch(() => {
+    throw new ApiError(400, 'That business is not in this service');
+  }) : null;
+  const title = clip(body.title, 120);
+  if (!title) throw new ApiError(400, 'Give the ad a title');
+  const dates = parseDates(body.startDate, body.endDate);
+  const ctaLink = cleanLink(body.ctaLink);
+  if (kind === 'banner' && !file) throw new ApiError(400, 'A banner needs an image');
+  const imageUrl = file ? (await saveImageFile(file, `spotlight/${service}`)).url : '';
+  const doc = await SpotlightAd.create({
+    service,
+    partnerId: partner?._id || null,
+    partnerName: partner?.name || '',
+    kind,
+    title,
+    description: clip(body.description, 500),
+    imageUrl,
+    ctaLink,
+    ...dates,
+    budgetNote: clip(body.budgetNote, 200),
+    status: 'approved',
+    reviewedBy: admin?._id || null,
+    reviewedAt: new Date(),
+    createdByAdmin: true,
+  });
+  return toItem(doc.toObject());
+}
+
+/** Businesses in a service by name, for the New Advertisement picker. */
+export async function searchPartners(admin, query = {}) {
+  const service = String(query.service || '').trim();
+  assertService(admin, service);
+  const def = PARTNERS[service];
+  const nameField = service === 'shop' ? 'sellerName' : 'restaurantName';
+  const q = clip(query.q, 60);
+  const filter = q ? { [nameField]: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } } : {};
+  const rows = await mongoose.connection.collection(def.collection)
+    .find(filter).project({ [nameField]: 1, status: 1 }).sort({ [nameField]: 1 }).limit(20).toArray();
+  return { items: rows.map((r) => ({ id: String(r._id), name: String(def.name(r) || '').trim() || 'Unnamed', status: r.status || '' })) };
 }
 
 /** Approve or reject a request. Rejecting needs a reason the partner will see. */

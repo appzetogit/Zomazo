@@ -11,6 +11,8 @@ export const spotlightAdminAPI = {
   list: (params) => apiClient.get("/platform/spotlight", { params, ...admin }),
   review: (id, body) => apiClient.patch(`/platform/spotlight/${encodeURIComponent(id)}/review`, body, admin),
   update: (id, body) => apiClient.patch(`/platform/spotlight/${encodeURIComponent(id)}`, body, admin),
+  create: (formData) => apiClient.post("/platform/spotlight", formData, admin),
+  partners: (params) => apiClient.get("/platform/spotlight/partners", { params, ...admin }),
 }
 
 export const mailListAdminAPI = {

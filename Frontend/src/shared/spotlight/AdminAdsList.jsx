@@ -52,7 +52,10 @@ export default function AdminAdsList({ service, requestsPath = "requests" }) {
               <h1 className="text-lg font-semibold text-slate-900">Ads List</h1>
               <p className="text-sm text-slate-500 mt-1">Approved partner ads. Running banners show in the home promotion strip.</p>
             </div>
-            <Link to={requestsPath} className="text-sm font-medium text-blue-600 hover:underline">Ad requests →</Link>
+            <div className="flex items-center gap-4">
+              <Link to={requestsPath} className="text-sm font-medium text-blue-600 hover:underline">Ad requests →</Link>
+              <Link to="new" className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">New ad</Link>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="relative">
