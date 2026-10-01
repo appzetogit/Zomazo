@@ -5,6 +5,8 @@ import { UserWallet } from '../user/models/UserWallet.js';
 import { RIDE_STATUS } from '../constants/index.js';
 import { resolveConfiguredGatewayCredentials } from './paymentGatewayService.js';
 import { sendPushNotificationToEntities } from './pushNotificationService.js';
+import { applyUserWalletAdjustment } from './dispatchService.js';
+import { runAdminRefund } from '../../../core/orders/adminRefundClaim.js';
 
 /*
  * Admin refunds on rides.
@@ -49,20 +51,24 @@ export const ridePaymentOf = (ride) => {
   return null;
 };
 
-/** Razorpay refund through the taxi module's own gateway settings. */
-const refundThroughRazorpay = async (paymentId, rupees, note) => {
+const razorpayAuth = async () => {
+  const { keyId, keySecret } = await resolveConfiguredGatewayCredentials('razor_pay');
+  if (!keyId || !keySecret) throw new Error('Razorpay is not configured');
+  return `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`;
+};
+
+/**
+ * Razorpay refund through the taxi module's own gateway settings, tagged with the
+ * claim key (receipt + notes) so findRazorpayRefund can find it again.
+ */
+const refundThroughRazorpay = async (paymentId, rupees, note, key) => {
   if (isMockPaymentAllowed() && paymentId.startsWith('mock_')) {
     return { refundId: `mock_rfnd_${Date.now()}` };
   }
-  const { keyId, keySecret } = await resolveConfiguredGatewayCredentials('razor_pay');
-  if (!keyId || !keySecret) throw new Error('Razorpay is not configured');
   const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}/refund`, {
     method: 'POST',
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ amount: toPaise(rupees), notes: { reason: note.slice(0, 250) } }),
+    headers: { Authorization: await razorpayAuth(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount: toPaise(rupees), receipt: key.slice(0, 40), notes: { reason: note.slice(0, 250), refund_key: key } }),
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || !payload?.id) {
@@ -71,14 +77,30 @@ const refundThroughRazorpay = async (paymentId, rupees, note) => {
   return { refundId: String(payload.id) };
 };
 
+/** A refund already made on this payment under `key`, or null. Throws if Razorpay cannot be asked. */
+const findRazorpayRefund = async (paymentId, key) => {
+  if (isMockPaymentAllowed() && paymentId.startsWith('mock_')) return null;
+  const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}/refunds?count=100`, {
+    headers: { Authorization: await razorpayAuth() },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error?.description || `Razorpay answered ${response.status}`);
+  const hit = (payload.items || []).find((r) => r?.notes?.refund_key === key || r?.receipt === key.slice(0, 40));
+  return hit ? { refundId: String(hit.id) } : null;
+};
+
 /**
  * Refund a completed or cancelled paid ride.
  *
- * Claim, pay, record -- in that order, so nothing is paid twice. The claim is one
- * atomic update that sets adminRefund.status to 'pending' and reserves the amount
- * on adminRefund.refundedPaise, matched against the values just read; a second
- * refund started meanwhile finds neither matching and is refused. A payout that
- * fails gives the claim back. The rider is told only once the money has moved.
+ * Claim, pay, record through core/orders/adminRefundClaim.js on ride.adminRefund:
+ * one atomic claim so two refunds cannot both pay; a claim a crash left behind is
+ * taken over after ten minutes and its payout looked up by key before anything is
+ * paid again. The rider is told only once the money has moved.
+ *
+ * Wallet refunds follow taxi's own convention for money returned on a ride
+ * (dispatchService's cancellation compensation): credited to the wallet's
+ * refundWallet, as a credit row with a referenceKey -- which is also what makes
+ * the credit idempotent and findable after a crash.
  *
  * @param {string} rideId
  * @param {{amount?: number|string, reason: string, adminId?: string}} opts
@@ -101,91 +123,53 @@ export const refundRideByAdmin = async (rideId, { amount, reason, adminId } = {}
     throw new ApiError(400, 'This online payment has no gateway reference, so it cannot be refunded to where it came from');
   }
 
-  const prev = ride.adminRefund || {};
-  const prevStatus = prev.status || 'none';
-  if (prevStatus === 'pending') throw new ApiError(409, 'A refund on this ride is already in progress. Refresh in a moment.');
-  const rawCounter = Number.isFinite(prev.refundedPaise) ? prev.refundedPaise : null;
-  const alreadyPaise = rawCounter ?? 0;
-  const leftPaise = payment.paidPaise - alreadyPaise;
-  if (leftPaise <= 0) throw new ApiError(400, 'Everything paid for this ride has already been refunded');
-
-  const wantedPaise = amount === undefined || amount === null || amount === '' ? leftPaise : toPaise(amount);
-  if (!(wantedPaise > 0)) throw new ApiError(400, 'Refund amount must be more than zero');
-  if (wantedPaise > leftPaise) {
-    throw new ApiError(400, `Refund cannot be more than Rs ${(leftPaise / 100).toFixed(2)}, what is left of the Rs ${(payment.paidPaise / 100).toFixed(2)} paid`);
-  }
-
-  const reservedPaise = alreadyPaise + wantedPaise;
-  const claimed = await Ride.findOneAndUpdate(
-    {
-      _id: ride._id,
-      'adminRefund.status': prevStatus === 'none' ? { $in: [null, 'none'] } : prevStatus,
-      'adminRefund.refundedPaise': rawCounter,
-    },
-    { $set: { 'adminRefund.status': 'pending', 'adminRefund.refundedPaise': reservedPaise } },
-    { new: true },
-  );
-  if (!claimed) throw new ApiError(409, 'Another refund on this ride is in progress or just finished. Refresh and try again.');
-
-  const rupees = wantedPaise / 100;
   const shortId = String(ride._id).slice(-6);
-  let refundId = '';
-  try {
-    if (payment.method === 'razorpay') {
-      ({ refundId } = await refundThroughRazorpay(payment.paymentId, rupees, note));
-    } else {
-      const title = payment.method === 'cash'
-        ? `Refund for ride ${shortId} (paid in cash, so credited to your wallet)`
-        : `Refund for ride ${shortId}`;
-      await UserWallet.findOneAndUpdate(
-        { userId: ride.userId },
-        {
-          $inc: { balance: rupees },
-          $push: {
-            transactions: {
-              $each: [{
-                kind: 'credit',
-                amount: rupees,
-                title,
-                description: title,
-                provider: 'admin_ride_refund',
-                referenceKey: `ride-refund:${ride._id}:${reservedPaise}`,
-                metadata: { rideId: String(ride._id), byAdminId: String(adminId || ''), reason: note },
-              }],
-              $position: 0,
-            },
-          },
-        },
-        { upsert: true, new: true },
-      );
-    }
-  } catch (err) {
-    await Ride.updateOne(
-      { _id: ride._id, 'adminRefund.status': 'pending', 'adminRefund.refundedPaise': reservedPaise },
-      { $set: { 'adminRefund.status': prevStatus, 'adminRefund.refundedPaise': alreadyPaise } },
-    );
-    throw new ApiError(424, `The refund could not be paid (${err?.message || 'payout error'}). Nothing was refunded; try again.`);
-  }
+  const walletRef = (key) => `ride-admin-refund:${ride._id}:${key}`;
+  const method = payment.method === 'razorpay' ? 'razorpay' : 'wallet';
+  const { entry, totalPaise } = await runAdminRefund({
+    Model: Ride,
+    docId: ride._id,
+    paths: {
+      status: 'adminRefund.status',
+      counter: 'adminRefund.refundedPaise',
+      claim: 'adminRefund.claim',
+      history: 'adminRefund.history',
+    },
+    paidPaise: payment.paidPaise,
+    amount,
+    meta: { method, reason: note, byAdminId: String(adminId || '') },
+    pay: async ({ rupees, key }) => {
+      if (method === 'razorpay') return refundThroughRazorpay(payment.paymentId, rupees, note, key);
+      const result = await applyUserWalletAdjustment({
+        userId: ride.userId,
+        amount: rupees,
+        kind: 'credit',
+        title: payment.method === 'cash'
+          ? `Refund for ride ${shortId} (paid in cash, so credited to your wallet)`
+          : `Refund for ride ${shortId}`,
+        referenceKey: walletRef(key),
+        walletField: 'refundWallet',
+        provider: 'ride_admin_refund',
+      });
+      if (!['applied', 'existing'].includes(result.status)) throw new Error(`wallet credit ${result.status}`);
+      return {};
+    },
+    findPaid: async (claim) => {
+      if (method === 'razorpay') return findRazorpayRefund(payment.paymentId, claim.key);
+      const hit = await UserWallet.exists({ userId: ride.userId, 'transactions.referenceKey': walletRef(claim.key) });
+      return hit ? {} : null;
+    },
+  }).catch((err) => {
+    throw new ApiError(err.statusCode || 500, err.message);
+  });
 
-  const entry = {
-    amount: rupees,
-    method: payment.method === 'razorpay' ? 'razorpay' : 'wallet',
-    refundId,
-    reason: note,
-    byAdminId: String(adminId || ''),
-    at: new Date(),
-  };
-  await Ride.updateOne(
-    { _id: ride._id },
-    { $set: { 'adminRefund.status': 'processed' }, $push: { 'adminRefund.history': entry } },
-  );
-
+  const rupees = entry.amount;
   // Only now, with the money moved and recorded, is the rider told.
   try {
     await sendPushNotificationToEntities({
       userIds: [String(ride.userId)],
       title: 'Refund processed',
-      body: entry.method === 'razorpay'
+      body: method === 'razorpay'
         ? `Rs ${rupees.toFixed(2)} for your ride has been refunded to your original payment method within 5-7 working days.`
         : `Rs ${rupees.toFixed(2)} for your ride has been credited to your wallet.`,
       data: { type: 'ride_refund', rideId: String(ride._id) },
@@ -196,9 +180,9 @@ export const refundRideByAdmin = async (rideId, { amount, reason, adminId } = {}
 
   return {
     rideId: String(ride._id),
-    refund: { ...entry, refundedTotal: reservedPaise / 100, refundableLeft: (payment.paidPaise - reservedPaise) / 100 },
-    message: entry.method === 'razorpay'
-      ? `Rs ${rupees.toFixed(2)} refunded to the original payment (Razorpay ${refundId})`
+    refund: { ...entry, refundedTotal: totalPaise / 100, refundableLeft: (payment.paidPaise - totalPaise) / 100 },
+    message: method === 'razorpay'
+      ? `Rs ${rupees.toFixed(2)} refunded to the original payment (Razorpay ${entry.refundId})`
       : `Rs ${rupees.toFixed(2)} credited to the rider's wallet`,
   };
 };

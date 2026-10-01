@@ -55,7 +55,7 @@ const makeRide = async ({ status = 'completed', paymentMethod = 'online', fare =
   });
   return { _id, userId };
 };
-const walletOf = async (userId) => Number((await CustomerWallet.findOne({ userId }).lean())?.balance || 0);
+const walletOf = async (userId) => Number((await CustomerWallet.findOne({ userId }).lean())?.refundWallet || 0);
 const online = (amount, providerPaymentId = 'mock_pay_1') => ({ provider: 'razorpay', providerPaymentId, status: 'paid', amount });
 
 console.log('\ntaxi ride refunds');
@@ -132,6 +132,51 @@ await check('a failed gateway refund gives the claim back', async () => {
   assert.equal(r.adminRefund?.status ?? 'none', 'none');
   assert.equal(r.adminRefund?.refundedPaise ?? 0, 0);
   assert.equal(r.adminRefund?.history?.length ?? 0, 0);
+});
+
+await check('wallet refunds follow taxi convention: refundWallet, a credit row with a referenceKey', async () => {
+  const { _id, userId } = await makeRide({ collection: { provider: 'wallet', status: 'paid', amount: 60 } });
+  await refundRideByAdmin(String(_id), { amount: 60, reason: 'bad route', adminId });
+  const w = await CustomerWallet.findOne({ userId }).lean();
+  assert.equal(Number(w.balance || 0), 0, 'the top-up balance is not touched');
+  assert.equal(w.refundWallet, 60);
+  assert.equal(w.transactions[0].kind, 'credit');
+  assert.equal(w.transactions[0].provider, 'ride_admin_refund');
+  assert.match(w.transactions[0].referenceKey, new RegExp(`^ride-admin-refund:${_id}:rf_`));
+});
+
+const staleRide = async ({ paidOut, minutesAgo = 11 }) => {
+  const { _id, userId } = await makeRide({ collection: { provider: 'wallet', status: 'paid', amount: 300 } });
+  const key = `rf_taxi_${String(_id).slice(-6)}`;
+  await Ride.collection.updateOne({ _id }, { $set: { adminRefund: {
+    status: 'pending', refundedPaise: 10000,
+    claim: { key, at: new Date(Date.now() - minutesAgo * 60000), amountPaise: 10000, prevStatus: 'none', method: 'wallet', reason: 'crashed' },
+  } } });
+  if (paidOut) {
+    await CustomerWallet.collection.insertOne({ userId, balance: 0, refundWallet: 100,
+      transactions: [{ kind: 'credit', amount: 100, referenceKey: `ride-admin-refund:${_id}:${key}` }] });
+  }
+  return { _id, userId };
+};
+
+await check('a fresh pending claim blocks a second refund', async () => {
+  const { _id } = await staleRide({ paidOut: false, minutesAgo: 1 });
+  assert.equal((await thrownBy(() => refundRideByAdmin(String(_id), { amount: 10, reason: 'second', adminId })))?.statusCode, 409);
+});
+
+await check('stale claim that paid: recorded once, never paid again', async () => {
+  const { _id, userId } = await staleRide({ paidOut: true });
+  await refundRideByAdmin(String(_id), { reason: 'the rest', adminId });
+  const r = await Ride.findById(_id).lean();
+  assert.deepEqual(r.adminRefund.history.map((h) => h.amount), [100, 200]);
+  assert.equal(await walletOf(userId), 300);
+});
+
+await check('stale claim that never paid: released', async () => {
+  const { _id, userId } = await staleRide({ paidOut: false });
+  await refundRideByAdmin(String(_id), { reason: 'all of it', adminId });
+  assert.equal(await walletOf(userId), 300);
+  assert.equal((await Ride.findById(_id).lean()).adminRefund.history.length, 1);
 });
 
 await mongoose.disconnect();

@@ -83,7 +83,7 @@ const resolveCancellationPricing = async (ride, session) => {
   });
 };
 
-const applyUserWalletAdjustment = async ({
+export const applyUserWalletAdjustment = async ({
   userId,
   amount,
   kind,

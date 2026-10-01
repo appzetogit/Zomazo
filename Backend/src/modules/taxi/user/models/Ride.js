@@ -932,6 +932,8 @@ const rideSchema = new mongoose.Schema(
         default: undefined,
       },
       refundedPaise: { type: Number, min: 0 },
+      // The refund being paid right now (core/orders/adminRefundClaim.js).
+      claim: { type: mongoose.Schema.Types.Mixed },
       history: {
         type: [{
           _id: false,
@@ -940,6 +942,7 @@ const rideSchema = new mongoose.Schema(
           refundId: { type: String, default: '' },
           reason: { type: String, default: '' },
           byAdminId: { type: String, default: '' },
+          claimKey: { type: String, default: '' },
           at: { type: Date, default: Date.now },
         }],
         default: undefined,
