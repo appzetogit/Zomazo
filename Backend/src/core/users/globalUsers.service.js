@@ -214,6 +214,8 @@ export async function enrichUsers(users = []) {
                 if (!owner && q.phone) owner = idByPhone.get(toTenDigits(q.phone)) || null;
                 if (owner) ownerOf.set(String(q._id), owner);
             }
+            // Quick keys orders by the platform id since the qc_users merge.
+            if (usersColl === 'qc_users') for (const id of ids) ownerOf.set(String(id), String(id));
             if (!ownerOf.size) return;
             const rows = await mongoose.connection.collection(ordersColl).aggregate([
                 { $match: { userId: { $in: [...ownerOf.keys()].map((id) => new mongoose.Types.ObjectId(id)) } } },

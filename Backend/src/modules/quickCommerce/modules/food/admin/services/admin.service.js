@@ -665,7 +665,7 @@ export async function getDashboardStats(query = {}) {
         FoodAddon.countDocuments({ approvalStatus: 'approved', isDeleted: { $ne: true }, ...zoneScopedRestaurantMatch }),
         zoneId
             ? FoodOrder.distinct('userId', { ...orderMatch, userId: { $ne: null } }).then((ids) => ids.length)
-            : FoodUser.countDocuments({}),
+            : FoodUser.countDocuments(QUICK_CUSTOMER),
         FoodRestaurant.find({ ...restaurantMatch, status: 'pending' }).sort({ createdAt: -1 }).limit(5).select('restaurantName createdAt').lean(),
         FoodDeliveryPartner.find({ status: 'pending' }).sort({ createdAt: -1 }).limit(5).select('name createdAt').lean(),
         FoodOrder.find({ 
@@ -706,7 +706,7 @@ export async function getDashboardStats(query = {}) {
                     }
                 }
             ])
-            : FoodUser.find({}).sort({ createdAt: -1 }).limit(5).select('name createdAt').lean()
+            : FoodUser.find(QUICK_CUSTOMER).sort({ quickJoinedAt: -1 }).limit(5).select('name createdAt').lean()
     ]);
 
     const liveSignals = [];
@@ -1489,16 +1489,23 @@ export async function getTaxReportDetail(restaurantId, query = {}) {
 }
 
 // ----- Customers / Users (admin) -----
+
+/** Quick's customers in the shared users collection: those who have used Quick. */
+const QUICK_CUSTOMER = Object.freeze({ quickJoinedAt: { $ne: null } });
+/** On in Quick: not switched off everywhere, nor by Quick's admin. */
+const activeInQuick = (u) => u?.isActive !== false && u?.quickBlocked !== true;
 export async function getCustomers(query = {}) {
     const limit = Math.min(Math.max(parseInt(query.limit, 10) || 50, 1), 1000);
     const page = Math.max(parseInt(query.page, 10) || 1, 1);
     const skip = (page - 1) * limit;
 
-    const filter = { role: 'USER' };
+    // Customers live in the shared users collection (the qc_users merge):
+    // Quick's are the ones who have used Quick.
+    const filter = { role: 'USER', ...QUICK_CUSTOMER };
 
     if (query.status) {
-        if (String(query.status) === 'active') filter.isActive = true;
-        if (String(query.status) === 'inactive') filter.isActive = false;
+        if (String(query.status) === 'active') Object.assign(filter, { isActive: { $ne: false }, quickBlocked: { $ne: true } });
+        if (String(query.status) === 'inactive') filter.$and = [{ $or: [{ isActive: false }, { quickBlocked: true }] }];
     }
 
     if (query.joiningDate && String(query.joiningDate).trim()) {
@@ -1539,7 +1546,7 @@ export async function getCustomers(query = {}) {
                 { $match: filter },
                 {
                     $lookup: {
-                        from: 'food_orders',
+                        from: 'qc_orders',
                         let: { uid: '$_id' },
                         pipeline: [
                             {
@@ -1570,6 +1577,7 @@ export async function getCustomers(query = {}) {
                         countryCode: 1,
                         isVerified: 1,
                         isActive: 1,
+                        quickBlocked: 1,
                         createdAt: 1,
                         profileImage: 1,
                         totalOrder: 1,
@@ -1585,7 +1593,7 @@ export async function getCustomers(query = {}) {
                 .sort(sort)
                 .skip(skip)
                 .limit(limit)
-                .select('name email phone countryCode isVerified isActive createdAt profileImage')
+                .select('name email phone countryCode isVerified isActive quickBlocked createdAt profileImage')
                 .lean(),
             FoodUser.countDocuments(filter),
         ]);
@@ -1641,8 +1649,8 @@ export async function getCustomers(query = {}) {
         phone: u.phone || '',
         profileImage: sanitizeUrl(u.profileImage || ''),
         countryCode: u.countryCode || '+91',
-        status: u.isActive !== false,
-        isActive: u.isActive !== false,
+        status: activeInQuick(u),
+        isActive: activeInQuick(u),
         isVerified: u.isVerified === true,
         totalOrder: stats.totalOrder,
         totalOrderAmount: stats.totalOrderAmount,
@@ -1693,8 +1701,8 @@ export async function getCustomerById(id) {
         phone: u.phone || '',
         profileImage: sanitizeUrl(u.profileImage || ''),
         countryCode: u.countryCode || '+91',
-        status: u.isActive !== false,
-        isActive: u.isActive !== false,
+        status: activeInQuick(u),
+        isActive: activeInQuick(u),
         isVerified: u.isVerified === true,
         totalOrders: Number(stats.totalOrders || 0),
         totalOrder: Number(stats.totalOrders || 0),
@@ -1707,13 +1715,16 @@ export async function getCustomerById(id) {
 
 export async function updateCustomerStatus(id, isActive) {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
+    // Quick's switch, not the account's: the same person keeps Food, Rides and
+    // the rest. The account-wide isActive is the platform admin's.
     const updatedDoc = await FoodUser.findByIdAndUpdate(
         id,
-        { $set: { isActive: Boolean(isActive) } },
+        { $set: { quickBlocked: !isActive } },
         { new: true }
     );
     if (!updatedDoc) return null;
     const updated = updatedDoc.toObject();
+    updated.isActive = activeInQuick(updated);
     if (updated.isActive === false) {
         await FoodRefreshToken.deleteMany({ userId: updated._id });
     }

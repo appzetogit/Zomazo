@@ -78,6 +78,11 @@ export async function resolveInviter(ref) {
         const row = await mongoose.connection.collection(s.collection).findOne({ $or: or }, { projection });
         if (row) return platformIdOfRow(row);
     }
+    // A Quick code (its qc_users id) from before the merge, once the row is dropped.
+    if (oid) {
+        const merged = await mongoose.connection.collection('qc_user_id_map').findOne({ _id: oid }, { projection: { platformId: 1 } });
+        if (merged?.platformId) return merged.platformId;
+    }
     return null;
 }
 

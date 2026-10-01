@@ -21,7 +21,8 @@ process.env.NODE_ENV = 'test';
 await mongoose.connect(process.env.MONGO_URI);
 
 const { FoodUser } = await import('../src/core/users/user.model.js');
-const { FoodUser: QCUser } = await import('../src/modules/quickCommerce/core/users/user.model.js');
+// Pre-merge rows (the qc_users merge moved Quick's customers into users).
+const { LegacyQcUser: QCUser } = await import('../src/modules/quickCommerce/core/users/user.model.js');
 const require = createRequire(import.meta.url);
 const SPUser = require('../src/modules/serviceProvider/models/User.js');
 const { ensurePlatformUser, linkSatellite } = await import('../src/core/identity/identityLink.service.js');

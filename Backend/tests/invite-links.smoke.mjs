@@ -193,12 +193,14 @@ await db.collection('sp_users').insertOne({ name: 'Meera', phone: '9000000002', 
 
 await check('Ravi\'s one code pays Quick\'s programme through the sign-in (via=quick)', async () => {
   const me = await signUp({ ref: 'USR0001ABCDEF', refService: 'quick' });
-  const mine = await db.collection('qc_users').findOne({ platformUserId: me.id });
-  const his = await db.collection('qc_users').findOne({ platformUserId: ravi });
-  assert.ok(mine && his, 'both get a Quick row');
+  // Quick's customers are platform accounts (the qc_users merge).
+  const mine = await db.collection('users').findOne({ _id: new mongoose.Types.ObjectId(String(me.id)) });
+  const his = await db.collection('users').findOne({ _id: ravi });
+  assert.ok(mine?.quickJoinedAt && his?.quickJoinedAt, 'both become Quick customers');
+  assert.equal(String(mine.quickReferredBy), String(ravi));
   const log = await QuickLog.findOne({ refereeId: mine._id }).lean();
   assert.equal(log?.status, 'credited');
-  assert.equal(String(log.referrerId), String(his._id));
+  assert.equal(String(log.referrerId), String(ravi));
 });
 
 await check('and Services\' programme (via=services)', async () => {

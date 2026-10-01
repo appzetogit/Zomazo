@@ -123,6 +123,16 @@ const DELIBERATE_PLATFORM_REFS = new Set([
     // identity in the shared `users` collection. That is the identity merge working,
     // not a leak.
     'QCUser.platformUserId -> FoodUser',
+    // Quick's customers ARE platform accounts since the qc_users merge
+    // (core/identity/quickCustomer.js, tests/merge-qc-users.smoke.mjs).
+    'QCOrder.userId -> FoodUser',
+    'QCTransaction.userId -> FoodUser',
+    'QCSupportTicket.userId -> FoodUser',
+    'QCSafetyEmergencyReport.userId -> FoodUser',
+    'QCUserCart.userId -> FoodUser',
+    'QCUserFavorite.userId -> FoodUser',
+    'QCReturn.userId -> FoodUser',
+    'QCRefund.userId -> FoodUser',
 ]);
 
 check('no QC schema still points at a Food* model (undeclared)', () => {

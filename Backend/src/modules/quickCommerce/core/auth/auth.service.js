@@ -53,6 +53,7 @@ import { referralSettingsFor } from '../../../../core/referral/referralSettings.
 import { claimReferralForPhone, releaseReferralClaim } from '../../../../core/referral/referralClaim.service.js';
 import { resolveInviter } from '../../../../core/referral/inviteCode.service.js';
 import { ensureQuickCustomer } from './auth.middleware.js';
+import { quickCustomerForPhone, resolveQuickCustomerId } from "../../../../core/identity/quickCustomer.js";
 const ROLES = {
   USER: "USER",
   RESTAURANT: "RESTAURANT",
@@ -161,13 +162,13 @@ export const requestUserOtp = async (phone) => {
  */
 export async function creditQuickSignupReferral({ refereeId, ref } = {}) {
   try {
-    const userDoc = await FoodUser.findById(refereeId).select("_id phone referredBy").lean();
-    if (!userDoc || userDoc.referredBy) return { credited: false, reason: "no_referee" };
+    const userDoc = await FoodUser.findById(refereeId).select("_id phone quickReferredBy").lean();
+    if (!userDoc || userDoc.quickReferredBy) return { credited: false, reason: "no_referee" };
     const referrerId = await quickReferrerFor(ref);
     if (!referrerId) return { credited: false, reason: "unknown_referrer" };
     if (String(referrerId) === String(userDoc._id)) return { credited: false, reason: "self_referral" };
     const [referrer, settingsDoc] = await Promise.all([
-      FoodUser.findById(referrerId).select("_id referralCount").lean(),
+      FoodUser.findById(referrerId).select("_id quickReferralCount").lean(),
       referralSettingsFor('quickCommerce', FoodReferralSettings),
     ]);
 
@@ -198,8 +199,8 @@ export async function creditQuickSignupReferral({ refereeId, ref } = {}) {
         : null;
       const claimed = platformClaim?.claimed
         ? await FoodUser.updateOne(
-            { _id: referrerId, $or: [{ referralCount: { $lt: limit } }, { referralCount: { $exists: false } }] },
-            { $inc: { referralCount: 1 } },
+            { _id: referrerId, $or: [{ quickReferralCount: { $lt: limit } }, { quickReferralCount: { $exists: false } }] },
+            { $inc: { quickReferralCount: 1 } },
           )
         : null;
       if (platformClaim?.claimed && claimed?.modifiedCount !== 1) {
@@ -207,7 +208,7 @@ export async function creditQuickSignupReferral({ refereeId, ref } = {}) {
       }
 
       if (claimed?.modifiedCount === 1) {
-        await FoodUser.updateOne({ _id: userDoc._id }, { $set: { referredBy: referrerId } });
+        await FoodUser.updateOne({ _id: userDoc._id }, { $set: { quickReferredBy: referrerId } });
 
         const log = await FoodReferralLog.create({
           referrerId,
@@ -257,8 +258,10 @@ async function quickReferrerFor(ref) {
   const code = String(ref || "").trim();
   if (!code) return null;
   if (mongoose.Types.ObjectId.isValid(code)) {
-    const own = await FoodUser.findById(code).select("_id").lean();
-    if (own) return own._id;
+    // A platform id, or an old Quick code (a qc_users id) -- merged on the
+    // spot if the migration has not reached it yet.
+    const own = await resolveQuickCustomerId(code);
+    if (own) return new mongoose.Types.ObjectId(own);
   }
   const platformId = await resolveInviter(code);
   return platformId ? ensureQuickCustomer(platformId) : null;
@@ -281,28 +284,23 @@ export const verifyUserOtpAndLogin = async (
     throw new AuthError(result.reason || "OTP verification failed");
   }
 
-  let userDoc = await FoodUser.findOne({ phone });
-  
-  // Ensure user exists and mark as verified on successful OTP.
-  // Check if user is new or hasn't provided a name yet
-  const needsNamePrompt = !userDoc || !userDoc.name || String(userDoc.name).trim() === "" || String(userDoc.name).toLowerCase() === "null";
-  const isNewUser = needsNamePrompt;
+  // The customer's platform account (the qc_users merge): matched on the last
+  // ten digits, any qc_users row of theirs still waiting merged first, made
+  // when there is none.
   const trimmedName = typeof name === "string" ? name.trim() : "";
+  let userDoc = await quickCustomerForPhone(phone, { name: trimmedName });
 
-  if (!userDoc) {
-    userDoc = await FoodUser.create({
-      phone,
-      isVerified: true,
-      ...(trimmedName ? { name: trimmedName } : {}),
-    });
+  // New to Quick (never used it, or just made), or no name given yet -- as
+  // before the merge, when "new" meant no qc_users row.
+  const needsNamePrompt = !userDoc.name || String(userDoc.name).trim() === "" || String(userDoc.name).toLowerCase() === "null";
+  const isNewUser = needsNamePrompt || !userDoc.quickJoinedAt || userDoc.$locals?.createdNow === true;
 
-    // Link to the customer's one platform identity (identity merge, phase 1).
-    // Never blocks the login; an unlinked document is repaired by the backfill.
-    import('../../../../core/identity/identityLink.service.js')
-      .then(({ linkSatellite }) => linkSatellite(FoodUser, userDoc._id, { phone, name: trimmedName }))
-      .catch(() => {});
-  } else {
+  {
     let needsSave = false;
+    if (!userDoc.quickJoinedAt) {
+      userDoc.quickJoinedAt = new Date();
+      needsSave = true;
+    }
     if (!userDoc.isVerified) {
       userDoc.isVerified = true;
       needsSave = true;
@@ -315,7 +313,7 @@ export const verifyUserOtpAndLogin = async (
   }
 
   // Block login for deactivated users
-  if (userDoc.isActive === false) {
+  if (userDoc.isActive === false || userDoc.quickBlocked === true) {
     throw new AuthError(
       "Your account has been deactivated. Please contact support.",
     );
@@ -1057,10 +1055,17 @@ export const refreshAccessToken = async (token) => {
     throw new AuthError("Invalid refresh token");
   }
 
+  // A refresh token from before the qc_users merge names the old Quick id: the
+  // new access token names the platform account it was merged into.
+  if (payload?.role === "USER") {
+    const customerId = await resolveQuickCustomerId(payload.userId);
+    if (customerId) payload = { ...payload, userId: customerId };
+  }
+
   // If deactivated user, do not issue fresh access tokens (forces logout on client)
   if (payload?.role === "USER") {
-    const u = await FoodUser.findById(payload.userId).select("isActive").lean();
-    if (!u || u.isActive === false) {
+    const u = await FoodUser.findById(payload.userId).select("isActive quickBlocked").lean();
+    if (!u || u.isActive === false || u.quickBlocked === true) {
       throw new AuthError("User account is deactivated");
     }
   }

@@ -29,7 +29,8 @@ try {
 
     const rider = new mongoose.Types.ObjectId();
     const userId = new mongoose.Types.ObjectId();
-    await mongoose.model('QCUser').collection.insertOne({
+    // Quick's customers are in the shared users collection (the qc_users merge).
+    await mongoose.connection.collection('users').insertOne({
         _id: userId, name: 'Asha', phone: '9000000001', email: 'asha@example.test',
     });
     const insert = async (dispatch, orderStatus = 'preparing') => {

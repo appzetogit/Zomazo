@@ -38,13 +38,17 @@ await mongoose.connect(mongod.getUri());
 
 const referral = await import('../src/modules/quickCommerce/modules/food/user/services/userReferral.service.js');
 const { listPublicOffersController } = await import('../src/modules/quickCommerce/modules/food/restaurant/controllers/restaurant.controller.js');
-const { FoodUser: QuickUser } = await import('../src/modules/quickCommerce/core/users/user.model.js');
+// Rows from before the qc_users merge: the session middleware translates a
+// customer's id (resolveQuickCustomerId) before any of these services see it.
+const { LegacyQcUser: QuickUser } = await import('../src/modules/quickCommerce/core/users/user.model.js');
+const { resolveQuickCustomerId } = await import('../src/core/identity/quickCustomer.js');
 const { FoodUser: PlatformUser } = await import('../src/core/users/user.model.js');
 const { FoodReferralLog: PlatformReferralLog } = await import('../src/modules/food/admin/models/referralLog.model.js');
 const { FoodOffer: QuickOffer } = await import('../src/modules/quickCommerce/modules/food/admin/models/offer.model.js');
 const { FoodOrder: QuickOrder } = await import('../src/modules/quickCommerce/modules/food/orders/models/order.model.js');
 
 const oid = () => new mongoose.Types.ObjectId();
+const store = oid();
 const asha = oid();
 const ashaQuick = oid();
 const friend = oid();
@@ -58,36 +62,36 @@ await QuickUser.collection.insertMany([
   { _id: ashaQuick, platformUserId: asha, phone: '9876543210', referralCode: 'QUICKONLY', referralCount: 0 },
   { _id: loner, phone: '9000000000', referralCode: 'LONER1' },
 ]);
+// Asha's Quick order, from before the merge: keyed by her Quick row.
+await QuickOrder.collection.insertOne({ userId: ashaQuick, restaurantId: store, orderStatus: 'delivered', createdAt: new Date() });
 await PlatformReferralLog.collection.insertOne({
   referrerId: asha, refereeId: friend, role: 'USER', rewardAmount: 50, status: 'credited', createdAt: new Date(),
 });
 
 console.log('\nRefer & earn');
 await check('a linked customer gets the platform id as the code, and a /login?ref= link', async () => {
-  const stats = await referral.getUserReferralStats(String(ashaQuick));
+  const stats = await referral.getUserReferralStats(await resolveQuickCustomerId(ashaQuick));
   assert.equal(stats.referralCode, String(asha));
   assert.equal(stats.referralLink, `/login?ref=${asha}`);
   assert.equal(stats.referralCount, 2, 'the platform count, not the Quick one');
 });
 await check('their invited friends are the ones the platform sign-in credited', async () => {
-  const d = await referral.getUserReferralDetails(String(ashaQuick));
+  const d = await referral.getUserReferralDetails(await resolveQuickCustomerId(ashaQuick));
   assert.equal(d.stats.referralCode, String(asha));
   assert.equal(d.stats.totalInvited, 1);
   assert.equal(d.stats.creditedCount, 1);
   assert.equal(d.invitedFriends[0].name, 'Ravi');
 });
 await check('a Quick-only account keeps its own code', async () => {
-  const stats = await referral.getUserReferralStats(String(loner));
+  const stats = await referral.getUserReferralStats(await resolveQuickCustomerId(loner));
   assert.equal(stats.referralCode, 'LONER1');
 });
 
 console.log('\nCoupon list');
-const store = oid();
 await QuickOffer.collection.insertMany([
   { couponCode: 'WELCOME', discountType: 'flat-price', discountValue: 50, status: 'active', restaurantScope: 'all', customerScope: 'first-time', showInCart: true },
   { couponCode: 'EVERYONE', discountType: 'percentage', discountValue: 10, status: 'active', restaurantScope: 'all', customerScope: 'all', showInCart: true },
 ]);
-await QuickOrder.collection.insertOne({ userId: ashaQuick, restaurantId: store, orderStatus: 'delivered', createdAt: new Date() });
 
 const callOffers = (user) =>
   new Promise((resolve, reject) => {

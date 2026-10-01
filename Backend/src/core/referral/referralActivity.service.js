@@ -25,12 +25,18 @@ const SOURCES = [
 const coll = (name) => mongoose.connection.collection(name);
 const STATUSES = ['pending', 'credited', 'rejected'];
 
+// Quick's customers are in `users` since the qc_users merge; rows not merged
+// yet are still in qc_users. ObjectIds are unique across the two.
+const lookIn = (collection) => (collection === 'qc_users' ? ['users', 'qc_users'] : [collection]);
+
+async function findIn(collection, filter, projection) {
+  const lists = await Promise.all(lookIn(collection).map((c) => coll(c).find(filter).project(projection).toArray()));
+  return lists.flat();
+}
+
 async function namesFor(collection, ids) {
   if (!collection || !ids.length) return new Map();
-  const rows = await coll(collection)
-    .find({ _id: { $in: ids } })
-    .project({ name: 1, phone: 1 })
-    .toArray();
+  const rows = await findIn(collection, { _id: { $in: ids } }, { name: 1, phone: 1 });
   return new Map(rows.map((r) => [String(r._id), { name: r.name || '', phone: r.phone || '' }]));
 }
 
@@ -127,7 +133,8 @@ async function rowsOfPerson(collection, platformId) {
   // Services rows made before the link carry only the phone.
   if (collection === 'sp_users' && phone.length === 10) or.push({ phone: { $in: [phone, `+91${phone}`, `91${phone}`] } });
   const rows = await coll(collection).find({ $or: or }).project({ _id: 1 }).toArray();
-  return rows.map((r) => r._id);
+  // Quick keys its logs by the platform id since the merge.
+  return [...(collection === 'qc_users' ? [platformId] : []), ...rows.map((r) => r._id)];
 }
 
 /**
@@ -150,10 +157,7 @@ export async function invitesOfPerson(platformUserId, { limit = 100 } = {}) {
       .sort({ createdAt: -1 })
       .limit(limit)
       .toArray();
-    const referees = await coll(src.users)
-      .find({ _id: { $in: docs.map((d) => d.refereeId).filter(Boolean) } })
-      .project({ name: 1, phone: 1, profileImage: 1 })
-      .toArray();
+    const referees = await findIn(src.users, { _id: { $in: docs.map((d) => d.refereeId).filter(Boolean) } }, { name: 1, phone: 1, profileImage: 1 });
     const byId = new Map(referees.map((r) => [String(r._id), r]));
     return docs.map((d) => {
       const friend = byId.get(String(d.refereeId)) || {};

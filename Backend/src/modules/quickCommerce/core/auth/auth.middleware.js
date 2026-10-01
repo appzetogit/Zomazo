@@ -1,11 +1,9 @@
 import mongoose from 'mongoose';
 import { verifyAccessToken } from './token.util.js';
 import { sendError } from '../../utils/response.js';
+// The shared `users` collection: Quick's customers since the qc_users merge.
 import { FoodUser } from '../users/user.model.js';
-// The shared `users` collection -- the customer's one identity across the
-// whole platform. Same exported name as the satellite above, so it is
-// aliased to keep the two impossible to confuse.
-import { FoodUser as PlatformUser } from '../../../../core/users/user.model.js';
+import { resolveQuickCustomerId } from '../../../../core/identity/quickCustomer.js';
 import { FoodRestaurant } from '../../modules/food/restaurant/models/restaurant.model.js';
 import { FoodDeliveryPartner } from '../../modules/food/delivery/models/deliveryPartner.model.js';
 import { resolveQcPartnerForFoodRider } from '../../../../core/identity/qcRiderBridge.js';
@@ -41,7 +39,6 @@ const SESSION_SCOPED_MODELS = {
  * what an unresolvable token deserves and what it did before.
  */
 const resolveSessionAccount = async (model, decoded) => {
-    const select = 'isActive tokenVersion status';
     // The id under whichever name the issuer used (taxi signs `sub`). With no
     // id at all, `findOne({ platformUserId: undefined })` became `findOne({})`
     // -- mongoose drops undefined keys -- and returned the FIRST customer, so a
@@ -49,8 +46,14 @@ const resolveSessionAccount = async (model, decoded) => {
     const id = decoded?.userId || decoded?.sub;
     if (!id || !mongoose.Types.ObjectId.isValid(String(id))) return null;
 
-    // 1. A token minted by this module: the id IS the satellite id.
-    const direct = await model.findById(id).select(select).lean();
+    // Customers are the platform's own accounts (the qc_users merge). The id
+    // may be a platform id or a pre-merge qc_users id (an old Quick token):
+    // both resolve to the platform account, merging a waiting qc_users row on
+    // the spot so its orders and cart are there on this request.
+    if (decoded.role === 'USER') return resolveQuickCustomer(id);
+
+    // A token minted by this module: the id IS the account id.
+    const direct = await model.findById(id).select('isActive tokenVersion status').lean();
     if (direct) return direct;
 
     // A rider signed in through the platform rider app carries their FOOD
@@ -66,72 +69,33 @@ const resolveSessionAccount = async (model, decoded) => {
             bridgedFrom: String(id)
         };
     }
-
-    if (decoded.role !== 'USER') return null;
-
-    // 2. A shared-login token whose satellite is already linked.
-    const linked = await model
-        .findOne({ platformUserId: id })
-        .select(select)
-        .lean();
-    if (linked) return linked;
-
-    // 3. No satellite yet. The customer is signed in and real -- they are in
-    //    the shared users collection -- so one is made for them rather than
-    //    refusing the order.
-    const platform = await PlatformUser.findById(id)
-        .select('phone name email isActive')
-        .lean();
-    if (!platform || platform.isActive === false) return null;
-
-    // Phones are stored inconsistently across verticals (+91 prefixed, spaced,
-    // bare), so they are matched on the last ten digits -- the same rule
-    // core/identity/identityLink.service.js uses.
-    const suffix = String(platform.phone || '').replace(/\D/g, '').slice(-10);
-    if (suffix.length !== 10) return null;
-    const byPhone = new RegExp(suffix + '$');
-
-    // Adopt an existing unlinked row before creating one: production already
-    // has qc_users rows with no platformUserId, and a second row for the same
-    // phone would split that customer's orders across two accounts.
-    const orphan = await model
-        .findOne({ phone: byPhone, platformUserId: null })
-        .select(select)
-        .lean();
-    if (orphan) {
-        await model.updateOne(
-            { _id: orphan._id },
-            { $set: { platformUserId: id } }
-        );
-        return orphan;
-    }
-
-    try {
-        const created = await model.create({
-            phone: suffix,
-            platformUserId: id,
-            ...(platform.name ? { name: platform.name } : {}),
-            ...(platform.email ? { email: platform.email } : {})
-        });
-        return {
-            _id: created._id,
-            isActive: true,
-            tokenVersion: created.tokenVersion
-        };
-    } catch (err) {
-        // Two requests from the same customer racing on a first order: the
-        // unique phone index makes one lose. The winner's row is the account.
-        if (err && err.code === 11000) {
-            return model.findOne({ phone: byPhone }).select(select).lean();
-        }
-        return null;
-    }
+    return null;
 };
 
 /**
- * This customer's Quick row, made on first use, for a platform account -- what
- * the first signed-in request would make anyway. Lets an invite be credited in
- * Quick at the one sign-in (core/referral/signupReferral.service.js).
+ * The customer's platform account, as the session sees it. `isActive` is
+ * false when the account is off everywhere or only in Quick (quickBlocked,
+ * set by Quick's admin). The first visit marks them a Quick customer, which
+ * is what Quick's admin lists.
+ */
+const resolveQuickCustomer = async (id) => {
+    const customerId = await resolveQuickCustomerId(id);
+    if (!customerId) return null;
+    const doc = await FoodUser.findById(customerId)
+        .select('isActive tokenVersion quickBlocked quickJoinedAt')
+        .lean();
+    if (!doc) return null;
+    if (!doc.quickJoinedAt) {
+        await FoodUser.updateOne({ _id: doc._id, quickJoinedAt: null }, { $set: { quickJoinedAt: new Date() } });
+    }
+    return { ...doc, isActive: doc.isActive !== false && doc.quickBlocked !== true };
+};
+
+/**
+ * This customer's Quick id (their platform id) for a platform account, marked
+ * a Quick customer -- what the first signed-in request would do anyway. Lets
+ * an invite be credited in Quick at the one sign-in
+ * (core/referral/signupReferral.service.js).
  */
 export const ensureQuickCustomer = async (platformUserId) => {
     const row = await resolveSessionAccount(FoodUser, { userId: String(platformUserId || ''), role: 'USER' });
@@ -190,12 +154,11 @@ export const authMiddleware = (req, res, next) => {
         .then((doc) => {
             if (!doc) return sendError(res, 401, 'Account not found');
 
-            // The rest of this module addresses the customer by its OWN id --
-            // orders, addresses and the cart are all keyed on qc_users._id.
-            // The token carries the platform id, so it is translated here,
-            // once, rather than in every controller that reads req.user.
+            // The id the rest of this module keys on. For a customer it is the
+            // platform id even when the token is an old Quick one naming a
+            // qc_users id -- translated here, once, rather than per controller.
             req.user.userId = String(doc._id);
-            req.user.platformUserId = String(decoded.userId);
+            req.user.platformUserId = normalizedDecoded.role === 'USER' ? String(doc._id) : String(decoded.userId);
             if (normalizedDecoded.role === 'USER' && doc.isActive === false) {
                 return sendError(res, 401, 'User account is deactivated');
             }

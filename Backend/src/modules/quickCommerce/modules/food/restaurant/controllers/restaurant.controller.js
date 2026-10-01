@@ -22,7 +22,7 @@ import { validateRestaurantRegisterDto } from '../validators/restaurant.validato
 import { sendResponse, sendError } from '../../../../utils/response.js';
 import { FoodUnregisteredRestaurant } from '../models/unregisteredRestaurant.model.js';
 import mongoose from 'mongoose';
-import { FoodUser as QuickUser } from '../../../../core/users/user.model.js';
+import { resolveQuickCustomerId } from '../../../../../../core/identity/quickCustomer.js';
 
 
 export const uploadRestaurantAttachmentController = async (req, res, next) => {
@@ -201,8 +201,8 @@ const quickCustomerId = async (user) => {
     if (!user?.userId || String(user.role || '').toUpperCase() !== 'USER') return undefined;
     const id = String(user.userId);
     if (!mongoose.Types.ObjectId.isValid(id)) return undefined;
-    const row = await QuickUser.findOne({ $or: [{ _id: id }, { platformUserId: id }] }).select('_id').lean();
-    return row ? String(row._id) : undefined;
+    // The platform id since the qc_users merge; an old Quick token's id is translated.
+    return (await resolveQuickCustomerId(id)) || undefined;
 };
 
 export const listPublicOffersController = async (req, res, next) => {

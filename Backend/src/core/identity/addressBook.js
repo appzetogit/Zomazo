@@ -19,7 +19,7 @@ import { platformUserIdFor } from './platformUser.js';
 
 const REQUIRED = ['street', 'city', 'state'];
 
-async function mergeLegacyAddresses(ownCollection, ownId, platformId) {
+export async function mergeLegacyAddresses(ownCollection, ownId, platformId) {
     const db = mongoose.connection;
     const own = await db.collection(ownCollection).findOne(
         { _id: new mongoose.Types.ObjectId(String(ownId)) },

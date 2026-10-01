@@ -48,6 +48,7 @@ await FoodReferralSettings.create({ referralRewardUser: 30, referralLimitUser: 1
 await QuickSettings.create({ referralRewardUser: 20, referralLimitUser: 10, isActive: true });
 
 const foodReferrer = (await db.collection('users').insertOne({ phone: '9100000001', name: 'Asha', role: 'USER', isVerified: true, referralCode: 'ASHA1', referralCount: 0 })).insertedId;
+// An old Quick code (a qc_users id): merged into users, same _id, on first use.
 const quickReferrer = (await db.collection('qc_users').insertOne({ phone: '9100000002', name: 'Ravi', isVerified: true, referralCount: 0 })).insertedId;
 
 const foodSignUp = async (phone) => {
@@ -80,7 +81,7 @@ await check('and the other way round: Food first, Quick refuses', async () => {
     const log = await quickLog('9200000002');
     assert.equal(log?.status, 'rejected');
     assert.equal(log?.reason, 'rewarded_in_other_service');
-    assert.equal((await db.collection('qc_users').findOne({ _id: quickReferrer })).referralCount, 1);
+    assert.equal((await db.collection('users').findOne({ _id: quickReferrer })).quickReferralCount, 1);
 });
 
 await check('a reward in an older log (the Shop) counts as taken', async () => {
@@ -92,7 +93,7 @@ await check('a reward in an older log (the Shop) counts as taken', async () => {
 });
 
 await check('a service that cannot pay (cap reached) gives the person back', async () => {
-    await db.collection('qc_users').updateOne({ _id: quickReferrer }, { $set: { referralCount: 10 } });
+    await db.collection('users').updateOne({ _id: quickReferrer }, { $set: { quickReferralCount: 10 } });
     await quickSignUp('9200000004');
     assert.equal((await quickLog('9200000004'))?.reason, 'limit_reached');
     assert.equal(await claims.PlatformReferralClaim.countDocuments({ phone: '9200000004' }), 0);

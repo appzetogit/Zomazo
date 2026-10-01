@@ -81,9 +81,13 @@ await check('the account holds the brought-over address under its old id (what c
     assert.ok(account.addresses.find((a) => String(a._id) === String(qcHome._id)));
 });
 
-await check('a customer with no platform account keeps the service copy', async () => {
+await check('a Quick customer with no platform account keeps their addresses once merged', async () => {
+    // Since the qc_users merge the session translates the Quick id first; a
+    // Quick-only customer becomes a platform account under the same id.
+    const { resolveQuickCustomerId } = await import('../src/core/identity/quickCustomer.js');
     const loneId = oid();
     await db.collection('qc_users').insertOne({ _id: loneId, phone: '9111111199', addresses: [addr('Home', 'Lone street')] });
+    assert.equal(await resolveQuickCustomerId(String(loneId)), String(loneId));
     const { addresses } = await quick.listAddresses(String(loneId));
     assert.deepEqual(streets(addresses), ['Home:Lone street']);
 });

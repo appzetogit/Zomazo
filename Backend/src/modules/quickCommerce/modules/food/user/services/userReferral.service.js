@@ -27,9 +27,9 @@ import { FoodReferralSettings as PlatformReferralSettings } from '../../../../..
  * limit). A Quick-only account with no platform link keeps the old behaviour.
  */
 const platformIdFor = async (oid) => {
-    const row = await FoodUser.findById(oid).select('platformUserId').lean();
-    const pid = row?.platformUserId ? String(row.platformUserId) : '';
-    return mongoose.Types.ObjectId.isValid(pid) ? pid : null;
+    // Since the qc_users merge a Quick customer id IS the platform id.
+    const row = await FoodUser.findById(oid).select('_id').lean();
+    return row ? String(row._id) : null;
 };
 
 const platformInvite = async (pid) => {
@@ -58,7 +58,7 @@ export const getUserReferralStats = async (userId) => {
         return { ...stats, ...invite };
     }
     const [user, wallet, settingsDoc] = await Promise.all([
-        FoodUser.findById(oid).select('_id referralCount referralCode').lean(),
+        FoodUser.findById(oid).select('_id quickReferralCount referralCode').lean(),
         FoodUserWallet.findOne({ userId: oid }).select('referralEarnings').lean(),
         referralSettingsFor('quickCommerce', FoodReferralSettings)
     ]);
@@ -70,7 +70,7 @@ export const getUserReferralStats = async (userId) => {
             user?.referralCode || user?._id,
             ''
         ),
-        referralCount: Number(user?.referralCount) || 0,
+        referralCount: Number(user?.quickReferralCount) || 0,
         totalReferralEarnings: Number(wallet?.referralEarnings) || 0,
         rewardAmount: Math.max(0, Number(settingsDoc?.referralRewardUser) || 0),
         referralLimit: Math.max(0, Number(settingsDoc?.referralLimitUser) || 0)
@@ -90,7 +90,7 @@ export const getUserReferralDetails = async (userId) => {
         return { ...details, stats: { ...(details?.stats || {}), ...invite } };
     }
     const [user, wallet, settingsDoc, logs] = await Promise.all([
-        FoodUser.findById(oid).select('_id referralCount referralCode').lean(),
+        FoodUser.findById(oid).select('_id quickReferralCount referralCode').lean(),
         FoodUserWallet.findOne({ userId: oid }).select('referralEarnings').lean(),
         referralSettingsFor('quickCommerce', FoodReferralSettings),
         FoodReferralLog.find({ referrerId: oid, role: 'USER' })
@@ -151,7 +151,7 @@ export const getUserReferralDetails = async (userId) => {
                 user?.referralCode || user?._id,
                 ''
             ),
-            referralCount: Number(user?.referralCount) || 0,
+            referralCount: Number(user?.quickReferralCount) || 0,
             totalReferralEarnings: Number(wallet?.referralEarnings) || 0,
             rewardAmount: Math.max(0, Number(settingsDoc?.referralRewardUser) || 0),
             referralLimit: Math.max(0, Number(settingsDoc?.referralLimitUser) || 0),

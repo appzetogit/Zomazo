@@ -39,7 +39,10 @@ const signUp = async (phone) => {
     const { otp } = await auth.requestUserOtp(phone);
     return auth.verifyUserOtpAndLogin(phone, otp, ref, null, 'web', 'New');
 };
-const referralCount = async () => (await db.collection('qc_users').findOne({ _id: referrer.insertedId })).referralCount;
+// The referrer's code is their old Quick id: they are merged into `users`
+// (same _id, having no platform account) the first time it is used. Quick's
+// own count is quickReferralCount there.
+const referralCount = async () => (await db.collection('users').findOne({ _id: referrer.insertedId }))?.quickReferralCount;
 
 await check('a new customer signing up with the code pays the referrer once', async () => {
     await signUp('9000000002');
@@ -49,7 +52,7 @@ await check('a new customer signing up with the code pays the referrer once', as
 });
 
 await check('the same phone, after deleting the account, is not paid again', async () => {
-    await db.collection('qc_users').deleteOne({ phone: '9000000002' });
+    await db.collection('users').deleteOne({ phone: '9000000002' });
     await signUp('9000000002');
     assert.equal(await referralCount(), 1);
     const refused = await FoodReferralLog.findOne({ status: 'rejected', reason: 'phone_already_rewarded' }).lean();
@@ -57,7 +60,7 @@ await check('the same phone, after deleting the account, is not paid again', asy
 });
 
 await check('the cap holds: a referrer at the limit is not paid', async () => {
-    await db.collection('qc_users').updateOne({ _id: referrer.insertedId }, { $set: { referralCount: 5 } });
+    await db.collection('users').updateOne({ _id: referrer.insertedId }, { $set: { quickReferralCount: 5 } });
     await signUp('9000000003');
     assert.equal(await referralCount(), 5);
     assert.ok(await FoodReferralLog.findOne({ reason: 'limit_reached' }).lean());

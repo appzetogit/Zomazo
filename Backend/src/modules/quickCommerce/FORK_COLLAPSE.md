@@ -50,7 +50,7 @@ that is already slated for removal is poor value for the risk.
 | broadcasts | `food_notification_broadcasts` | `qc_broadcast_notifications` | not yet — plus a TTL index master lacks |
 | payments | `payments` | same | already shared |
 | refunds / settlements / transactions | shared names | `qc_*` | no — needs a migration |
-| users | `users` | `qc_users` | no — identity merge, blocked on the dry-run |
+| users | `users` | was `qc_users` | **merged** (1 Oct 2026) -- see "Database merges" below |
 | admins | `admins` | `qc_admins` | no — and the permission *shapes* differ |
 
 The rule that falls out: **share the code, keep the collection**, until a migration
@@ -132,7 +132,7 @@ were deleted.
 Done: `otp`, `refreshTokens`, `roles/role.middleware`, `notifications` (4 of 7),
 `payments/razorpayWebhook.controller`.
 
-Blocked on a database: `users`, `admin` (both identity merges),
+Blocked on a database: `admin` (identity merge; `users` is done, see below),
 `payments/{refund,settlement,transaction}` models and services (collection
 migrations, and the ledger cutover replaces them anyway).
 
@@ -202,3 +202,35 @@ where the twin had the same bug in live code:
   only Shop admins change its banners.
 - Both: a rejected store, rider or seller is refused on every request, not
   only at sign-in.
+
+### Database merges (1 Oct 2026)
+
+**Customers: `qc_users` -> `users`.** Quick reads and writes customers in the
+shared `users` collection; a Quick customer id IS the platform id.
+`modules/quickCommerce/core/users/user.model.js` re-exports the platform
+model; the old rows are `LegacyQcUser`, read only by the merge.
+
+- The merge is `core/identity/quickCustomer.js` (`mergeQcUser`): the platform
+  account by platformUserId, else the last ten digits of the phone, else one
+  made with the qc row's own `_id` (so its wallet and rows need not move).
+  Quick-only fields keep their own names -- `quickReferralCount`,
+  `quickReferredBy`, `quickBlocked` (Quick's admin switch; `isActive` is every
+  app), `quickJoinedAt` (Quick's admin and broadcasts list only these),
+  `tokenVersion`, rider `rating`. Blanks are filled, push tokens and addresses
+  merged, every reference in `QC_USER_REFS` rewritten, and `qc_user_id_map`
+  keeps old -> new.
+- Code works before and after the script: the session middleware, socket,
+  refresh, invite codes and the offers list call `resolveQuickCustomerId`,
+  which merges a waiting row on that customer's first request.
+  `platformUserIdFor`, `resolveInviter` and `linkedIds('qc_users')` read the
+  map / the platform id too.
+- Run: deploy, then `node scripts/migrations/mergeQcUsers.mjs` (dry run),
+  `--apply` (re-runnable), later `--drop-old` (refuses while any reference to
+  a moved id is left -- a clash on a unique index, e.g. a second cart for one
+  person, is reported for a hand decision; it renames `qc_users`, not drops).
+- Between the deploy and `--apply`, admin and rider screens that populate a
+  customer show no name for customers not merged yet: run the script straight
+  after the deploy.
+- Closing the Quick account no longer deletes anything shared: it empties
+  Quick's cart and favourites, signs Quick out and clears `quickJoinedAt`.
+- Test: `tests/merge-qc-users.smoke.mjs`.

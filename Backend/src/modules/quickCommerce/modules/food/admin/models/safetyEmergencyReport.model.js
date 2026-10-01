@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const safetyEmergencyReportSchema = new mongoose.Schema(
     {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'QCUser', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', required: true, index: true },
         userName: { type: String, default: '' },
         userEmail: { type: String, default: '' },
         userPhone: { type: String, default: '' },

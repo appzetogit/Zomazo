@@ -23,7 +23,7 @@ const userCartSchema = new mongoose.Schema(
     {
         userId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'QCUser',
+            ref: 'FoodUser',
             required: true,
             unique: true,
             index: true,

@@ -77,7 +77,7 @@ const SOURCES = {
     service: 'quickCommerce',
     requesterType: 'customer',
     load: () => model('../../modules/quickCommerce/modules/food/user/models/supportTicket.model.js', 'FoodSupportTicket'),
-    people: { field: 'userId', collection: 'qc_users', name: (d) => d.name, phone: (d) => d.phone },
+    people: { field: 'userId', collection: ['users', 'qc_users'], name: (d) => d.name, phone: (d) => d.phone },
     toInbox: (s) => ({ 'in-progress': 'in_progress' }[s] || s),
     toOwn: (s) => ({ in_progress: 'in-progress' }[s] || s),
     update: async (id, { status, reply }, admin) => (await quickAdmin()).updateSupportTicket(id, { source: 'user', status, adminResponse: reply, author: authorOf(admin) }),
@@ -160,11 +160,13 @@ async function peopleFor(source, docs) {
   if (!people) return new Map();
   const ids = [...new Set(docs.map((d) => String(d[people.field] || '')).filter(isId))];
   if (!ids.length) return new Map();
-  const rows = await mongoose.connection
-    .collection(people.collection)
+  // A list of collections is read in turn (Quick: merged customers, then rows
+  // not merged yet); ObjectIds are unique across them.
+  const rows = (await Promise.all([].concat(people.collection).map((name) => mongoose.connection
+    .collection(name)
     .find({ _id: { $in: ids.map((id) => new mongoose.Types.ObjectId(id)) } })
     .project({ name: 1, phone: 1, restaurantName: 1, ownerPhone: 1 })
-    .toArray();
+    .toArray()))).flat();
   return new Map(rows.map((r) => [String(r._id), { name: people.name(r) || '', phone: people.phone(r) || '' }]));
 }
 

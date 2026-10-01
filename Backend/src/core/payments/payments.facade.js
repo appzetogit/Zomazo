@@ -24,7 +24,7 @@ const SUBJECT_BY_VERTICAL = Object.freeze({
 
 const PAYER_BY_VERTICAL = Object.freeze({
     food: 'FoodUser',
-    quickCommerce: 'QCUser',
+    quickCommerce: 'FoodUser', // Quick's customers are the platform's (qc_users merge)
     taxi: 'TaxiUser',
     serviceProvider: 'SPUser',
 });

@@ -53,6 +53,9 @@ export async function platformUserIdFor(id) {
       .findOne({ phone: { $in: [phone, `+91${phone}`, `91${phone}`] } }, { projection: { _id: 1 } });
     return main ? { platformId: String(main._id), vertical } : null;
   }
+  // A Quick id from before the qc_users merge, once its row is dropped.
+  const merged = await db.collection('qc_user_id_map').findOne({ _id }, { projection: { platformId: 1 } });
+  if (merged?.platformId) return { platformId: String(merged.platformId), vertical: 'quickCommerce' };
   return null;
 }
 

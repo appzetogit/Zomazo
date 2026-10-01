@@ -92,16 +92,14 @@ export const initSocket = async (rootIo) => {
             socket.user = { userId: decoded.userId, role: decoded.role };
             logger.info(`Socket auth success: ${decoded.role}:${decoded.userId} for socket ${socket.id}`);
 
-            // A customer signed in on the platform carries the PLATFORM id, but
-            // every QC emit targets user:<qc_users id> and join-tracking compares
-            // against it -- so such a customer joined an empty room and was refused
-            // tracking. Translated to the satellite once, here, as the REST
-            // middleware does; a customer with no satellite yet has no QC orders.
+            // Every QC emit targets user:<customer id>, which is the platform id
+            // since the qc_users merge. An old Quick token names a qc_users id:
+            // translated here, once, as the REST middleware does.
             if (String(decoded.role || '').toUpperCase() === 'USER' && decoded.userId) {
-                return import('../core/users/user.model.js')
-                    .then(({ FoodUser: QCUser }) => QCUser.findOne({ $or: [{ _id: decoded.userId }, { platformUserId: decoded.userId }] }).select('_id').lean())
-                    .then((doc) => {
-                        if (doc) socket.user.userId = String(doc._id);
+                return import('../../../core/identity/quickCustomer.js')
+                    .then(({ resolveQuickCustomerId }) => resolveQuickCustomerId(decoded.userId))
+                    .then((customerId) => {
+                        if (customerId) socket.user.userId = String(customerId);
                         next();
                     })
                     .catch(() => next(new Error('AUTH_INVALID')));

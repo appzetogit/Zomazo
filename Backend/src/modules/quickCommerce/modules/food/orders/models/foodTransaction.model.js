@@ -4,7 +4,7 @@ const foodTransactionSchema = new mongoose.Schema({
     // Identifiers
     orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'QCOrder', required: true, unique: true, index: true },
 
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'QCUser', required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', required: true, index: true },
     restaurantId: { type: mongoose.Schema.Types.ObjectId, ref: 'QCRestaurant', required: true, index: true },
     deliveryPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'QCDeliveryPartner', index: true },
 

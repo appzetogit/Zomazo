@@ -25,6 +25,8 @@ const mongo = await MongoMemoryServer.create();
 await mongoose.connect(mongo.getUri('one_profile'));
 const db = mongoose.connection;
 
+// The session middleware translates a Quick id (the qc_users merge) before any service sees it.
+const { resolveQuickCustomerId } = await import('../src/core/identity/quickCustomer.js');
 const quick = await import('../src/modules/quickCommerce/modules/food/user/services/userProfile.service.js');
 const shop = await import('../src/modules/ecommerce/modules/commerce/user/services/userProfile.service.js');
 const { withSharedProfile, saveSharedProfile } = await import('../src/core/identity/sharedProfile.js');
@@ -40,7 +42,7 @@ await db.collection('ecom_users').insertOne({ _id: shopId, name: '', phone: '900
 await db.collection('sp_users').insertOne({ _id: spId, name: 'Old SP', phone: '9000000001', platformUserId: platformId, profilePhoto: '' });
 
 await check("Quick and the Shop show the account's name, email and photo", async () => {
-    const q = (await quick.getCurrentUserProfile(String(qcId))).user;
+    const q = (await quick.getCurrentUserProfile(await resolveQuickCustomerId(String(qcId)))).user;
     const s = (await shop.getCurrentUserProfile(String(shopId))).user;
     for (const u of [q, s]) {
         assert.equal(u.name, 'Asha Rao');
@@ -52,7 +54,7 @@ await check("Quick and the Shop show the account's name, email and photo", async
 await check('a name changed in the Shop is the name Quick and the account show', async () => {
     await shop.updateCurrentUserProfile(String(shopId), { name: 'Asha K' });
     assert.equal((await db.collection('users').findOne({ _id: platformId })).name, 'Asha K');
-    assert.equal((await quick.getCurrentUserProfile(String(qcId))).user.name, 'Asha K');
+    assert.equal((await quick.getCurrentUserProfile(await resolveQuickCustomerId(String(qcId)))).user.name, 'Asha K');
 });
 
 await check("Services' photo field maps to the account's photo both ways", async () => {
@@ -65,7 +67,7 @@ await check("Services' photo field maps to the account's photo both ways", async
 await check('a customer with no platform account keeps their own details', async () => {
     const loneId = oid();
     await db.collection('qc_users').insertOne({ _id: loneId, name: 'Lone', phone: '9111111199', role: 'USER' });
-    assert.equal((await quick.getCurrentUserProfile(String(loneId))).user.name, 'Lone');
+    assert.equal((await quick.getCurrentUserProfile(await resolveQuickCustomerId(String(loneId)))).user.name, 'Lone');
 });
 
 await mongoose.disconnect();

@@ -62,7 +62,8 @@ export const resolveCustomerIdentities = async (masterUserId) => {
     }
 
     try {
-        const { FoodUser: QCUser } = await import('../../modules/quickCommerce/core/users/user.model.js');
+        // Rows not merged into `users` yet (the qc_users merge); merged ones use the master id.
+        const { LegacyQcUser: QCUser } = await import('../../modules/quickCommerce/core/users/user.model.js');
         const qc = await QCUser.findOne(bySatellite).select('_id').lean();
         if (qc?._id) { ids.push(qc._id); resolved.push('quickCommerce'); }
     } catch (err) {

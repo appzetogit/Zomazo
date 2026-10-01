@@ -63,7 +63,7 @@ const qcReturnSchema = new mongoose.Schema(
 
         orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'QCOrder', required: true, index: true },
         orderNumber: { type: String, trim: true, default: '' },
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'QCUser', required: true, index: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', required: true, index: true },
         /** The seller the returned goods came from — the wallet that gets debited. */
         sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'QCRestaurant', index: true },
 

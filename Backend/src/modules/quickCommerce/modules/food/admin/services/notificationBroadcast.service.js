@@ -74,7 +74,8 @@ const buildDeliveryLabel = (doc) => ({
 const modelConfigMap = {
     USER: {
         model: FoodUser,
-        query: { isActive: true },
+        // Quick's customers in the shared users collection (the qc_users merge).
+        query: { isActive: true, quickBlocked: { $ne: true }, quickJoinedAt: { $ne: null } },
         select: '_id name phone email',
         buildLabel: buildUserLabel
     },

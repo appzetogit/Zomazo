@@ -80,7 +80,11 @@ export async function linkedIds(collection, platformId, phone) {
   const ten = lastTen(phone);
   if (ten.length === 10) or.push({ phone: { $in: [ten, `+91${ten}`, `91${ten}`, `+91 ${ten}`] } });
   const rows = await coll(collection).find({ $or: or }).project({ _id: 1 }).toArray();
-  return rows.map((r) => r._id);
+  const ids = rows.map((r) => r._id);
+  // Quick keys its rows by the platform id since the qc_users merge; a row
+  // not merged yet still names its qc_users id, so both are asked for.
+  if (collection === 'qc_users' && isId(platformId)) ids.unshift(oid(platformId));
+  return ids;
 }
 
 /* -------------------------------------------------------------- sources */

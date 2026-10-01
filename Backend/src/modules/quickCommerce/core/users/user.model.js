@@ -167,5 +167,18 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ phone: 1 }, { unique: true });
 userSchema.index({ 'addresses.location': '2dsphere' });
 
-export const FoodUser = mongoose.models.QCUser || mongoose.model('QCUser', userSchema, 'qc_users');
+/**
+ * The old Quick customer rows. Read only by the merge
+ * (core/identity/quickCustomer.js, scripts/migrations/mergeQcUsers.mjs);
+ * nothing writes a new one.
+ */
+export const LegacyQcUser = mongoose.models.QCUser || mongoose.model('QCUser', userSchema, 'qc_users');
+
+/*
+ * Quick's customers ARE the platform's: the shared `users` collection. Every
+ * importer of this file reads and writes that, and a Quick customer id is the
+ * platform id. Old qc_users ids are translated once, at the edge
+ * (auth.middleware.js -> resolveQuickCustomerId).
+ */
+export { FoodUser } from '../../../../core/users/user.model.js';
 

@@ -3,7 +3,7 @@ import { recordCustomerNotification } from '../../../../core/notifications/custo
 import { dropPlatformDeviceTokens, platformDeviceTokensFor } from '../../../../core/identity/platformUser.js';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import { FoodUser } from '../users/user.model.js';
+import { FoodUser, LegacyQcUser } from '../users/user.model.js';
 import { FoodRestaurant } from '../../modules/food/restaurant/models/restaurant.model.js';
 import { FoodDeliveryPartner } from '../../modules/food/delivery/models/deliveryPartner.model.js';
 import { FoodAdmin } from '../admin/admin.model.js';
@@ -447,9 +447,13 @@ export const listOwnerTokens = async ({ ownerType, ownerId, platform }) => {
     if (!ownerType || !ownerId) return [];
     const model = getOwnerModel(ownerType);
     if (!model) return [];
-    const doc = await model.findById(ownerId).select('fcmTokens fcmTokenMobile').lean();
+    const isUser = String(ownerType).toUpperCase() === 'USER';
+    // A customer not merged into users yet (the qc_users merge) is still
+    // addressed by their qc_users id: their devices are on that row.
+    const doc = (await model.findById(ownerId).select('fcmTokens fcmTokenMobile').lean())
+        || (isUser ? await LegacyQcUser.findOne({ _id: ownerId, mergedAt: { $exists: false } }).select('fcmTokens fcmTokenMobile').lean() : null);
     const own = readTokensFromDoc(doc, platform);
-    if (String(ownerType).toUpperCase() !== 'USER') return own;
+    if (!isUser) return own;
     // A customer who signed in through the platform login has their devices on
     // the platform account, not on qc_users: reach those too.
     const shared = await platformDeviceTokensFor(ownerId, {

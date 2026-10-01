@@ -79,19 +79,24 @@ const own_uploadCurrentUserProfileImage = async (userId, file) => {
  */
 export const deleteCurrentUserAccount = async (userId) => {
     // We import dynamically to avoid circular dependencies if any
-    const { FoodUserWallet } = await import('../models/userWallet.model.js');
-    
     const user = await FoodUser.findById(userId);
     if (!user) throw new AuthError('Profile not found');
 
-    // Remove a wallet keyed by this Quick id only. A linked customer's wallet is
-    // the one they share with every other app, and deletes on the linked model
-    // are never translated to it (core/wallet/linkedWallet.js), so closing the
-    // Quick account leaves that balance where it is.
-    await FoodUserWallet.findOneAndDelete({ userId });
-
-    // Remove User
-    await FoodUser.findByIdAndDelete(userId);
+    // Since the qc_users merge the customer IS their platform account, which
+    // Food, Rides and the rest still use -- along with the one wallet. Closing
+    // Quick leaves both: it empties Quick's cart and favourites, signs Quick's
+    // sessions out and takes the customer off Quick's lists until they come back.
+    const [{ FoodUserCart }, { FoodUserFavorite }, { QCRefreshToken }] = await Promise.all([
+        import('../models/userCart.model.js'),
+        import('../models/userFavorite.model.js'),
+        import('../../../../../../core/refreshTokens/refreshToken.model.js'),
+    ]);
+    await Promise.all([
+        FoodUserCart.deleteMany({ userId: user._id }),
+        FoodUserFavorite.deleteMany({ userId: user._id }),
+        QCRefreshToken.deleteMany({ userId: user._id }),
+        FoodUser.updateOne({ _id: user._id }, { $set: { quickJoinedAt: null } }),
+    ]);
 
     return { success: true };
 };
