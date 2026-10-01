@@ -161,6 +161,48 @@ await check('a stale claim that never paid is released', async () => {
   assert.equal((await FoodOrder.findById(_id).lean()).returnRefundedPaise, 30000);
 });
 
+const { applyCancellationRefund } = await import(`${BASE}/orders/services/order.service.js`);
+const cancelRefund = async (_id) => {
+  const doc = await FoodOrder.findById(_id);
+  const r = await applyCancellationRefund(doc, { cancelledBy: 'user' });
+  await doc.save({ validateBeforeSave: false });
+  return r;
+};
+
+await check('cancel while an admin refund is being paid: refused, nothing extra paid', async () => {
+  const { _id, userId } = await makeOrder();
+  await FoodOrder.collection.updateOne({ _id }, { $set: {
+    returnRefundedPaise: 20000,
+    'payment.refund': { status: 'pending', claim: { key: 'rf_live', at: new Date(), amountPaise: 20000, prevStatus: 'none' } },
+  } });
+  const r = await cancelRefund(_id);
+  assert.equal(r.reason, 'admin_refund_in_progress');
+  assert.equal(await walletOf(userId), 0);
+  assert.equal((await FoodOrder.findById(_id).lean()).returnRefundedPaise, 20000);
+});
+
+await check('cancel after returns refunded part: only the rest is refunded', async () => {
+  const { _id, userId } = await makeOrder({ extra: { returnRefundedPaise: 25000 } });
+  const r = await cancelRefund(_id);
+  assert.equal(r.processed, true);
+  assert.equal(await walletOf(userId), 50);
+  assert.equal((await FoodOrder.findById(_id).lean()).returnRefundedPaise, 30000);
+});
+
+await check('admin claim racing a cancellation: together never more than paid', async () => {
+  for (let i = 0; i < 5; i += 1) {
+    const { _id, userId } = await makeOrder();
+    await Promise.allSettled([
+      processRefundAdmin(String(_id), 200, adminId, 'race admin'),
+      cancelRefund(_id),
+    ]);
+    const o = await FoodOrder.findById(_id).lean();
+    assert.ok(await walletOf(userId) <= 300, `paid ${await walletOf(userId)}`);
+    assert.ok(o.returnRefundedPaise <= 30000);
+    assert.equal(Math.round((await walletOf(userId)) * 100), o.returnRefundedPaise, 'counter matches money out');
+  }
+});
+
 await mongoose.disconnect();
 await mongo.stop();
 console.log(failed ? `\n${failed} check(s) failed\n` : '\nall checks passed\n');

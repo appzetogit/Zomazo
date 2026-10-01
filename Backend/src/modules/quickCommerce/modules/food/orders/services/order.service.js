@@ -414,7 +414,36 @@ function buildCancellationRefundDescription(order, cancelledBy = 'system') {
   }
 }
 
-async function applyCancellationRefund(order, { cancelledBy = 'system', refundAmount } = {}) {
+/**
+ * Reserve a cancellation refund on the order's one refund counter
+ * (returnRefundedPaise), which returns and admin refunds also reserve against:
+ * all of them together can never pay out more than was paid. Grants what is
+ * left when that is less than asked. Refuses (blocked) while an admin refund is
+ * being paid: its claim holds payment.refund, which this refund's save would
+ * otherwise overwrite. Sets payment.refund.status 'pending' with the grant, so
+ * an admin refund cannot claim in between; the caller's save replaces it.
+ */
+async function reserveCancellationRefund(order, amount) {
+  const toPaise = (rupees) => Math.round((Number(rupees) || 0) * 100);
+  const { seedRefundCounter } = await import('../../returns/services/return.service.js');
+  await seedRefundCounter(order);
+  const paidPaise = toPaise(order.pricing?.total);
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const fresh = await FoodOrder.findById(order._id).select('returnRefundedPaise payment.refund.status').lean();
+    if (fresh?.payment?.refund?.status === 'pending') return { blocked: true, grantPaise: 0 };
+    const already = Number(fresh?.returnRefundedPaise) || 0;
+    const grantPaise = Math.min(toPaise(amount), paidPaise - already);
+    if (grantPaise <= 0) return { blocked: false, grantPaise: 0 };
+    const res = await FoodOrder.updateOne(
+      { _id: order._id, returnRefundedPaise: already, 'payment.refund.status': { $ne: 'pending' } },
+      { $inc: { returnRefundedPaise: grantPaise }, $set: { 'payment.refund.status': 'pending' } },
+    );
+    if (res.modifiedCount === 1) return { blocked: false, grantPaise };
+  }
+  return { blocked: true, grantPaise: 0 };
+}
+
+export async function applyCancellationRefund(order, { cancelledBy = 'system', refundAmount } = {}) {
   if (!order?.payment) {
     return { attempted: false, processed: false, reason: 'missing_payment' };
   }
@@ -422,7 +451,7 @@ async function applyCancellationRefund(order, { cancelledBy = 'system', refundAm
   const paymentMethod = String(order.payment?.method || 'cash').toLowerCase();
   const paymentStatus = String(order.payment?.status || 'cod_pending').toLowerCase();
   const refundStatus = String(order.payment?.refund?.status || 'none').toLowerCase();
-  const amount = Number(refundAmount ?? order?.pricing?.total ?? order?.payment?.amountDue ?? 0);
+  let amount = Number(refundAmount ?? order?.pricing?.total ?? order?.payment?.amountDue ?? 0);
 
   if (!Number.isFinite(amount) || amount <= 0) {
     return { attempted: false, processed: false, reason: 'invalid_amount' };
@@ -440,9 +469,25 @@ async function applyCancellationRefund(order, { cancelledBy = 'system', refundAm
     return { attempted: false, processed: false, reason: `payment_status_${paymentStatus || 'unknown'}`, method: paymentMethod };
   }
 
+  if (paymentMethod !== 'razorpay' && paymentMethod !== 'wallet') {
+    return { attempted: false, processed: false, reason: `unsupported_method_${paymentMethod}`, method: paymentMethod };
+  }
+  const reservation = await reserveCancellationRefund(order, amount);
+  if (reservation.blocked) {
+    return { attempted: false, processed: false, reason: 'admin_refund_in_progress', method: paymentMethod };
+  }
+  if (reservation.grantPaise <= 0) {
+    order.payment.refund = { status: 'processed', amount: 0, processedAt: new Date() };
+    return { attempted: false, processed: true, reason: 'nothing_left_to_refund', method: paymentMethod };
+  }
+  amount = reservation.grantPaise / 100;
+  // Nothing paid out: give the reservation back so a retry, return or admin refund can use it.
+  const release = () => FoodOrder.updateOne({ _id: order._id }, { $inc: { returnRefundedPaise: -reservation.grantPaise } });
+
   if (paymentMethod === 'razorpay') {
     const paymentId = String(order.payment?.razorpay?.paymentId || '').trim();
     if (!paymentId) {
+      await release();
       order.payment.refund = {
         status: 'failed',
         amount,
@@ -450,7 +495,12 @@ async function applyCancellationRefund(order, { cancelledBy = 'system', refundAm
       return { attempted: true, processed: false, reason: 'missing_razorpay_payment_id', method: paymentMethod };
     }
 
-    const refundResult = await initiateRazorpayRefund(paymentId, amount);
+    let refundResult;
+    try {
+      refundResult = await initiateRazorpayRefund(paymentId, amount);
+    } catch (err) {
+      refundResult = { success: false, error: err?.message || String(err) };
+    }
     if (refundResult.success) {
       order.payment.status = 'refunded';
       order.payment.refund = {
@@ -462,6 +512,7 @@ async function applyCancellationRefund(order, { cancelledBy = 'system', refundAm
       return { attempted: true, processed: true, method: paymentMethod, refundId: refundResult.refundId };
     }
 
+    await release();
     order.payment.refund = {
       status: 'failed',
       amount,
@@ -475,12 +526,17 @@ async function applyCancellationRefund(order, { cancelledBy = 'system', refundAm
   }
 
   if (paymentMethod === 'wallet') {
-    await userWalletService.refundWalletBalance(
-      order.userId,
-      amount,
-      buildCancellationRefundDescription(order, cancelledBy),
-      { orderId: order._id, cancelledBy }
-    );
+    try {
+      await userWalletService.refundWalletBalance(
+        order.userId,
+        amount,
+        buildCancellationRefundDescription(order, cancelledBy),
+        { orderId: order._id, cancelledBy }
+      );
+    } catch (err) {
+      await release();
+      throw err;
+    }
     order.payment.status = 'refunded';
     order.payment.refund = {
       status: 'processed',
