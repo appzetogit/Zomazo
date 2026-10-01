@@ -98,31 +98,43 @@ export default function NewRefundRequests() {
     return [...new Set(orders.map(o => o.restaurant))]
   }, [orders])
 
-  // Handle refund processing
-  const handleProcessRefund = async (order) => {
-    if (!confirm(`Are you sure you want to process refund for order ${order.orderId}?`)) {
-      return
+  const reloadRequests = async () => {
+    const refreshResponse = await adminAPI.getRefundRequests({ page: 1, limit: 1000 })
+    if (refreshResponse.data?.success && refreshResponse.data?.data?.orders) {
+      setOrders(refreshResponse.data.data.orders)
+      setTotalCount(refreshResponse.data.data.pagination?.total || refreshResponse.data.data.orders.length)
     }
+  }
 
+  // Approve: refund everything paid, to where it came from (the server caps and records it)
+  const handleProcessRefund = async (order) => {
+    const reason = window.prompt(`Refund order ${order.orderId} in full. Reason for the refund:`, order.cancellationReason || "Order cancelled")
+    if (reason === null) return
     try {
       setProcessingRefund(order.id)
-      const response = await adminAPI.processRefund(order.id, {})
-      
-      if (response.data?.success) {
-        toast.success(`Refund processed successfully for order ${order.orderId}`)
-        // Refresh the list
-        const params = { page: 1, limit: 1000 }
-        const refreshResponse = await adminAPI.getRefundRequests(params)
-        if (refreshResponse.data?.success && refreshResponse.data?.data?.orders) {
-          setOrders(refreshResponse.data.data.orders)
-          setTotalCount(refreshResponse.data.data.pagination?.total || refreshResponse.data.data.orders.length)
-        }
-      } else {
-        toast.error(response.data?.message || "Failed to process refund")
-      }
+      const response = await adminAPI.processRefund(order.id, { reason })
+      toast.success(response.data?.message || `Refund processed for order ${order.orderId}`)
+      await reloadRequests()
     } catch (error) {
       debugError("Error processing refund:", error)
       toast.error(error.response?.data?.message || "Failed to process refund")
+    } finally {
+      setProcessingRefund(null)
+    }
+  }
+
+  // Reject: no refund; the reason is recorded on the order and sent to the customer
+  const handleRejectRefund = async (order) => {
+    const reason = window.prompt(`Reject the refund for order ${order.orderId}. Reason (the customer sees this):`)
+    if (reason === null) return
+    try {
+      setProcessingRefund(order.id)
+      const response = await adminAPI.rejectRefundRequest(order.id, { reason })
+      toast.success(response.data?.message || `Refund request rejected for order ${order.orderId}`)
+      await reloadRequests()
+    } catch (error) {
+      debugError("Error rejecting refund:", error)
+      toast.error(error.response?.data?.message || "Failed to reject refund")
     } finally {
       setProcessingRefund(null)
     }
@@ -243,7 +255,7 @@ export default function NewRefundRequests() {
                             ? 'bg-emerald-100 text-emerald-700' 
                             : 'bg-amber-100 text-amber-700'
                         }`}>
-                          {order.refundStatus === 'processed' ? 'Processed' : 'Pending'}
+                          {order.refundStatus === 'processed' ? 'Processed' : order.refundStatus === 'failed' ? 'Failed' : order.refundStatus === 'pending' ? 'In progress' : 'Pending'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -268,8 +280,18 @@ export default function NewRefundRequests() {
                               {processingRefund === order.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
-                                <span className="text-sm">?</span>
+                                <span className="text-sm">{"₹"}</span>
                               )}
+                            </button>
+                          )}
+                          {order.refundStatus !== 'processed' && order.refundStatus !== 'pending' && (
+                            <button
+                              onClick={() => handleRejectRefund(order)}
+                              disabled={processingRefund === order.id}
+                              className="px-2 py-1 rounded border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Reject refund"
+                            >
+                              Reject
                             </button>
                           )}
                         </div>

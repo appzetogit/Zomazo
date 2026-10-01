@@ -1361,6 +1361,12 @@ export const adminAPI = {
   acceptOrder: (orderId) =>
     apiClient.patch(`/food/admin/orders/${String(orderId)}/status`,
       { orderStatus: "confirmed" }, { contextModule: "admin" }),
+  /** Cancelled paid orders whose money has not gone back: { orders, pagination }. */
+  getRefundRequests: (params = {}) =>
+    apiClient.get(`/food/admin/orders/refund-requests`, { params, contextModule: "admin" }),
+  /** Decide a refund request with no refund: body { reason }, shown to the customer. */
+  rejectRefundRequest: (orderId, body = {}) =>
+    apiClient.post(`/food/admin/orders/${String(orderId)}/refund/reject`, body, { contextModule: "admin" }),
   /** Admin refund, full or partial: body { amount?, reason }. The server caps it at what is left to refund. */
   processRefund: (orderId, body = {}) =>
     apiClient.post(`/food/admin/orders/${String(orderId)}/refund`, body, { contextModule: "admin" }),

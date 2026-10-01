@@ -279,11 +279,14 @@ router.patch('/dining/restaurants/:restaurantId', diningAdminController.updateDi
 
 // ----- Orders -----
 router.get('/orders', orderController.listOrdersAdminController);
+// Before '/orders/:orderId', which would otherwise take 'refund-requests' as an id.
+router.get('/orders/refund-requests', orderController.listRefundRequestsController);
 router.get('/orders/:orderId', orderController.getOrderByIdAdminController);
 router.patch('/orders/:orderId/status', orderController.updateOrderStatusAdminController);
 router.delete('/orders/:orderId', orderController.deleteOrderAdminController);
 // Moves money: 'orders' write through enforceAdminAccess above, and audited as a finance action.
 router.post('/orders/:orderId/refund', requireFinancePermission('ORDER_REFUND'), orderController.adminRefundOrderController);
+router.post('/orders/:orderId/refund/reject', orderController.rejectRefundRequestController);
 
 // ----- Order cancellation after the restaurant accepts -----
 router.get('/order-cancellation', async (_req, res, next) => {

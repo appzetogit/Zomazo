@@ -313,6 +313,13 @@ const paymentSchema = new mongoose.Schema(
             refundedPaise: { type: Number, min: 0 },
             // The admin refund being paid right now (core/orders/adminRefundClaim.js).
             claim: { type: mongoose.Schema.Types.Mixed },
+            // An admin's "no refund" on a cancelled paid order (rejectRefundRequest).
+            decision: {
+                status: { type: String, enum: ['rejected'] },
+                reason: { type: String, default: '' },
+                byAdminId: { type: String, default: '' },
+                at: { type: Date }
+            },
             // One row per admin refund that actually paid out.
             history: {
                 type: [{

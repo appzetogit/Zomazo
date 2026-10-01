@@ -1137,6 +1137,85 @@ export async function adminRefundOrder(orderId, { amount, reason, adminId } = {}
   };
 }
 
+const CANCELLED_STATUSES = ["cancelled_by_user", "cancelled_by_restaurant", "cancelled_by_admin"];
+
+/*
+ * Refund requests: cancelled orders that were paid and whose money has not gone
+ * back -- the automatic cancellation refund failed, was never possible (no
+ * gateway id), or a cash order collected before it was cancelled. Nobody files
+ * these; they are what the admin's "New Refund Requests" queue has to clear,
+ * either by refunding (adminRefundOrder) or by deciding not to (rejectRefundRequest).
+ */
+const refundRequestFilter = () => ({
+  orderStatus: { $in: CANCELLED_STATUSES },
+  "payment.status": "paid",
+  "payment.refund.status": { $ne: "processed" },
+  "payment.refund.decision.status": { $ne: "rejected" },
+});
+
+export async function listRefundRequests({ page = 1, limit = 50 } = {}) {
+  const lim = Math.min(Math.max(Number(limit) || 50, 1), 1000);
+  const pg = Math.max(Number(page) || 1, 1);
+  const filter = refundRequestFilter();
+  const [rows, total] = await Promise.all([
+    FoodOrder.find(filter)
+      .sort({ updatedAt: -1 })
+      .skip((pg - 1) * lim)
+      .limit(lim)
+      .populate("userId", "name phone")
+      .populate("restaurantId", "restaurantName")
+      .lean(),
+    FoodOrder.countDocuments(filter),
+  ]);
+  const orders = rows.map((o) => {
+    const at = new Date(o.updatedAt || o.createdAt);
+    const cancel = [...(o.statusHistory || [])].reverse().find((h) => CANCELLED_STATUSES.includes(h.to));
+    return {
+      id: String(o._id),
+      _id: String(o._id),
+      orderId: o.order_id || String(o._id),
+      date: at.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+      time: at.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+      customerName: o.userId?.name || "Customer",
+      customerPhone: o.userId?.phone || "",
+      restaurant: o.restaurantId?.restaurantName || "",
+      totalAmount: Number(o.pricing?.total) || 0,
+      paymentStatus: "Paid",
+      payment: { method: o.payment?.method, status: o.payment?.status },
+      orderStatus: o.orderStatus,
+      cancellationReason: cancel?.note || "",
+      refundStatus: o.payment?.refund?.status || "none",
+    };
+  });
+  return { orders, pagination: { page: pg, limit: lim, total } };
+}
+
+/**
+ * The admin decides a cancelled paid order gets no refund. Recorded on the order
+ * with the reason, and the customer is told why. Refused while a refund is being
+ * paid or once one has been.
+ */
+export async function rejectRefundRequest(orderId, { reason, adminId } = {}) {
+  const identity = buildOrderIdentityFilter(orderId);
+  if (!identity) throw new ValidationError("Order id required");
+  const note = String(reason || "").trim();
+  if (note.length < 4) throw new ValidationError("Give a reason for rejecting the refund (at least 4 characters)");
+
+  const order = await FoodOrder.findOneAndUpdate(
+    { ...identity, ...refundRequestFilter(), "payment.refund.status": { $nin: ["processed", "pending"] } },
+    { $set: { "payment.refund.decision": { status: "rejected", reason: note, byAdminId: String(adminId || ""), at: new Date() } } },
+    { new: true },
+  ).lean();
+  if (!order) throw new ValidationError("This order has no open refund request (already refunded, in progress, or decided)");
+
+  await notifyOwnersSafely([{ ownerType: "USER", ownerId: order.userId }], {
+    title: "Refund request declined",
+    body: `No refund will be made for order #${order.order_id || order._id}: ${note}`,
+    data: { type: "order_refund_rejected", orderId: String(order._id), orderMongoId: String(order._id) },
+  });
+  return { order: normalizeOrderForClient(order) };
+}
+
 export async function cancelOrder(orderId, userId, reason) {
   const identity = buildOrderIdentityFilter(orderId);
   if (!identity) throw new ValidationError("Order id required");

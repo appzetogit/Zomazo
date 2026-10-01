@@ -187,6 +187,29 @@ export async function getOrderByIdRestaurantController(req, res, next) {
  * Admins act across restaurants, so no restaurantId scoping — but the same kitchen-status
  * whitelist applies (picked_up / delivered stay owned by the delivery + OTP flow).
  */
+/** Cancelled paid orders whose money has not gone back (orderService.listRefundRequests). */
+export async function listRefundRequestsController(req, res, next) {
+    try {
+        const result = await orderService.listRefundRequests(req.query || {});
+        return sendResponse(res, 200, 'Refund requests fetched', result);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/** Decide a refund request with no refund, and a reason the customer is shown. */
+export async function rejectRefundRequestController(req, res, next) {
+    try {
+        const result = await orderService.rejectRefundRequest(req.params.orderId, {
+            reason: req.body?.reason,
+            adminId: req.user?.userId || req.auth?.sub || null,
+        });
+        return sendResponse(res, 200, 'Refund request rejected', result);
+    } catch (err) {
+        next(err);
+    }
+}
+
 /** Admin refund, full or partial (see orderService.adminRefundOrder for the guards). */
 export async function adminRefundOrderController(req, res, next) {
     try {
