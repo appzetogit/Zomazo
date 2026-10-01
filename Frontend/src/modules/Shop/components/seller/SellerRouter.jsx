@@ -18,6 +18,7 @@ const OrdersMain = lazy(() => import("@shop/pages/seller/OrdersMain"))
 const SellerNotifications = lazy(() => import("@shop/pages/seller/Notifications"))
 const SellerOnboarding = lazy(() => import("@shop/pages/seller/Onboarding"))
 const CouponListPage = lazy(() => import("@shop/pages/seller/CouponListPage"))
+const Advertise = lazy(() => import("@shop/pages/seller/Advertise"))
 const AddCouponPage = lazy(() => import("@shop/pages/seller/AddCouponPage"))
 const EditCouponPage = lazy(() => import("@shop/pages/seller/EditCouponPage"))
 const MenuCategoriesPage = lazy(() => import("@shop/pages/seller/MenuCategoriesPage"))
@@ -107,6 +108,7 @@ export default function SellerRouter() {
           <Route element={<ProtectedRoute requiredRole="seller" loginPath="/seller/login"><AllOrdersPage /></ProtectedRoute>} path="orders/all" />
           <Route element={<ProtectedRoute requiredRole="seller" loginPath="/seller/login"><OrderDetailPage /></ProtectedRoute>} path="orders/:id" />
           <Route element={<ProtectedRoute requiredRole="seller" loginPath="/seller/login"><CouponListPage /></ProtectedRoute>} path="coupon" />
+          <Route element={<ProtectedRoute requiredRole="seller" loginPath="/seller/login"><Advertise /></ProtectedRoute>} path="advertise" />
           <Route element={<ProtectedRoute requiredRole="seller" loginPath="/seller/login"><AddCouponPage /></ProtectedRoute>} path="coupon/new" />
           <Route element={<ProtectedRoute requiredRole="seller" loginPath="/seller/login"><EditCouponPage /></ProtectedRoute>} path="coupon/:id/edit" />
           <Route element={<ProtectedRoute requiredRole="seller" loginPath="/seller/login"><DeliverySettings /></ProtectedRoute>} path="delivery-settings" />

@@ -12,10 +12,27 @@ import bikeImg from '@/assets/landing/bike.png';
 import heroBgImg from '@/assets/landing/hero-bg.png';
 import newHeroTaxiImg from '@/assets/ride-removebg-preview.png';
 import Brand from "@/shared/superapp/Brand"
+import { toast } from "sonner"
+import { subscribeToNewsletter } from "@/shared/spotlight/api"
 
 function LandingPage() {
   const navigate = useNavigate();
   const { settings, activeLogo } = useSettings();
+  const [email, setEmail] = React.useState('');
+  const [subscribing, setSubscribing] = React.useState(false);
+  const subscribe = async (e) => {
+    e.preventDefault();
+    setSubscribing(true);
+    try {
+      await subscribeToNewsletter(email.trim(), 'taxi');
+      setEmail('');
+      toast.success('You are subscribed');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Could not subscribe. Please try again.');
+    } finally {
+      setSubscribing(false);
+    }
+  };
   const appName = settings.general?.app_name || 'easytaxi';
   const appLogo = activeLogo || settings.general?.logo || settings.customization?.logo || '';
   const [activeTab, setActiveTab] = React.useState('home');
@@ -255,9 +272,10 @@ function LandingPage() {
             <div className="newsletter-text">
               <h4 className="newsletter-subtitle"><Car size={16} /> GET TO ACCESS</h4>
               <h3 className="newsletter-title">Subscribe Our Newsletter.</h3>
-              <form className="newsletter-form">
-                <input type="email" placeholder="Email" />
-                <button type="button" onClick={() => window.open('https://play.google.com/store/apps/details?id=com.Quick Drop.user', '_blank')}>Book Now →</button>
+              {/* The platform newsletter list (Backend core/mailingList). */}
+              <form className="newsletter-form" onSubmit={subscribe}>
+                <input type="email" required maxLength={254} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <button type="submit" disabled={subscribing}>{subscribing ? 'Subscribing...' : 'Subscribe →'}</button>
               </form>
             </div>
           </div>
