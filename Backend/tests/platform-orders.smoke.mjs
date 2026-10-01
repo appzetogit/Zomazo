@@ -250,6 +250,38 @@ await check('a sub-admin sees only the services whose orders they may read', () 
     assert.deepEqual(servicesVisibleTo(noOrders), []);
 });
 
+await check('a normal order update makes no extra find on the order collection', async () => {
+    const doc = storeOrder();
+    await saveRaw(FoodOrder, doc);
+    await flushPlatformOrderSync();
+    let reads = 0;
+    mongoose.set('debug', (collection, method) => {
+        // find(): what the hook used to run for ids. (The sync itself reads the
+        // record back with findOne by _id, in the background -- that is the sync.)
+        if (collection === 'food_orders' && method === 'find') reads += 1;
+    });
+    try {
+        await FoodOrder.updateOne({ _id: doc._id }, { $set: { orderStatus: 'created' } });
+        await FoodOrder.findOneAndUpdate({ _id: doc._id }, { $set: { 'payment.status': 'paid' } });
+        await FoodOrder.updateMany({ _id: { $in: [doc._id] } }, { $set: { orderStatus: 'picked_up' } });
+        await flushPlatformOrderSync();
+        assert.equal(reads, 0, `${reads} extra find(s) for writes that name their record`);
+        assert.equal((await row('food', doc._id)).status, 'out_for_delivery');
+
+        // A filter that does not name the id: read once, after the write, widened past
+        // the field the update changes (the record no longer matches the original filter).
+        reads = 0;
+        const pending = FoodOrder.updateOne({ order_id: doc.order_id, orderStatus: 'picked_up' }, { $set: { orderStatus: 'delivered' } });
+        await pending;
+        assert.equal(reads, 0, 'the id lookup ran before the write returned');
+        await flushPlatformOrderSync();
+        assert.equal(reads, 1);
+        assert.equal((await row('food', doc._id)).status, 'delivered');
+    } finally {
+        mongoose.set('debug', false);
+    }
+});
+
 await mongoose.disconnect();
 await replSet.stop();
 console.log(failed ? `\n${failed} failed` : '\nall passed');
