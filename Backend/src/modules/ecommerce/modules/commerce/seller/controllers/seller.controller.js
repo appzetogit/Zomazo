@@ -1,4 +1,5 @@
 import { assertPassForRegistration } from '../../../../../../core/partner/partnerHandoff.service.js';
+import { boostPromoted } from '../../../../../../core/spotlight/spotlight.service.js';
 import {
     registerSeller,
     listApprovedSellers,
@@ -58,6 +59,8 @@ export const createOnboardingFeeOrderController = async (req, res, next) => {
 export const listApprovedSellersController = async (req, res, next) => {
     try {
         const data = await listApprovedSellers(req.query);
+        // Running promoted listings (core/spotlight) first, marked.
+        if (Array.isArray(data?.sellers)) data.sellers = await boostPromoted('shop', data.sellers);
         return sendResponse(res, 200, 'Stores fetched successfully', data);
     } catch (error) {
         next(error);

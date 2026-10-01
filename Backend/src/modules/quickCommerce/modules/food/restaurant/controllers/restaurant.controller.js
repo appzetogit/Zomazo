@@ -1,3 +1,4 @@
+import { boostPromoted } from '../../../../../../core/spotlight/spotlight.service.js';
 import {
     registerRestaurant,
     listApprovedRestaurants,
@@ -57,6 +58,8 @@ export const createOnboardingFeeOrderController = async (req, res, next) => {
 export const listApprovedRestaurantsController = async (req, res, next) => {
     try {
         const data = await listApprovedRestaurants(req.query);
+        // Running promoted listings (core/spotlight) first, marked.
+        if (Array.isArray(data?.restaurants)) data.restaurants = await boostPromoted('quick', data.restaurants);
         return sendResponse(res, 200, 'Restaurants fetched successfully', data);
     } catch (error) {
         next(error);

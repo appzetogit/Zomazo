@@ -261,6 +261,32 @@ export async function runningBanners(service) {
   }
 }
 
+export const MAX_PROMOTED_AT_TOP = 2;
+
+/**
+ * A customer list with running promoted listings moved to the top and marked
+ * `isPromoted`. Only businesses already in the list are moved -- the list
+ * already did the zone, open-now and filter work, so an ad never puts a
+ * business in front of a customer it would not otherwise reach -- and each
+ * appears once. At most MAX_PROMOTED_AT_TOP, earliest-started first, so ads
+ * cannot crowd out the list. Never throws: a broken ad must not empty the list.
+ */
+export async function boostPromoted(service, list) {
+  if (!Array.isArray(list) || !list.length) return list;
+  try {
+    const docs = await SpotlightAd.find(runningFilter(service, 'listing')).sort({ startDate: 1 }).select('partnerId').lean();
+    const order = [...new Set(docs.map((d) => String(d.partnerId)))];
+    const byId = new Map(list.map((item, i) => [String(item?._id ?? item?.id ?? ''), i]));
+    const picked = order.filter((id) => byId.has(id)).slice(0, MAX_PROMOTED_AT_TOP).map((id) => byId.get(id));
+    if (!picked.length) return list;
+    const top = picked.map((i) => ({ ...list[i], isPromoted: true }));
+    const taken = new Set(picked);
+    return [...top, ...list.filter((_, i) => !taken.has(i))];
+  } catch {
+    return list;
+  }
+}
+
 /** The businesses with a running promoted listing in a service. */
 export async function promotedPartners(service) {
   if (!SPOTLIGHT_SERVICES.includes(service)) throw new ApiError(400, 'Unknown service');

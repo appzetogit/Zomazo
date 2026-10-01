@@ -1970,6 +1970,7 @@ export default function Home() {
                 pureVegRestaurant: restaurant.pureVegRestaurant === true,
                 location: restaurant.location, // Store location for distance recalculation
                 isActive: restaurant.isActive !== false, // Default to true if not specified
+                isPromoted: restaurant.isPromoted === true,
                 isAcceptingOrders: restaurant.isAcceptingOrders !== false, // Default to true if not specified
                 openDays: Array.isArray(restaurant.openDays)
                   ? restaurant.openDays
@@ -2000,6 +2001,8 @@ export default function Home() {
               if (aAvailable !== bAvailable) {
                 return aAvailable ? -1 : 1; // Available restaurants come first
               }
+              // Paid promoted listings (the server caps them) stay on top among open ones.
+              if (a.isPromoted !== b.isPromoted) return a.isPromoted ? -1 : 1;
 
               // Apply secondary sort based on sortBy filter
               if (filters.sortBy === "price-low") {
@@ -3149,6 +3152,7 @@ export default function Home() {
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-[#ff6d00] transition-colors">
                       {restaurant.name}
                     </h3>
+                    {restaurant.isPromoted ? <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Promoted</span> : null}
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold text-white px-1.5 py-0.5 rounded-md ${restaurant.rating > 0 ? "bg-[#259539]" : "bg-gray-400"}`}>
                         {restaurant.rating > 0 ? restaurant.rating.toFixed(1) : "NEW"}
@@ -3205,6 +3209,7 @@ export default function Home() {
                         <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white truncate group-hover:text-[#ff6d00] transition-colors leading-tight">
                           {restaurant.name}
                         </h3>
+                        {restaurant.isPromoted ? <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Promoted</span> : null}
                       </Link>
                       <div className="flex items-center gap-1.5 mt-1.5">
                         <span className={`inline-flex items-center gap-0.5 text-[10px] font-black text-white px-2 py-0.5 rounded-lg ${restaurant.rating > 0 ? "bg-[#259539]" : "bg-gray-400"}`}>

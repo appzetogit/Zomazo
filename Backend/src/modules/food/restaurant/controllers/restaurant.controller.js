@@ -1,4 +1,5 @@
 import { assertPassForRegistration } from '../../../../core/partner/partnerHandoff.service.js';
+import { boostPromoted } from '../../../../core/spotlight/spotlight.service.js';
 import {
     registerRestaurant,
     listApprovedRestaurants,
@@ -45,6 +46,8 @@ export const registerRestaurantController = async (req, res, next) => {
 export const listApprovedRestaurantsController = async (req, res, next) => {
     try {
         const data = await listApprovedRestaurants(req.query);
+        // Running promoted listings (core/spotlight) first, marked.
+        if (Array.isArray(data?.restaurants)) data.restaurants = await boostPromoted('food', data.restaurants);
         return sendResponse(res, 200, 'Restaurants fetched successfully', data);
     } catch (error) {
         next(error);

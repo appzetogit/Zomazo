@@ -178,6 +178,30 @@ await check('a running banner ad joins the service\'s home promotion strip; paus
   assert.deepEqual(await read(), ['Own']);
 });
 
+console.log('\nPromoted listings in customer lists');
+await check('running listings go first, marked, at most two, no duplicates; expired and paused are not boosted', async () => {
+  const ids = Array.from({ length: 6 }, () => oid());
+  const ad = (partnerId, startOffset, endOffset, status = 'approved') => ({
+    service: 'quick', partnerId, kind: 'listing', title: 't', status,
+    startDate: new Date(Date.now() + startOffset), endDate: new Date(Date.now() + endOffset),
+  });
+  await SpotlightAd.insertMany([
+    ad(ids[4], -3 * day, day), // earliest-started running: first
+    ad(ids[2], -2 * day, day),
+    ad(ids[2], -day, day), // a second ad for the same store: still once
+    ad(ids[5], -day / 2, day), // third running: over the cap
+    ad(ids[1], -3 * day, -day), // expired
+    ad(ids[3], -day, day, 'paused'),
+    ad(oid(), -day, day), // a store not in this list (another zone): not added
+  ]);
+  const list = ids.map((id, n) => ({ _id: id, name: `s${n}` }));
+  const out = await spotlight.boostPromoted('quick', list);
+  assert.deepEqual(out.map((r) => r.name), ['s4', 's2', 's0', 's1', 's3', 's5']);
+  assert.deepEqual(out.map((r) => r.isPromoted === true), [true, true, false, false, false, false]);
+  // Another service's ads do not apply.
+  assert.deepEqual((await spotlight.boostPromoted('shop', list)).map((r) => r.name), list.map((r) => r.name));
+});
+
 console.log('\nThe mail list');
 await check('subscribing is validated', async () => {
   const bad = await call('/platform/mailing-list/subscribe', { email: 'not-an-email', source: 'food' });
