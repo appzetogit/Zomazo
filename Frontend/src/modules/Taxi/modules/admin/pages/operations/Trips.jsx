@@ -47,6 +47,86 @@ const normalizeRow = (row = {}) => ({
   raw: row,
 });
 
+/**
+ * Refund on a completed or cancelled paid ride. The server caps the amount at
+ * what is left and refuses a second refund racing this one; its message is
+ * shown as-is either way.
+ */
+const RideRefundPanel = ({ row, onRefunded }) => {
+  const info = row.raw?.refund || {};
+  const refundable = Number(info.refundable || 0);
+  const [amount, setAmount] = React.useState(refundable ? refundable.toFixed(2) : '');
+  const [reason, setReason] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [message, setMessage] = React.useState(null);
+
+  if (!(Number(info.paid) > 0)) return null;
+
+  const destination = info.method === 'razorpay'
+    ? 'to the original payment (Razorpay)'
+    : info.method === 'cash'
+      ? "to the rider's wallet (paid in cash)"
+      : "to the rider's wallet";
+
+  const submit = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const response = await adminService.refundRide(row.raw?.id || row.id, { amount, reason });
+      const body = response?.data || response || {};
+      setMessage({ ok: true, text: body.message || 'Refund processed' });
+      setReason('');
+      onRefunded?.();
+    } catch (err) {
+      setMessage({ ok: false, text: err?.response?.data?.message || err?.message || 'Refund failed' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400">Refund</h3>
+      <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-3 text-[13px] text-slate-600">
+        <div className="flex justify-between"><span>Paid</span><span className="font-bold">₹{Number(info.paid).toFixed(2)}</span></div>
+        <div className="flex justify-between"><span>Refunded</span><span className="font-bold">₹{Number(info.refunded || 0).toFixed(2)}</span></div>
+        {refundable > 0 ? (
+          <>
+            <input
+              value={amount}
+              onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+              inputMode="decimal"
+              placeholder={`Up to ${refundable.toFixed(2)}`}
+              className="h-9 w-full rounded-md border border-slate-200 px-3 outline-none focus:border-slate-300"
+            />
+            <input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              maxLength={300}
+              placeholder="Reason"
+              className="h-9 w-full rounded-md border border-slate-200 px-3 outline-none focus:border-slate-300"
+            />
+            <p className="text-[12px] text-slate-400">Refunded {destination}.</p>
+            <button
+              type="button"
+              disabled={busy || !(Number(amount) > 0) || reason.trim().length < 4}
+              onClick={submit}
+              className="w-full h-9 rounded-md bg-[#f46b45] text-white font-bold disabled:opacity-50"
+            >
+              {busy ? 'Refunding...' : `Refund ₹${(Number(amount) || 0).toFixed(2)}`}
+            </button>
+          </>
+        ) : (
+          <p className="font-bold text-emerald-600">Fully refunded</p>
+        )}
+        {message && (
+          <p className={`text-[12px] font-bold ${message.ok ? 'text-emerald-600' : 'text-red-500'}`}>{message.text}</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const Trips = () => {
   const [activeTab, setActiveTab] = React.useState('All');
   const [search, setSearch] = React.useState('');
@@ -315,6 +395,9 @@ const Trips = () => {
                                       )}
                                     </div>
                                   </div>
+                                )}
+                                {(row.tripStatus === 'COMPLETED' || row.tripStatus === 'CANCELLED') && (
+                                  <RideRefundPanel key={`${row.id}-${row.raw?.refund?.refunded || 0}`} row={row} onRefunded={loadRows} />
                                 )}
                               </div>
                             </motion.div>

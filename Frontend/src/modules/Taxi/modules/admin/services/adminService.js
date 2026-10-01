@@ -201,6 +201,8 @@ export const adminService = {
   getTrips: ({ page = 1, limit = 10, tab = 'all', search = '' } = {}) =>
     api.get(`/admin/trips?page=${page}&limit=${limit}&tab=${encodeURIComponent(tab)}&search=${encodeURIComponent(search)}`),
   deleteOngoingRide: (id) => api.delete(`/admin/ongoing-rides/${id}`),
+  // Admin refund on a completed or cancelled paid ride: { amount?, reason }.
+  refundRide: (id, body = {}) => api.post(`/admin/ride-requests/${id}/refund`, body),
 
   /**
    * Wallet & Financials

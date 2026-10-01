@@ -6,6 +6,7 @@ import { BusService } from '../models/BusService.js';
 import { BusSeatHold } from '../../user/models/BusSeatHold.js';
 import { LandingPageSetting } from '../models/LandingPageSetting.js';
 import { ApiError } from '../../../../utils/ApiError.js';
+import { refundRideByAdmin } from '../../services/rideRefund.service.js';
 
 const ok = (res, data, extra = {}) =>
   res.json({ success: true, data, ...extra });
@@ -636,6 +637,15 @@ export const getDeliveries = asyncHandler(async (req, res) =>
 export const getIntercityTrips = asyncHandler(async (req, res) =>
   ok(res, await adminService.listIntercityTrips(req.query)),
 );
+// Admin refund on a completed or cancelled paid ride (services/rideRefund.service.js).
+export const refundRide = asyncHandler(async (req, res) => {
+  const result = await refundRideByAdmin(req.params.id, {
+    amount: req.body?.amount,
+    reason: req.body?.reason,
+    adminId: req.auth?.sub || req.auth?.admin?.id || null,
+  });
+  res.json({ success: true, message: result.message, data: result });
+});
 export const deleteOngoingRide = asyncHandler(async (req, res) =>
   ok(res, await adminService.deleteOngoingRide(req.params.id)),
 );

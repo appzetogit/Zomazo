@@ -920,6 +920,31 @@ const rideSchema = new mongoose.Schema(
         default: null,
       },
     },
+    /*
+     * Admin refunds on this ride (services/rideRefund.service.js). refundedPaise is
+     * the counter each refund reserves against, together with status 'pending'
+     * while one is being paid, so two refunds can never spend the same headroom.
+     */
+    adminRefund: {
+      status: {
+        type: String,
+        enum: ['none', 'pending', 'processed'],
+        default: undefined,
+      },
+      refundedPaise: { type: Number, min: 0 },
+      history: {
+        type: [{
+          _id: false,
+          amount: { type: Number, required: true },
+          method: { type: String, default: '' },
+          refundId: { type: String, default: '' },
+          reason: { type: String, default: '' },
+          byAdminId: { type: String, default: '' },
+          at: { type: Date, default: Date.now },
+        }],
+        default: undefined,
+      },
+    },
   },
   { timestamps: true },
 );

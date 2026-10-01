@@ -572,7 +572,10 @@ export default function OrdersPage({ statusKey = "all" }) {
         deliveryType: order.deliveryType || "Home Delivery",
         orderOtp: order.deliveryOtp,
         address: order.address || order.customerAddress || order.deliveryAddress,
-        refundStatus: order.payment?.refund?.status || (order.payment?.status === 'refunded' ? 'processed' : null)
+        // 'processed' only once everything paid is back: a partial refund leaves
+        // the Refund button so the rest can still be refunded.
+        refundStatus: order.payment?.status === 'refunded' ? 'processed' : null,
+        refundedSoFar: order.payment?.refund?.status === 'processed' ? Number(order.payment?.refund?.amount) || 0 : 0
       }
     })
   }, [orders])
@@ -820,28 +823,14 @@ export default function OrdersPage({ statusKey = "all" }) {
     }
   }
 
-  // Handle refund button click - show modal for wallet payments, confirm dialog for others
+  // Handle refund button click - the modal asks for the amount and a reason for every payment method
   const handleRefund = (order) => {
-    const isWalletPayment = order.paymentType === "Wallet" || order.payment?.method === "wallet";
-    
-    if (isWalletPayment) {
-      // Show modal for wallet refunds
-      setSelectedOrderForRefund(order)
-      setRefundModalOpen(true)
-    } else {
-      // For non-wallet payments, use the old confirm dialog flow
-      const confirmMessage = `Are you sure you want to process refund for order ${order.orderId}?\n\nThis will initiate a Razorpay refund to the customer's original payment method.`;
-      
-      if (!confirm(confirmMessage)) {
-        return
-      }
-      
-      processRefund(order, null) // null amount means use default
-    }
+    setSelectedOrderForRefund(order)
+    setRefundModalOpen(true)
   }
 
   // Process refund with amount
-  const processRefund = async (order, refundAmount = null) => {
+  const processRefund = async (order, refundAmount = null, reason = "") => {
     // Try using MongoDB _id first (more reliable for route matching), then fallback to orderId string
     // Backend accepts either MongoDB ObjectId (24 chars) or orderId string
     // Using MongoDB _id is more reliable for route matching (no dashes/special chars)
@@ -874,7 +863,7 @@ export default function OrdersPage({ statusKey = "all" }) {
       })
       
       // Include refundAmount in request body if provided (ensure it's a number)
-      const requestData = refundAmount !== null ? { refundAmount: parseFloat(refundAmount) } : {}
+      const requestData = { reason, ...(refundAmount !== null ? { amount: parseFloat(refundAmount) } : {}) }
       debugLog('?? Request data being sent:', requestData)
       const response = await adminAPI.processRefund(orderIdToUse, requestData)
       
@@ -887,7 +876,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         setOrders(prevOrders => 
           prevOrders.map(o => 
             (o.id === order.id || o.orderId === order.orderId)
-              ? { ...o, refundStatus: 'processed' } // Wallet refunds are instant, so mark as processed
+              ? { ...o, refundStatus: response.data?.data?.refund?.refundableLeft > 0 ? null : 'processed' }
               : o
           )
         )
@@ -953,9 +942,9 @@ export default function OrdersPage({ statusKey = "all" }) {
   }
 
   // Handle refund confirmation from modal
-  const handleRefundConfirm = (amount) => {
+  const handleRefundConfirm = (amount, reason) => {
     if (selectedOrderForRefund) {
-      processRefund(selectedOrderForRefund, amount)
+      processRefund(selectedOrderForRefund, amount, reason)
     }
   }
 

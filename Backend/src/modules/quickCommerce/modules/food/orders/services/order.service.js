@@ -3195,38 +3195,102 @@ export async function markOrderDeliveredAdmin(orderId, adminId, note = "") {
 
 export async function processRefundAdmin(orderId, amount, adminId) {
     const identity = buildOrderIdentityFilter(orderId);
-    let order = await FoodOrder.findOne(identity);
+    const order = await FoodOrder.findOne(identity).lean();
     if (!order) throw new NotFoundError("Order not found");
 
+    const paymentMethod = String(order.payment?.method || 'cash').toLowerCase();
+    if (paymentMethod === 'cash' || paymentMethod === 'cod') {
+        throw new ValidationError('Cash on Delivery orders do not require a refund');
+    }
     const currentPaymentStatus = String(order.payment?.status || "").toLowerCase();
-
-    if (currentPaymentStatus === "refunded") {
-        throw new ValidationError("Order is already refunded");
+    if (currentPaymentStatus !== 'paid' && currentPaymentStatus !== 'refunded') {
+        throw new ValidationError('Nothing has been paid on this order, so there is nothing to refund');
+    }
+    const paymentId = String(order.payment?.razorpay?.paymentId || '').trim();
+    if (paymentMethod === 'razorpay' && !paymentId) {
+        throw new ValidationError('This online payment has no Razorpay payment id, so it cannot be refunded');
+    }
+    if (paymentMethod !== 'razorpay' && paymentMethod !== 'wallet') {
+        throw new ValidationError(`Refunds are not supported for ${paymentMethod} payments`);
     }
 
-    const refundAmount = Number(amount) || order.pricing?.total || 0;
-    if (refundAmount <= 0) throw new ValidationError("Invalid refund amount");
+    /*
+     * The cap is what was paid minus everything already refunded -- by returns, by
+     * a cancellation, by earlier admin refunds -- all of which meet on one counter,
+     * order.returnRefundedPaise (see return.service.js reserveRefund). Checking the
+     * order total alone let two admin refunds, or an admin refund after a return,
+     * pay out more than the order was worth.
+     */
+    const toPaise = (rupees) => Math.round((Number(rupees) || 0) * 100);
+    const { seedRefundCounter } = await import('../../returns/services/return.service.js');
+    await seedRefundCounter(order);
+    const paidPaise = toPaise(order.pricing?.total);
+    const hasAmount = !(amount === undefined || amount === null || amount === '');
 
-    const refundResult = await applyCancellationRefund(order, {
-        cancelledBy: 'admin',
-        refundAmount,
+    // The claim: a compare-and-swap on the counter, all or nothing, so two clicks
+    // cannot both spend the same headroom. Retried only when someone else moved it.
+    let alreadyPaise = 0;
+    let wantedPaise = 0;
+    let claimed = false;
+    for (let attempt = 0; attempt < 8 && !claimed; attempt += 1) {
+        const fresh = await FoodOrder.findById(order._id).select('returnRefundedPaise').lean();
+        alreadyPaise = Number(fresh?.returnRefundedPaise) || 0;
+        const leftPaise = paidPaise - alreadyPaise;
+        if (leftPaise <= 0) throw new ValidationError("Order is already refunded");
+        wantedPaise = hasAmount ? toPaise(amount) : leftPaise;
+        if (!(wantedPaise > 0)) throw new ValidationError("Invalid refund amount");
+        if (wantedPaise > leftPaise) {
+            throw new ValidationError(`Refund cannot be more than ₹${(leftPaise / 100).toFixed(2)}, what is left of the ₹${(paidPaise / 100).toFixed(2)} paid`);
+        }
+        const res = await FoodOrder.updateOne(
+            { _id: order._id, returnRefundedPaise: alreadyPaise },
+            { $inc: { returnRefundedPaise: wantedPaise } },
+        );
+        claimed = res.modifiedCount === 1;
+    }
+    if (!claimed) {
+        throw Object.assign(new Error('Another refund on this order is in progress. Try again.'), { statusCode: 409 });
+    }
+
+    const refundAmount = wantedPaise / 100;
+    let refundId = '';
+    try {
+        if (paymentMethod === 'razorpay') {
+            const result = await initiateRazorpayRefund(paymentId, refundAmount);
+            if (!result?.success) throw new Error(result?.error || 'gateway refused the refund');
+            refundId = String(result.refundId || '');
+        } else {
+            await userWalletService.refundWalletBalance(
+                order.userId,
+                refundAmount,
+                `Refund for order #${order.orderId || order._id}`,
+                { orderId: order._id, source: 'admin_refund', byAdminId: String(adminId || '') }
+            );
+        }
+    } catch (err) {
+        // Nothing moved: give the headroom back so the admin can retry.
+        await FoodOrder.updateOne({ _id: order._id }, { $inc: { returnRefundedPaise: -wantedPaise } });
+        logger.error(`Admin refund payout failed for QC order ${order._id}: ${err?.message || err}`);
+        throw Object.assign(new Error(`The refund could not be paid (${err?.message || 'payout error'}). Nothing was refunded; try again.`), { statusCode: 424 });
+    }
+
+    const adminPaidPaise = (order.payment?.refund?.status === 'processed' ? toPaise(order.payment.refund.amount) : 0) + wantedPaise;
+    const full = alreadyPaise + wantedPaise >= paidPaise;
+    await FoodOrder.updateOne({ _id: order._id }, {
+        $set: {
+            'payment.refund.status': 'processed',
+            'payment.refund.amount': adminPaidPaise / 100,
+            'payment.refund.processedAt': new Date(),
+            ...(refundId ? { 'payment.refund.refundId': refundId } : {}),
+            ...(full ? { 'payment.status': 'refunded' } : {}),
+        },
     });
-
-    if (!refundResult.processed) {
-        if (order.isModified()) {
-            await order.save();
-        }
-        if (refundResult.reason === 'cash_payment') {
-            throw new ValidationError('Cash on Delivery orders do not require a refund');
-        }
-        throw new Error('Refund processing failed');
-    }
-
-    await order.save();
+    const updated = await FoodOrder.findById(order._id);
 
     try {
         await foodTransactionService.updateTransactionStatus(order._id, order.orderStatus, {
-            status: 'refunded',
+            // A partial refund leaves the payment captured; only the last one marks it refunded.
+            status: full ? 'refunded' : undefined,
             note: `Refund of ₹${refundAmount} processed by admin`,
             recordedByRole: 'ADMIN',
             recordedById: adminId
@@ -3235,5 +3299,5 @@ export async function processRefundAdmin(orderId, amount, adminId) {
         logger.warn(`Admin refund transaction sync failed: ${err?.message || err}`);
     }
 
-    return { success: true, order: normalizeOrderForClient(order) };
+    return { success: true, order: normalizeOrderForClient(updated) };
 }

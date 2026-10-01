@@ -999,6 +999,174 @@ async function processOrderRefundOnce(order, refundUserId) {
   order.payment.refund = refundPatch["payment.refund"];
 }
 
+const refundToPaise = (rupees) => Math.round((Number(rupees) || 0) * 100);
+
+// 4xx so the error handler passes our wording through to the admin; a 5xx is masked.
+const adminRefundError = (message, statusCode) => Object.assign(new Error(message), { statusCode });
+
+/**
+ * Admin refund on a paid order: full or partial, any number of times, never more
+ * than was paid in total.
+ *
+ * Money moves in three steps, in an order that never pays twice: claim, pay, record.
+ * The claim is one atomic update that flips payment.refund.status to 'pending' AND
+ * reserves the amount on payment.refund.refundedPaise, matched against the values
+ * just read -- so two clicks, or this racing a cancellation's processOrderRefundOnce
+ * (which skips a 'pending' refund), cannot both spend the same headroom. A payout
+ * that fails gives the claim back; nothing has moved, so the admin can retry.
+ *
+ * Money goes back the way it came: Razorpay refund for an online payment, wallet
+ * credit for a wallet payment. Cash cannot be handed back by the app, so a cash
+ * order's refund is a wallet credit, and its description says so.
+ *
+ * @param {string} orderId  mongo id or order_id
+ * @param {{amount?: number|string, reason: string, adminId?: string}} opts
+ *   amount omitted = everything still refundable
+ */
+export async function adminRefundOrder(orderId, { amount, reason, adminId } = {}) {
+  const identity = buildOrderIdentityFilter(orderId);
+  if (!identity) throw new ValidationError("Order id required");
+  const note = String(reason || "").trim();
+  if (note.length < 4) throw new ValidationError("Give a reason for the refund (at least 4 characters)");
+
+  const order = await FoodOrder.findOne(identity).lean();
+  if (!order) throw new NotFoundError("Order not found");
+
+  const payStatus = String(order.payment?.status || "").toLowerCase();
+  if (payStatus !== "paid" && payStatus !== "refunded") {
+    throw new ValidationError("Nothing has been paid on this order yet, so there is nothing to refund");
+  }
+
+  const method = String(order.payment?.method || "cash").toLowerCase();
+  const paymentId = String(order.payment?.razorpay?.paymentId || "").trim();
+  let destination;
+  if (method === "razorpay" || method === "razorpay_qr") {
+    if (!paymentId) throw new ValidationError("This online payment has no Razorpay payment id, so it cannot be refunded to the card or UPI it came from");
+    destination = "gateway";
+  } else {
+    destination = "wallet";
+  }
+
+  const refund = order.payment?.refund || {};
+  const prevStatus = String(refund.status || "none");
+  if (prevStatus === "pending") {
+    throw adminRefundError("A refund on this order is already in progress. Refresh in a moment.", 409);
+  }
+  const rawCounter = Number.isFinite(refund.refundedPaise) ? refund.refundedPaise : null;
+  // A cancellation refund (processOrderRefundOnce) records only amount + status:
+  // count it once, so an order already refunded in full has no headroom left.
+  const alreadyPaise = rawCounter ?? (prevStatus === "processed" ? refundToPaise(refund.amount) : 0);
+  const paidPaise = refundToPaise(order.pricing?.total);
+  const leftPaise = paidPaise - alreadyPaise;
+  if (leftPaise <= 0) throw new ValidationError("Everything paid on this order has already been refunded");
+
+  const wantedPaise = amount === undefined || amount === null || amount === "" ? leftPaise : refundToPaise(amount);
+  if (!(wantedPaise > 0)) throw new ValidationError("Refund amount must be more than zero");
+  if (wantedPaise > leftPaise) {
+    throw new ValidationError(`Refund cannot be more than ₹${(leftPaise / 100).toFixed(2)}, what is left of the ₹${(paidPaise / 100).toFixed(2)} paid`);
+  }
+
+  const reservedPaise = alreadyPaise + wantedPaise;
+  const claimed = await FoodOrder.findOneAndUpdate(
+    {
+      _id: order._id,
+      "payment.status": { $in: ["paid", "refunded"] },
+      "payment.refund.status": prevStatus === "none" ? { $in: [null, "none"] } : prevStatus,
+      "payment.refund.refundedPaise": rawCounter,
+    },
+    { $set: { "payment.refund.status": "pending", "payment.refund.refundedPaise": reservedPaise } },
+    { new: true },
+  );
+  if (!claimed) {
+    throw adminRefundError("Another refund on this order is in progress or just finished. Refresh and try again.", 409);
+  }
+
+  const rupees = wantedPaise / 100;
+  const readableId = order.order_id || order._id;
+  let refundId = "";
+  try {
+    if (destination === "gateway") {
+      const result = await initiateRazorpayRefund(paymentId, rupees);
+      if (!result?.success) throw new Error(result?.error || "gateway refused the refund");
+      refundId = String(result.refundId || "");
+    } else {
+      const description = method === "cash"
+        ? `Refund for order #${readableId} (paid in cash, so credited to your wallet)`
+        : `Refund for order #${readableId}`;
+      await userWalletService.refundWalletBalance(order.userId, rupees, description, {
+        orderId: order._id, source: "admin_refund", byAdminId: String(adminId || ""),
+      });
+    }
+  } catch (err) {
+    logger.error(`Admin refund payout failed for Order ${order._id}: ${err?.message || err}`);
+    await FoodOrder.updateOne(
+      { _id: order._id, "payment.refund.status": "pending", "payment.refund.refundedPaise": reservedPaise },
+      { $set: { "payment.refund.status": prevStatus, "payment.refund.refundedPaise": alreadyPaise } },
+    );
+    throw adminRefundError(`The refund could not be paid (${err?.message || "payout error"}). Nothing was refunded; try again.`, 424);
+  }
+
+  const full = reservedPaise >= paidPaise;
+  const now = new Date();
+  const entry = {
+    amount: rupees,
+    method: destination === "gateway" ? "razorpay" : "wallet",
+    refundId,
+    reason: note,
+    byAdminId: String(adminId || ""),
+    at: now,
+  };
+  const set = {
+    "payment.refund.status": "processed",
+    "payment.refund.amount": reservedPaise / 100,
+    "payment.refund.processedAt": now,
+    ...(refundId ? { "payment.refund.refundId": refundId } : {}),
+    ...(full ? { "payment.status": "refunded" } : {}),
+  };
+  await FoodOrder.updateOne({ _id: order._id }, { $set: set, $push: { "payment.refund.history": entry } });
+
+  // The order's money ledger (food_transactions): one history row per refund, and
+  // the row reads refunded once the whole payment has gone back.
+  try {
+    await FoodTransaction.updateOne(
+      { orderId: order._id },
+      {
+        ...(full ? { $set: { status: "refunded" } } : {}),
+        $push: {
+          history: {
+            kind: "refunded",
+            amount: rupees,
+            at: now,
+            note: `Admin refund of ₹${rupees.toFixed(2)}: ${note}`,
+            recordedBy: { role: "ADMIN", id: mongoose.Types.ObjectId.isValid(adminId) ? adminId : undefined },
+          },
+        },
+      },
+    );
+  } catch (err) {
+    logger.warn(`Admin refund ledger sync failed for Order ${order._id}: ${err?.message || err}`);
+  }
+
+  // Only now, with the money moved and recorded, is the customer told.
+  const where = destination === "gateway"
+    ? "to your original payment method within 5-7 working days"
+    : "to your wallet";
+  await notifyOwnersSafely([{ ownerType: "USER", ownerId: order.userId }], {
+    title: "Refund processed",
+    body: `₹${rupees.toFixed(2)} for order #${readableId} has been refunded ${where}.`,
+    data: { type: "order_refund", orderId: String(order._id), orderMongoId: String(order._id) },
+  });
+
+  const fresh = await FoodOrder.findById(order._id).lean();
+  return {
+    order: normalizeOrderForClient(fresh),
+    refund: { ...entry, refundedTotal: reservedPaise / 100, refundableLeft: (paidPaise - reservedPaise) / 100 },
+    message: destination === "gateway"
+      ? `₹${rupees.toFixed(2)} refunded to the original payment (Razorpay ${refundId || "refund"})`
+      : `₹${rupees.toFixed(2)} credited to the customer's wallet`,
+  };
+}
+
 export async function cancelOrder(orderId, userId, reason) {
   const identity = buildOrderIdentityFilter(orderId);
   if (!identity) throw new ValidationError("Order id required");

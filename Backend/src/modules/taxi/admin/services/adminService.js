@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { ridePaymentOf } from '../../services/rideRefund.service.js';
 import { managedBrand } from '../../../../core/settings/platformProfile.service.js';
 import { ApiError } from '../../../../utils/ApiError.js';
 import { createDefaultAdminState } from '../data/defaultAdminState.js';
@@ -5565,6 +5566,18 @@ const toAdminRideRow = (ride) => {
     recovered_at: ride.recovered_at || null,
     cancellation_time: ride.cancellation_time || null,
     recovered_cancellation_due: Number(ride.recovered_cancellation_due || 0),
+    // What the admin Refund action needs: paid, already refunded, and what is left.
+    refund: (() => {
+      const paid = ridePaymentOf(ride);
+      const refunded = Number(ride.adminRefund?.refundedPaise || 0) / 100;
+      return {
+        paid: paid ? paid.paidPaise / 100 : 0,
+        method: paid?.method || '',
+        refunded,
+        refundable: paid && paid.method !== 'unknown' ? Math.max(0, paid.paidPaise / 100 - refunded) : 0,
+        history: ride.adminRefund?.history || [],
+      };
+    })(),
   };
 };
 

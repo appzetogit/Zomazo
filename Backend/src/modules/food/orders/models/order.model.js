@@ -303,7 +303,27 @@ const paymentSchema = new mongoose.Schema(
             },
             amount: { type: Number, default: 0 },
             refundId: { type: String, default: '' },
-            processedAt: { type: Date }
+            processedAt: { type: Date },
+            /*
+             * Paise refunded so far by admin refunds (adminRefundOrder), the
+             * counter each one reserves against so two refunds can never both
+             * spend the same headroom. Absent until the first admin refund,
+             * which seeds it from a cancellation refund already processed.
+             */
+            refundedPaise: { type: Number, min: 0 },
+            // One row per admin refund that actually paid out.
+            history: {
+                type: [{
+                    _id: false,
+                    amount: { type: Number, required: true },
+                    method: { type: String, default: '' },
+                    refundId: { type: String, default: '' },
+                    reason: { type: String, default: '' },
+                    byAdminId: { type: String, default: '' },
+                    at: { type: Date, default: Date.now }
+                }],
+                default: undefined
+            }
         }
     },
     { _id: false }
