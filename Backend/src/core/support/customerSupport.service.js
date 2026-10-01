@@ -3,6 +3,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { linkedIds } from '../orders/myOrders.service.js';
 import { isModuleEnabled } from '../modules/moduleState.service.js';
 import { MODULES } from '../modules/moduleRegistry.js';
+import { threadFor, appendMessage } from './supportThread.js';
 
 /**
  * The super app's help centre, for the customer.
@@ -214,6 +215,60 @@ export async function listCustomerTickets(userId) {
       .then((r) => r.map((d) => toRow('taxi', d))),
   ]);
   return lists.flat().sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)).slice(0, LIMIT);
+}
+
+/* ----------------------------------------------------------- the thread */
+
+// The help centre's ticket key prefix, and the support inbox's source for it.
+const INBOX_SOURCE = { food: 'food_customer', quick: 'quick_customer', shop: 'shop_customer' };
+
+/** One of the customer's own tickets, or a 404 -- never someone else's. */
+async function ownTicket(userId, key) {
+  const [prefix, id] = String(key || '').split(':');
+  if (!['food', 'quick', 'shop', 'taxi'].includes(prefix) || !isId(id)) throw new ApiError(404, 'Ticket not found');
+  if (prefix === 'food') {
+    const doc = await (await foodTicket()).findOne({ _id: oid(id), userId: oid(userId) }).lean();
+    if (doc) return { prefix, doc };
+  } else if (prefix === 'taxi') {
+    const doc = await (await taxiTicket()).findOne({ _id: oid(id), requesterRole: 'user', requesterId: oid(userId) }).lean();
+    if (doc) return { prefix, doc };
+  } else {
+    if (prefix === 'shop' && !(await isModuleEnabled(MODULES.ECOMMERCE))) throw new ApiError(404, 'Ticket not found');
+    const { phone } = await me(userId);
+    const ids = await linkedIds(prefix === 'quick' ? 'qc_users' : 'ecom_users', userId, phone);
+    const Model = prefix === 'quick' ? await quickTicket() : await shopTicket();
+    const doc = ids.length ? await Model.findOne({ _id: oid(id), userId: { $in: ids } }).lean() : null;
+    if (doc) return { prefix, doc };
+  }
+  throw new ApiError(404, 'Ticket not found');
+}
+
+/** A ticket with its whole conversation, for the help centre. */
+export async function getCustomerTicket(userId, key) {
+  const { prefix, doc } = await ownTicket(userId, key);
+  const row = toRow(prefix, doc);
+  row.messages = prefix === 'taxi'
+    ? (doc.messages || []).map((m) => ({
+      from: m.senderRole === 'admin' ? 'admin' : 'requester', name: m.senderName || '', message: m.message, at: m.createdAt || null,
+    }))
+    : await threadFor(INBOX_SOURCE[prefix], doc);
+  return row;
+}
+
+/**
+ * The customer writes back on their ticket. A resolved ticket opens again, so
+ * the reply lands in front of an admin instead of in a closed pile. Rides
+ * tickets are answered in the Rides app, which has its own conversation.
+ */
+export async function replyCustomerTicket(userId, key, body = {}) {
+  const message = clip(body.message, 2000);
+  if (!message) throw new ApiError(400, 'Write a message');
+  const { prefix, doc } = await ownTicket(userId, key);
+  if (prefix === 'taxi') throw new ApiError(400, 'Reply to ride tickets from the Rides help screen');
+  await appendMessage(INBOX_SOURCE[prefix], doc, { from: 'requester', message, authorId: oid(userId) });
+  const Model = prefix === 'food' ? await foodTicket() : prefix === 'quick' ? await quickTicket() : await shopTicket();
+  await Model.updateOne({ _id: doc._id }, { $set: { status: 'open', updatedAt: new Date() } });
+  return getCustomerTicket(userId, key);
 }
 
 export const __testables = { toRow };

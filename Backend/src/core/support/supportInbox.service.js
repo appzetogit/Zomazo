@@ -3,6 +3,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { decideAdminAccess } from '../admin/adminAccessPolicy.js';
 import { isModuleEnabled } from '../modules/moduleState.service.js';
 import { MODULES } from '../modules/moduleRegistry.js';
+import { threadFor, appendMessage } from './supportThread.js';
 
 /**
  * One support inbox for the whole platform (Master > Help & Support).
@@ -289,7 +290,10 @@ export async function getInboxTicket(admin, source, id) {
   const doc = await Model.findById(id).lean();
   if (!doc) throw new ApiError(404, 'Ticket not found');
   const people = await peopleFor(source, [doc]);
-  return toRow(source, doc, def.people ? people.get(String(doc[def.people.field] || '')) : null);
+  const row = toRow(source, doc, def.people ? people.get(String(doc[def.people.field] || '')) : null);
+  // Taxi keeps its conversation on the ticket; the others keep it in supportThread.
+  if (source !== 'taxi') row.messages = await threadFor(source, doc);
+  return row;
 }
 
 /* -------------------------------------------------------------- writing */
@@ -311,8 +315,13 @@ export async function updateInboxTicket(admin, source, id, body = {}) {
   if (status === undefined && !reply) throw new ApiError(400, 'Write a reply or pick a status');
 
   const Model = await def.load();
-  const exists = await Model.exists({ _id: id });
-  if (!exists) throw new ApiError(404, 'Ticket not found');
+  const before = await Model.findById(id).lean();
+  if (!before) throw new ApiError(404, 'Ticket not found');
+  // Recorded before the service overwrites adminResponse, so an older answer
+  // is kept as the earlier message rather than lost.
+  if (reply && source !== 'taxi') {
+    await appendMessage(source, before, { from: 'admin', message: reply, authorId: admin?._id, authorName: admin?.name || '' });
+  }
 
   await def.update(id, { status: status === undefined ? undefined : def.toOwn(status), reply: reply || undefined }, admin);
   return getInboxTicket(admin, source, id);

@@ -7,6 +7,7 @@ import { Textarea } from "@food/components/ui/textarea"
 import { Card, CardContent } from "@food/components/ui/card"
 import { orderAPI, restaurantAPI, supportAPI, helpDeskAPI } from "@food/api"
 import { toast } from "sonner"
+import TicketThread from "./TicketThread"
 import { ArrowLeft, Building2, HelpCircle, ShoppingBag, ChevronRight } from "lucide-react"
 
 /**
@@ -201,9 +202,7 @@ export default function Support() {
                   </span>
                 </div>
                 {t.orderRef ? <p className="text-xs text-slate-500 mt-1">About #{t.orderRef}</p> : null}
-                {t.reply ? (
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-2">Reply: {t.reply}</p>
-                ) : null}
+                <TicketThread ticket={t} />
               </div>
             ))}
           </div>

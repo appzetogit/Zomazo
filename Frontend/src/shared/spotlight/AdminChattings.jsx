@@ -7,8 +7,9 @@ import { errorOf, fmtDate } from "./api"
 const WHO = { customer: "Customer", restaurant: "Restaurant", store: "Store", rider: "Rider", user: "Customer", driver: "Driver", owner: "Owner" }
 
 /*
- * A ticket as a conversation. Taxi tickets keep every message; the other
- * services keep the request and one admin answer, so that is the thread.
+ * A ticket as a conversation. The opened ticket carries every message
+ * (core/support/supportThread.js); until it loads, the list row's request and
+ * latest answer stand in.
  */
 function threadOf(t) {
   if (t.messages?.length) return t.messages
@@ -52,7 +53,19 @@ export default function AdminChattings({ service }) {
 
   const shown = useMemo(() => items.filter((t) => !who || t.requesterType === who), [items, who])
   const open = items.find((t) => t.key === openKey) || null
-  const single = open && !open.messages?.length
+
+  // The list carries no thread; the ticket itself does.
+  const openTicket = async (t) => {
+    setOpenKey(t.key)
+    setReply("")
+    try {
+      const res = await supportInboxAPI.get(t.source, t.id)
+      const full = res?.data?.data
+      if (full) setItems((prev) => prev.map((x) => (x.key === full.key ? full : x)))
+    } catch (err) {
+      toast.error(errorOf(err, "Could not load the conversation"))
+    }
+  }
 
   const send = async (e) => {
     e.preventDefault()
@@ -94,7 +107,7 @@ export default function AdminChattings({ service }) {
               <button
                 key={t.key}
                 type="button"
-                onClick={() => { setOpenKey(t.key); setReply("") }}
+                onClick={() => openTicket(t)}
                 className={`w-full text-left px-4 py-3 border-b border-slate-100 hover:bg-slate-50 ${openKey === t.key ? "bg-blue-50" : ""}`}
               >
                 <div className="flex justify-between gap-2">
@@ -131,7 +144,6 @@ export default function AdminChattings({ service }) {
                 ))}
               </div>
               <form onSubmit={send} className="p-3 border-t border-slate-200 space-y-1">
-                {single && open.reply ? <p className="text-xs text-slate-500">This service keeps one answer per ticket: a new reply replaces the one above.</p> : null}
                 <div className="flex gap-2">
                   <input value={reply} maxLength={4000} onChange={(e) => setReply(e.target.value)} placeholder="Write a reply" className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" />
                   <button type="submit" disabled={sending || !reply.trim()} className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50"><Send className="w-4 h-4" /></button>

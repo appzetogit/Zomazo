@@ -138,6 +138,10 @@ export const helpDeskAPI = {
   getTickets: () => apiClient.get("/platform/me/support/tickets", { contextModule: "user" }),
   createTicket: (body) =>
     apiClient.post("/platform/me/support/tickets", body ?? {}, { contextModule: "user" }),
+  // One ticket's conversation, and writing back on it. `key` is the list's key.
+  getTicket: (key) => apiClient.get(`/platform/me/support/tickets/${encodeURIComponent(key)}`, { contextModule: "user" }),
+  reply: (key, message) =>
+    apiClient.post(`/platform/me/support/tickets/${encodeURIComponent(key)}/messages`, { message }, { contextModule: "user" }),
 };
 
 export const supportAPI = {
