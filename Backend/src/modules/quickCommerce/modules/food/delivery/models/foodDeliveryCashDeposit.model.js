@@ -30,7 +30,7 @@ const foodDeliveryCashDepositSchema = new mongoose.Schema({
     razorpayPaymentId: String,
     adminId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'QCAdmin'
+        ref: 'FoodAdmin'
     },
     adminNote: String
 }, { 

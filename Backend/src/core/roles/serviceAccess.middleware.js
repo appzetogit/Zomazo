@@ -30,25 +30,19 @@ export const requireServiceAccess = (vertical) => async (req, res, next) => {
         if (!userId) return sendError(res, 401, 'Not authenticated');
 
         const { FoodAdmin } = await import('../admin/admin.model.js');
-        const admin = await FoodAdmin.findById(userId)
-            .select('servicesAccess isActive isDeleted adminLevel admin_type role parentAdminId module permissions')
-            .lean();
+        const select = 'servicesAccess isActive isDeleted adminLevel admin_type role parentAdminId module permissions';
+        let admin = await FoodAdmin.findById(userId).select(select).lean();
 
-        // Not in the platform admins collection: a vertical-native admin (e.g. one
-        // that lives in qc_admins). Those are scoped to their own vertical by
-        // construction -- their credentials only exist inside it.
-        // Not in the platform admins collection. Quick commerce still has its own
-        // qc_admins, so an id found there passes; anything else is refused. This
-        // used to pass every unknown id, so a deleted admin's token (or another
-        // module's admin) kept working until it expired.
-        if (!admin) {
-            if (vertical === 'quickCommerce') {
-                const { FoodAdmin: QCAdmin } = await import('../../modules/quickCommerce/core/admin/admin.model.js');
-                const qcAdmin = await QCAdmin.findById(userId).select('isActive isDeleted').lean();
-                if (qcAdmin && !qcAdmin.isDeleted && qcAdmin.isActive !== false) return next();
-            }
-            return sendError(res, 403, 'Admin account not found');
+        // Quick's own admins are platform admins since the qc_admins merge
+        // (core/admin/quickAdmin.js); an old qc_admins id is translated (and that
+        // admin merged, if the script has not yet). Any other unknown id is
+        // refused: a deleted admin's token, or another module's admin.
+        if (!admin && vertical === 'quickCommerce') {
+            const { resolveQuickAdminId } = await import('../admin/quickAdmin.js');
+            const merged = await resolveQuickAdminId(userId);
+            if (merged) admin = await FoodAdmin.findById(merged).select(select).lean();
         }
+        if (!admin) return sendError(res, 403, 'Admin account not found');
 
         if (admin.isDeleted || admin.isActive === false) {
             return sendError(res, 403, 'Admin account is inactive');

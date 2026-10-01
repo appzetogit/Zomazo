@@ -58,7 +58,7 @@ const notificationBroadcastSchema = new mongoose.Schema(
         },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'QCAdmin',
+            ref: 'FoodAdmin',
             required: true,
             index: true
         },

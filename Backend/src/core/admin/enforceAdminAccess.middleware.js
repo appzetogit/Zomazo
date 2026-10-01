@@ -17,8 +17,10 @@ import {
  *   resolve   (path, method) => resource        -- see adminAccessPolicy.js
  *   prefix    prepended to req.path when mounted under a sub-path
  *
- * An id that is not in the platform `admins` collection (a quick-commerce-native
- * admin in qc_admins) passes through: that panel's own checks still apply to it.
+ * An id that is not in the platform `admins` collection passes through to the
+ * panel's own checks. Quick's admins are in `admins` since the qc_admins merge
+ * (core/admin/quickAdmin.js), and Quick's session middleware translates an old
+ * qc_admins id before this runs.
  */
 export const enforceAdminAccess = (service, resolve, { prefix = '' } = {}) => async (req, res, next) => {
   try {

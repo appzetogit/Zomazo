@@ -76,13 +76,13 @@ console.log('\n[2] edges');
     const a = await run('food', reqFor(inactive._id));
     check('inactive platform admin is 403 everywhere', () => assert.equal(a.status, 403));
 
-    // A quick-commerce-native admin (in qc_admins, not the platform collection)
-    // passes; an id found in neither is refused -- it used to pass, so a
-    // deleted admin's token kept working until it expired.
-    const { FoodAdmin: QCAdmin } = await import('../src/modules/quickCommerce/core/admin/admin.model.js');
+    // A Quick admin from before the qc_admins merge passes: it is merged into
+    // `admins` on the spot. An id found nowhere is refused -- it used to pass,
+    // so a deleted admin's token kept working until it expired.
+    const { LegacyQcAdmin: QCAdmin } = await import('../src/modules/quickCommerce/core/admin/admin.model.js');
     const qcNative = await QCAdmin.collection.insertOne({ email: 'qc@x.in', isActive: true, isDeleted: false });
     const b = await run('quickCommerce', reqFor(qcNative.insertedId));
-    check('vertical-native admin (in qc_admins) passes', () => assert.equal(b.passed, true));
+    check('a pre-merge Quick admin (qc_admins) passes, merged', () => assert.equal(b.passed, true));
     const b2 = await run('quickCommerce', reqFor(new mongoose.Types.ObjectId()));
     check('an admin id found nowhere is refused', () => assert.equal(b2.status, 403));
     const b3 = await run('food', reqFor(new mongoose.Types.ObjectId()));

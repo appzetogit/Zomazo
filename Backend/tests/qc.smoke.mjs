@@ -133,6 +133,12 @@ const DELIBERATE_PLATFORM_REFS = new Set([
     'QCUserFavorite.userId -> FoodUser',
     'QCReturn.userId -> FoodUser',
     'QCRefund.userId -> FoodUser',
+    // Quick's admins ARE platform admins since the qc_admins merge
+    // (core/admin/quickAdmin.js, tests/merge-qc-admins.smoke.mjs).
+    'QCDeliveryBonusTransaction.createdByAdminId -> FoodAdmin',
+    'QCDeliveryCashDeposit.adminId -> FoodAdmin',
+    'QCDeliveryOrderEmergencyRequest.resolvedBy -> FoodAdmin',
+    'QCBroadcastNotification.createdBy -> FoodAdmin',
 ]);
 
 check('no QC schema still points at a Food* model (undeclared)', () => {

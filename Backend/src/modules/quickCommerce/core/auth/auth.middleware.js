@@ -4,6 +4,7 @@ import { sendError } from '../../utils/response.js';
 // The shared `users` collection: Quick's customers since the qc_users merge.
 import { FoodUser } from '../users/user.model.js';
 import { resolveQuickCustomerId } from '../../../../core/identity/quickCustomer.js';
+import { resolveQuickAdminId } from '../../../../core/admin/quickAdmin.js';
 import { FoodRestaurant } from '../../modules/food/restaurant/models/restaurant.model.js';
 import { FoodDeliveryPartner } from '../../modules/food/delivery/models/deliveryPartner.model.js';
 import { resolveQcPartnerForFoodRider } from '../../../../core/identity/qcRiderBridge.js';
@@ -144,7 +145,17 @@ export const authMiddleware = (req, res, next) => {
         if (!req.user.userId && !isAdmin) {
             return sendError(res, 401, 'Invalid token for this service');
         }
-        return next();
+        if (!isAdmin || !req.user.userId) return next();
+        // Admins are the platform's (the qc_admins merge). A token from Quick's
+        // own admin sign-in before the merge names a qc_admins id: translated
+        // here, merging that admin on the spot if the script has not yet.
+        return resolveQuickAdminId(req.user.userId)
+            .then((adminId) => {
+                if (!adminId) return sendError(res, 401, 'Account not found');
+                req.user.userId = adminId;
+                return next();
+            })
+            .catch(() => sendError(res, 401, 'Authentication failed'));
     }
 
     // One indexed lookup of two small fields. USER already paid for this to check

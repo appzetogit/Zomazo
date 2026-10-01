@@ -11,7 +11,7 @@ const deliveryBonusTransactionSchema = new mongoose.Schema(
         transactionId: { type: String, required: true, trim: true, unique: true, index: true },
         amount: { type: Number, required: true, min: 0 },
         reference: { type: String, trim: true, default: '' },
-        createdByAdminId: { type: mongoose.Schema.Types.ObjectId, ref: 'QCAdmin' }
+        createdByAdminId: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodAdmin' }
     },
     { collection: 'food_delivery_bonus_transactions', timestamps: true }
 );

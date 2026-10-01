@@ -17,7 +17,6 @@ import {
     downloadBulkMenuTemplateController,
     uploadAdminBulkMenuController,
 } from '../../restaurant/controllers/bulkUpload.controller.js';
-import { FoodAdmin } from '../../../../core/admin/admin.model.js';
 import { requireAdminPermission, requireAnyAdminPermission } from '../../../../core/roles/adminPermission.middleware.js';
 import prescriptionAdminRoutes from './prescriptionAdmin.routes.js';
 import drugLicenceAdminRoutes from './drugLicenceAdmin.routes.js';
@@ -56,17 +55,8 @@ router.use(requireAdmin);
 // permissions, covering the Quick Commerce and the Medical panel alike. Before
 // this, hydrateAdmin below admitted every one of them as a QC superadmin.
 router.use(enforceAdminAccess('quickCommerce', resolveStoreAdminResource));
-router.use(async (req, _res, next) => {
-    try {
-        const admin = await FoodAdmin.findById(req.user?.userId)
-            .select('adminType permissions isActive isDeleted')
-            .lean();
-        req.adminAccess = admin;
-        return next();
-    } catch (error) {
-        return next(error);
-    }
-});
+// requireAdminPermission (core/roles/adminPermission.middleware.js) loads the
+// admin itself: every Quick admin is a platform admin since the qc_admins merge.
 
 const resolveSectionFromRequest = (path = '', method = '') => {
     if (path.startsWith('/sub-admins')) return 'sub_admin_management';

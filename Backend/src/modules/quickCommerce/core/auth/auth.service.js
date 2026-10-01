@@ -2,6 +2,20 @@ import crypto from "crypto";
 import ms from "ms";
 import { FoodUser } from "../users/user.model.js";
 import { FoodAdmin } from "../admin/admin.model.js";
+import { mergeWaitingQcAdminByEmail, platformToQcPermissions } from "../../../../core/admin/quickAdmin.js";
+import { isRestrictedAdmin } from "../../../../core/admin/adminAccessPolicy.js";
+import { ADMIN_ACTIONS, ADMIN_PERMISSION_SECTIONS } from "../../constants/permissions.js";
+
+/**
+ * Quick's { section: [actions] } view of an admin, for the panel. Admins are
+ * platform admins since the qc_admins merge; their sections are enforced by
+ * the shared policy, and this mirrors it.
+ */
+const quickPanelPermissions = (admin) => platformToQcPermissions(admin, {
+  restricted: isRestrictedAdmin(admin),
+  sections: ADMIN_PERMISSION_SECTIONS,
+  actions: ADMIN_ACTIONS,
+});
 import { AdminResetOtp } from "../admin/adminResetOtp.model.js";
 import { FoodRestaurant } from "../../modules/food/restaurant/models/restaurant.model.js";
 import { FoodDeliveryPartner } from "../../modules/food/delivery/models/deliveryPartner.model.js";
@@ -369,7 +383,9 @@ export const adminLogin = async (email, password) => {
     throw new ValidationError("Email and password are required");
   }
 
-  const admin = await FoodAdmin.findOne({ email });
+  // A Quick admin the merge has not reached yet is merged first.
+  await mergeWaitingQcAdminByEmail(email);
+  const admin = await FoodAdmin.findOne({ email: String(email).trim().toLowerCase() });
   if (!admin) {
     throw new AuthError("Invalid credentials");
   }
@@ -383,14 +399,12 @@ export const adminLogin = async (email, password) => {
     throw new AuthError("Invalid credentials");
   }
 
-  const effectivePermissions = admin.adminType === "super_admin"
-    ? ADMIN_FULL_PERMISSIONS
-    : sanitizeAdminPermissions(admin.permissions || {});
+  const effectivePermissions = quickPanelPermissions(admin);
 
   const payload = {
     userId: admin._id.toString(),
     role: admin.role,
-    adminType: admin.adminType || "super_admin",
+    adminType: isRestrictedAdmin(admin) ? "sub_admin" : "super_admin",
   };
 
   const accessToken = signAccessToken(payload);
@@ -678,9 +692,7 @@ export const getProfile = async (userId, role) => {
     case ROLES.ADMIN:
       profile = await FoodAdmin.findById(id).select("-password").lean();
       if (profile) {
-        profile.effectivePermissions = profile.adminType === "super_admin"
-          ? ADMIN_FULL_PERMISSIONS
-          : sanitizeAdminPermissions(profile.permissions || {});
+        profile.effectivePermissions = quickPanelPermissions(profile);
       }
       break;
     case ROLES.RESTAURANT:
@@ -936,6 +948,7 @@ export const requestAdminForgotPasswordOtp = async (email) => {
     throw new ValidationError("Email is required");
   }
 
+  await mergeWaitingQcAdminByEmail(normalizedEmail);
   const admin = await FoodAdmin.findOne({ email: normalizedEmail });
   if (!admin) {
     throw new AuthError("This email is not registered as an admin account.");
@@ -1009,6 +1022,7 @@ export const resetAdminPasswordWithOtp = async (email, otp, newPassword) => {
     throw new AuthError("Invalid OTP.");
   }
 
+  await mergeWaitingQcAdminByEmail(normalizedEmail);
   const admin = await FoodAdmin.findOne({ email: normalizedEmail });
   if (!admin) {
     await record.deleteOne();

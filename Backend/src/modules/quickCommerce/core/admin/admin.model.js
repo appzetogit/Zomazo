@@ -101,5 +101,17 @@ adminSchema.methods.comparePassword = function (candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
 };
 
-export const FoodAdmin = mongoose.models.QCAdmin || mongoose.model('QCAdmin', adminSchema, 'qc_admins');
+/**
+ * The old Quick admins. Read only by the merge (core/admin/quickAdmin.js,
+ * scripts/migrations/mergeQcAdmins.mjs); nothing writes a new one.
+ */
+export const LegacyQcAdmin = mongoose.models.QCAdmin || mongoose.model('QCAdmin', adminSchema, 'qc_admins');
+
+/*
+ * Quick's admins ARE the platform's: the shared `admins` collection, with the
+ * shared permission model (servicesAccess + resource.read/write, enforced by
+ * core/admin/enforceAdminAccess.middleware.js). An old qc_admins id in a token
+ * is translated at the edge (auth.middleware.js -> resolveQuickAdminId).
+ */
+export { FoodAdmin } from '../../../../core/admin/admin.model.js';
 

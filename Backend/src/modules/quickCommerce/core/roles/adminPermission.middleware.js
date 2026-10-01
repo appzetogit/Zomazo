@@ -1,27 +1,13 @@
 /**
- * Quick-commerce's OWN admin permission model. Deliberately not collapsed.
+ * Quick-commerce's section gate (requireAdminPermission).
  *
- * `role.middleware.js` beside this was byte-identical to master's and is gone.
- * This one is not a fork of anything -- it is a different model, and the two
- * cannot be merged by moving files:
- *
- *              collection      `permissions` shape
- *   master     admins          flat array of 'resource.action' strings
- *   this       qc_admins       nested object of { section: [actions] }
- *
- * So a QC-native admin does not exist in master's collection and their
- * permissions would not parse if they did. Unifying them is an identity merge
- * with a migration, not a refactor, and it belongs with the core/admin work.
- *
- * ONE CONSEQUENCE WORTH KNOWING NOW: requireFinancePermission, mounted on this
- * vertical's money routes, reads master's `admins`. A QC-native admin is absent
- * there, so today it tolerates and audits them (see financeAuthz.decide) -- but
- * when FINANCE_PERMISSIONS_ENFORCED is switched on they would be refused. The
- * admin identities have to merge before that flag flips, or QC's own admins lose
- * the withdrawal queue.
+ * Since the qc_admins merge (core/admin/quickAdmin.js) every Quick admin is a
+ * platform admin in `admins`, whose sections are enforced for this API by
+ * core/admin/enforceAdminAccess.middleware.js against the shared permissions.
+ * This gate only admits an active admin whose servicesAccess names Quick or
+ * Medical; requireFinancePermission now finds every Quick admin in `admins`.
  */
 import { sendError } from '../../utils/response.js';
-import { FoodAdmin } from '../admin/admin.model.js';
 
 const isSuperAdmin = (admin) =>
     !admin?.adminType || admin?.adminType === 'super_admin' || admin?.isSuperAdmin === true;
@@ -33,20 +19,11 @@ const hasAction = (permissions, section, action) => {
 
 const hydrateAdmin = async (req) => {
     if (req.adminAccess) return req.adminAccess;
-    const admin = await FoodAdmin.findById(req.user?.userId)
-        .select('adminType permissions isActive isDeleted')
-        .lean();
-    if (admin) {
-        req.adminAccess = admin;
-        return admin;
-    }
-
-    // Not a quick-commerce-native admin. Platform admins live in the shared `admins`
-    // collection, not qc_admins, so without this fallback every one of them read as
-    // "inactive" here and the whole QC panel 403'd. Same identity bridge the
-    // service-provider module uses: a platform admin is admitted when their
-    // servicesAccess names this vertical (an absent/empty list means unrestricted,
-    // matching SP's serviceAccess rule).
+    // Every admin is a platform admin since the qc_admins merge
+    // (core/admin/quickAdmin.js): one is admitted when their servicesAccess names
+    // this vertical (an absent/empty list means unrestricted, matching SP's
+    // serviceAccess rule). Which sections a sub-admin may open was decided
+    // earlier, by enforceAdminAccess, against the shared permissions.
     const { FoodAdmin: PlatformAdmin } = await import('../../../../core/admin/admin.model.js');
     const platform = await PlatformAdmin.findById(req.user?.userId)
         .select('role servicesAccess adminLevel isActive isDeleted')
@@ -59,9 +36,7 @@ const hydrateAdmin = async (req) => {
     if (access.length > 0 && !access.includes('quickCommerce') && !access.includes('medical')) return null;
 
     const bridged = {
-        // Full QC access for admitted platform admins. Per-section QC permissions only
-        // exist on qc_admins documents; scoping platform sub-admins inside QC is the
-        // server-side servicesAccess work tracked in SUPERAPP_DATA_MODEL.md.
+        // Sections are enforced by enforceAdminAccess; nothing more to check here.
         adminType: 'super_admin',
         permissions: {},
         isActive: platform.isActive !== false,

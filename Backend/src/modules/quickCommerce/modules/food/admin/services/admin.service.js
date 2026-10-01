@@ -67,7 +67,6 @@ import { FoodDeliveryWithdrawal } from '../../delivery/models/foodDeliveryWithdr
 import { FoodDeliveryWallet } from '../../delivery/models/deliveryWallet.model.js';
 import { FoodDeliveryCashDeposit } from '../../delivery/models/foodDeliveryCashDeposit.model.js';
 import { FoodUnregisteredRestaurant } from '../../restaurant/models/unregisteredRestaurant.model.js';
-import { FoodAdmin } from '../../../../core/admin/admin.model.js';
 import { getAdminRestaurantSubscriptionHistory as getAdminRestaurantSubscriptionHistoryFromRestaurant } from '../../restaurant/services/subscriptionHistory.service.js';
 import { FoodRestaurantSubscriptionHistory } from '../../restaurant/models/subscriptionHistory.model.js';
 import { ADMIN_FULL_PERMISSIONS, isValidPermissionPayload, sanitizeAdminPermissions } from '../../../../constants/permissions.js';
@@ -6552,132 +6551,28 @@ export async function deleteRestaurant(id) {
     return restaurant;
 }
 
-const toEmail = (value) => String(value || '').trim().toLowerCase();
 
-export async function createSubAdmin(payload = {}, actorId) {
-    const email = toEmail(payload.email);
-    const password = String(payload.password || '').trim();
-    const name = String(payload.name || '').trim();
+/*
+ * Quick's own sub-admin screens wrote qc_admins in Quick's old permission shape.
+ * Since the qc_admins merge (core/admin/quickAdmin.js) Quick's admins are
+ * platform admins, managed with every other panel's in Master > Admin
+ * accounts (core/admin/platformAdmins.routes.js), where Quick and Medical are
+ * services an admin is given. These endpoints refuse loudly rather than write
+ * a shape nothing reads any more.
+ */
+const subAdminsMoved = () => {
+    const err = new Error('Quick admin accounts are now managed in Master > Admin accounts');
+    err.statusCode = 410;
+    throw err;
+};
 
-    if (!email || !password) {
-        throw new ValidationError('Email and password are required');
-    }
-
-    const existing = await FoodAdmin.findOne({ email }).lean();
-    if (existing) {
-        throw new ValidationError('Admin with this email already exists');
-    }
-
-    const subAdmin = await FoodAdmin.create({
-        email,
-        password,
-        name,
-        phone: String(payload.phone || '').trim(),
-        role: 'ADMIN',
-        adminType: 'sub_admin',
-        permissions: {},
-        isActive: true,
-        isDeleted: false,
-        createdBy: actorId || null,
-        updatedBy: actorId || null,
-    });
-
-    return FoodAdmin.findById(subAdmin._id).select('-password').lean();
-}
-
-export async function getSubAdmins(query = {}) {
-    const filter = { adminType: 'sub_admin' };
-    if (query.includeDeleted !== 'true') {
-        filter.isDeleted = false;
-    }
-    if (query.status === 'active') filter.isActive = true;
-    if (query.status === 'inactive') filter.isActive = false;
-
-    const search = String(query.search || '').trim();
-    if (search) {
-        filter.$or = [
-            { name: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
-            { phone: { $regex: search, $options: 'i' } },
-        ];
-    }
-
-    const items = await FoodAdmin.find(filter)
-        .select('-password')
-        .sort({ createdAt: -1 })
-        .lean();
-    return { items };
-}
-
-export async function getSubAdminById(id) {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-        throw new ValidationError('Invalid sub-admin id');
-    }
-    const item = await FoodAdmin.findOne({ _id: id, adminType: 'sub_admin' }).select('-password').lean();
-    if (!item) throw new ValidationError('Sub-admin not found');
-    return item;
-}
-
-export async function updateSubAdminProfile(id, payload = {}, actorId) {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-        throw new ValidationError('Invalid sub-admin id');
-    }
-    const update = { updatedBy: actorId || null };
-    if (payload.name !== undefined) update.name = String(payload.name || '').trim();
-    if (payload.phone !== undefined) update.phone = String(payload.phone || '').trim();
-    if (payload.email !== undefined) update.email = toEmail(payload.email);
-
-    const updated = await FoodAdmin.findOneAndUpdate(
-        { _id: id, adminType: 'sub_admin', isDeleted: false },
-        { $set: update },
-        { new: true }
-    ).select('-password').lean();
-    if (!updated) throw new ValidationError('Sub-admin not found');
-    return updated;
-}
-
-export async function updateSubAdminPermissions(id, rawPermissions = {}, actorId) {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-        throw new ValidationError('Invalid sub-admin id');
-    }
-    if (!isValidPermissionPayload(rawPermissions)) {
-        throw new ValidationError('Invalid permissions payload');
-    }
-    const permissions = sanitizeAdminPermissions(rawPermissions);
-    const updated = await FoodAdmin.findOneAndUpdate(
-        { _id: id, adminType: 'sub_admin', isDeleted: false },
-        { $set: { permissions, updatedBy: actorId || null } },
-        { new: true }
-    ).select('-password').lean();
-    if (!updated) throw new ValidationError('Sub-admin not found');
-    return updated;
-}
-
-export async function updateSubAdminStatus(id, isActive, actorId) {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-        throw new ValidationError('Invalid sub-admin id');
-    }
-    const updated = await FoodAdmin.findOneAndUpdate(
-        { _id: id, adminType: 'sub_admin', isDeleted: false },
-        { $set: { isActive: Boolean(isActive), updatedBy: actorId || null } },
-        { new: true }
-    ).select('-password').lean();
-    if (!updated) throw new ValidationError('Sub-admin not found');
-    return updated;
-}
-
-export async function deleteSubAdmin(id, actorId) {
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-        throw new ValidationError('Invalid sub-admin id');
-    }
-    const updated = await FoodAdmin.findOneAndUpdate(
-        { _id: id, adminType: 'sub_admin', isDeleted: false },
-        { $set: { isDeleted: true, isActive: false, updatedBy: actorId || null } },
-        { new: true }
-    ).select('-password').lean();
-    if (!updated) throw new ValidationError('Sub-admin not found');
-    return updated;
-}
+export async function createSubAdmin() { return subAdminsMoved(); }
+export async function getSubAdmins() { return subAdminsMoved(); }
+export async function getSubAdminById() { return subAdminsMoved(); }
+export async function updateSubAdminProfile() { return subAdminsMoved(); }
+export async function updateSubAdminPermissions() { return subAdminsMoved(); }
+export async function updateSubAdminStatus() { return subAdminsMoved(); }
+export async function deleteSubAdmin() { return subAdminsMoved(); }
 
 export function getAdminPermissionCatalog() {
     return {

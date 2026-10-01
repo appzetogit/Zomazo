@@ -86,7 +86,7 @@ export const QC_USER_REFS = Object.freeze([
     { c: 'users', f: 'quickReferredBy' },
 ]);
 
-function refQuery(ref, id) {
+export function refQuery(ref, id) {
     if (ref.list) return { [ref.list]: id };
     if (ref.arr) return { [`${ref.arr}.${ref.f}`]: id };
     return { [ref.f]: id };
@@ -98,7 +98,7 @@ function refUpdate(ref, from, to) {
     return [{ $set: { [ref.f]: to } }, {}];
 }
 
-async function rewriteRef(ref, from, to) {
+export async function rewriteRef(ref, from, to) {
     const q = refQuery(ref, from);
     const [update, options] = refUpdate(ref, from, to);
     try {

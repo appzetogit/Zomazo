@@ -51,7 +51,7 @@ that is already slated for removal is poor value for the risk.
 | payments | `payments` | same | already shared |
 | refunds / settlements / transactions | shared names | `qc_*` | no — needs a migration |
 | users | `users` | was `qc_users` | **merged** (1 Oct 2026) -- see "Database merges" below |
-| admins | `admins` | `qc_admins` | no — and the permission *shapes* differ |
+| admins | `admins` | was `qc_admins` | **merged** (1 Oct 2026) -- see "Database merges" below |
 
 The rule that falls out: **share the code, keep the collection**, until a migration
 is a deliberate decision with a chosen moment. `core/refreshTokens/refreshToken.model.js`
@@ -132,7 +132,7 @@ were deleted.
 Done: `otp`, `refreshTokens`, `roles/role.middleware`, `notifications` (4 of 7),
 `payments/razorpayWebhook.controller`.
 
-Blocked on a database: `admin` (identity merge; `users` is done, see below),
+Blocked on a database (`users` and `admin` are done, see below):
 `payments/{refund,settlement,transaction}` models and services (collection
 migrations, and the ledger cutover replaces them anyway).
 
@@ -234,3 +234,24 @@ model; the old rows are `LegacyQcUser`, read only by the merge.
 - Closing the Quick account no longer deletes anything shared: it empties
   Quick's cart and favourites, signs Quick out and clears `quickJoinedAt`.
 - Test: `tests/merge-qc-users.smoke.mjs`.
+
+**Admins: `qc_admins` -> `admins`.** Quick's admins are platform admins, under
+the shared permission model enforced by `core/admin/enforceAdminAccess.middleware.js`.
+
+- `core/admin/quickAdmin.js` (`mergeQcAdmin`): a new email becomes a platform
+  sub-admin of the Quick module with the row's own `_id` and password hash --
+  `servicesAccess` quickCommerce + medical, `module` quickCommerce,
+  `admin_type` subadmin (so the policy keeps it out of Food, Rides and the
+  Shop); a Quick super_admin gets write on every resource the Quick panel
+  offers, a sub_admin its sections mapped by `QC_SECTION_RESOURCES`
+  (view/export -> read, create/edit/delete -> write, delete access only if it
+  had delete). An email already in `admins` keeps that account -- its
+  password and permissions -- and only gains the Quick and Medical panels
+  (the script lists these as REVIEW). `qc_admin_id_map` keeps old -> new.
+- Code works before and after: Quick's session middleware and
+  `requireServiceAccess` translate an old qc_admins id (merging it on the
+  spot); Quick's admin sign-in and password reset merge a waiting row by email.
+- Quick's own sub-admin screens (`/qc/admin/sub-admins`) answer 410: admins
+  are managed in Master > Admin accounts. The web panel did not use them.
+- Run: deploy, then `node scripts/migrations/mergeQcAdmins.mjs`, `--apply`,
+  later `--drop-old`. Test: `tests/merge-qc-admins.smoke.mjs`.
