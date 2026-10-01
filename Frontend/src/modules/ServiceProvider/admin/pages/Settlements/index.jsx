@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import Modal from '../../components/Modal';
 import Button from '../../components/Button';
 import adminSettlementService from '@sp/services/adminSettlementService';
+import BankPayoutCell, { useBankPayoutsEnabled } from '@/shared/components/BankPayoutCell';
 import { getSettings } from '../../services/settingsService';
 import { exportToCSV } from '@sp/utils/csvExport';
 
@@ -18,6 +19,7 @@ const SettlementManagement = () => {
   const [vendors, setVendors] = useState([]);
   const [history, setHistory] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
+  const bankPayouts = useBankPayoutsEnabled(adminSettlementService.getPayoutConfig, 'services');
   const [actionLoading, setActionLoading] = useState(false);
   const [settings, setSettings] = useState(null);
 
@@ -797,6 +799,28 @@ const SettlementManagement = () => {
                 Reject
               </button>
             </div>
+            {bankPayouts && (
+              <div className="mt-2 flex flex-col gap-2">
+                {/* Pending only shows here, so approving and paying is one step; a failed payout reopens the request. */}
+                <button
+                  onClick={async () => {
+                    if (!window.confirm('Approve and send the net amount to this bank account now?')) return;
+                    try {
+                      await adminSettlementService.approveWithdrawal(request._id, {});
+                      await adminSettlementService.payWithdrawalViaBank(request._id);
+                      toast.success('Bank payout started');
+                    } catch (err) {
+                      toast.error(err?.response?.data?.message || err.message || 'Bank payout failed');
+                    }
+                    loadData();
+                  }}
+                  className="w-full py-2 bg-white border border-green-300 text-green-700 rounded-lg font-bold text-sm hover:bg-green-50"
+                >
+                  {request.payout?.state === 'failed' || request.payout?.state === 'reversed' ? 'Retry bank payout' : 'Approve & pay via bank'}
+                </button>
+                <BankPayoutCell enabled={bankPayouts} payout={request.payout} isApproved={false} isPending={false} />
+              </div>
+            )}
             {request.adminNotes && (
               <p className="mt-3 text-xs text-gray-500 italic text-center">"{request.adminNotes}"</p>
             )}

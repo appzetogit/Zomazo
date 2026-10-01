@@ -93,6 +93,10 @@ export const adminService = {
     api.get(`/admin/wallet/drivers/withdrawals/request/${requestId}`, { params }),
   approveDriverWithdrawalRequest: (requestId) => api.patch(`/admin/wallet/drivers/withdrawals/${requestId}/approve`),
   rejectDriverWithdrawalRequest: (requestId) => api.patch(`/admin/wallet/drivers/withdrawals/${requestId}/reject`),
+  // Bank payouts (RazorpayX); config says whether they are set up.
+  getPayoutConfig: () => api.get('/admin/payouts/config'),
+  payDriverWithdrawalViaBank: (requestId) => api.post(`/admin/wallet/drivers/withdrawals/${requestId}/payout`),
+  refreshDriverWithdrawalPayout: (requestId) => api.post(`/admin/wallet/drivers/withdrawals/${requestId}/payout/refresh`),
 
   adjustOwnerWallet: (id, data) => api.post(`/admin/wallet/owners/${id}/adjust`, data),
   getOwnerWalletHistory: (id) => api.get(`/admin/wallet/owners/${id}/history`),
@@ -215,6 +219,10 @@ export const adminService = {
   getDriverWithdrawalContextByRequestId: (requestId, params = {}) => api.get(`/admin/wallet/drivers/withdrawals/request/${requestId}`, { params }),
   approveDriverWithdrawalRequest: (requestId) => api.patch(`/admin/wallet/drivers/withdrawals/${requestId}/approve`),
   rejectDriverWithdrawalRequest: (requestId) => api.patch(`/admin/wallet/drivers/withdrawals/${requestId}/reject`),
+  // Bank payouts (RazorpayX); config says whether they are set up.
+  getPayoutConfig: () => api.get('/admin/payouts/config'),
+  payDriverWithdrawalViaBank: (requestId) => api.post(`/admin/wallet/drivers/withdrawals/${requestId}/payout`),
+  refreshDriverWithdrawalPayout: (requestId) => api.post(`/admin/wallet/drivers/withdrawals/${requestId}/payout/refresh`),
 
   /**
    * Notifications & Banners

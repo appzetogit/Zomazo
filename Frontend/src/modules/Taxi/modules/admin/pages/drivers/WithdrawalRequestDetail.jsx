@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { adminService } from '../../services/adminService';
+import BankPayoutCell, { useBankPayoutsEnabled } from '@/shared/components/BankPayoutCell';
 
 const formatMoney = (value) => `Rs ${Number(value || 0).toFixed(2)}`;
 
@@ -55,6 +56,7 @@ const WithdrawalRequestDetail = () => {
   const [actionLoadingId, setActionLoadingId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [feedback, setFeedback] = useState('');
+  const bankPayouts = useBankPayoutsEnabled(adminService.getPayoutConfig, 'taxi');
 
   const applyPayload = (payload = {}) => {
     setDriver(payload.driver || null);
@@ -68,6 +70,8 @@ const WithdrawalRequestDetail = () => {
         currency: item.requested_currency || 'INR',
         status: item.status || 'pending',
         paymentMethod: item.payment_method || 'bank_transfer',
+        transactionId: item.transactionId || '',
+        payout: item.payout || null,
       })),
     );
   };
@@ -407,6 +411,19 @@ const WithdrawalRequestDetail = () => {
                           >
                             {request.status}
                           </span>
+                          <div className="mt-2 flex justify-center">
+                            <BankPayoutCell
+                              enabled={bankPayouts}
+                              payout={request.payout}
+                              isApproved={request.status === 'completed'}
+                              isPending={request.status === 'pending'}
+                              manualRef={request.transactionId}
+                              pay={() => adminService.payDriverWithdrawalViaBank(request.id)}
+                              refresh={() => adminService.refreshDriverWithdrawalPayout(request.id)}
+                              approve={() => adminService.approveDriverWithdrawalRequest(request.id)}
+                              onChanged={loadData}
+                            />
+                          </div>
                         </td>
                         <td className="px-8 py-6 text-right">
                           <div className="relative">
