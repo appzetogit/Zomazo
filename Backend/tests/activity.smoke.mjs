@@ -177,7 +177,8 @@ console.log('\n[6] the endpoint unifies ids across verticals');
     const { FoodUser } = await import('../src/core/users/user.model.js');
     const { createRequire } = await import('node:module');
     const require = createRequire(import.meta.url);
-    const SPUser = require('../src/modules/serviceProvider/models/User.js');
+    // A Services row as it was before the sp_users merge.
+    const { LegacySPUser: SPUser } = require('../src/modules/serviceProvider/models/User.js');
 
     // ONE person, but a different user document per vertical -- exactly what makes a
     // naive feed keyed on the token id silently omit half the customer's history.

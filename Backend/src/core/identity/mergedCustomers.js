@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 export const MERGED_CUSTOMER_MAPS = Object.freeze({
     qc_users: 'qc_user_id_map',
     ecom_users: 'ecom_user_id_map',
+    sp_users: 'sp_user_id_map',
 });
 
 /** True when `collection` is a merged service's customer rows. */

@@ -50,8 +50,10 @@ console.log('\n[1] model registry');
 const spModels = Object.keys(mongoose.models).filter((n) => n.startsWith('SP'));
 // 29, plus the four the Services coupons, broadcasts and referral rewards added.
 const ADDED_FOR_GROWTH = ['SPCoupon', 'SPCouponUsage', 'SPBroadcast', 'SPReferralLog'];
-check(`33 SP* models registered (got ${spModels.length})`, () => {
-    assert.equal(spModels.length, 29 + ADDED_FOR_GROWTH.length);
+// Plus the old customer rows, read only by the sp_users merge.
+const ADDED_FOR_MERGE = ['SPLegacyUser'];
+check(`34 SP* models registered (got ${spModels.length})`, () => {
+    assert.equal(spModels.length, 29 + ADDED_FOR_GROWTH.length + ADDED_FOR_MERGE.length);
     for (const name of ADDED_FOR_GROWTH) assert.ok(spModels.includes(name), `${name} is registered`);
 });
 
@@ -65,8 +67,12 @@ check('no SP model landed on a master-owned collection', () => {
 check("SPAdmin shares the 'admins' collection (deliberate merge)", () =>
     assert.equal(mongoose.models.SPAdmin.collection.name, 'admins'));
 
-check("SPUser is isolated on 'sp_users' in phase 1", () =>
-    assert.equal(mongoose.models.SPUser.collection.name, 'sp_users'));
+// Since the sp_users merge the customer is their platform account (users) and
+// SPUser is their Services profile under the same _id; the old rows stay on sp_users.
+check("SPUser is the Services profile (sp_profiles); the old rows are on 'sp_users'", () => {
+    assert.equal(mongoose.models.SPUser.collection.name, 'sp_profiles');
+    assert.equal(mongoose.models.SPLegacyUser.collection.name, 'sp_users');
+});
 
 check('SPTransaction / SPSettlement no longer collide with core/payments', () => {
     assert.equal(mongoose.models.SPTransaction.collection.name, 'sp_transactions');

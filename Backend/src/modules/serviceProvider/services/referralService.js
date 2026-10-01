@@ -1,5 +1,15 @@
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const User = require('../models/User');
+
+/*
+ * Since the sp_users merge the customer IS their platform account (the profile,
+ * models/User.js, has the same _id), and the Services referral fields live on
+ * that account under sp* names: spReferralCode (the SPxxxxxx code people
+ * already hold), spReferredBy and spReferralCount -- so they never touch Food's.
+ */
+const accounts = () => mongoose.connection.collection('users');
+const oid = (v) => new mongoose.Types.ObjectId(String(v));
 const ReferralLog = require('../models/ReferralLog');
 const Transaction = require('../models/Transaction');
 
@@ -27,22 +37,20 @@ const newCode = () => `SP${crypto.randomBytes(4).toString('hex').toUpperCase().s
 
 /** The customer's code, made on first ask. Retries on the rare collision. */
 async function ensureReferralCode(userId) {
-  const existing = await User.findById(userId).select('referralCode').lean();
+  if (!mongoose.Types.ObjectId.isValid(String(userId || ''))) return null;
+  const existing = await accounts().findOne({ _id: oid(userId) }, { projection: { spReferralCode: 1 } });
   if (!existing) return null;
-  if (existing.referralCode) return existing.referralCode;
+  if (existing.spReferralCode) return existing.spReferralCode;
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    try {
-      const updated = await User.findOneAndUpdate(
-        { _id: userId, $or: [{ referralCode: null }, { referralCode: { $exists: false } }] },
-        { $set: { referralCode: newCode() } },
-        { new: true }
-      ).select('referralCode').lean();
-      if (updated?.referralCode) return updated.referralCode;
-      // Someone else set it in between; theirs stands.
-      return (await User.findById(userId).select('referralCode').lean())?.referralCode || null;
-    } catch (err) {
-      if (err?.code !== 11000) throw err;
-    }
+    const code = newCode();
+    // Unique by look-up: the account collection has no unique index on it.
+    if (await accounts().findOne({ spReferralCode: code }, { projection: { _id: 1 } })) continue;
+    await accounts().updateOne(
+      { _id: oid(userId), $or: [{ spReferralCode: null }, { spReferralCode: { $exists: false } }] },
+      { $set: { spReferralCode: code } }
+    );
+    // Ours, or someone else's set in between; theirs stands.
+    return (await accounts().findOne({ _id: oid(userId) }, { projection: { spReferralCode: 1 } }))?.spReferralCode || null;
   }
   throw new Error('Could not make a referral code');
 }
@@ -56,7 +64,8 @@ async function ensureReferralCode(userId) {
 async function findReferrer(code) {
   const referralCode = String(code || '').trim().toUpperCase();
   if (!referralCode) return null;
-  const own = await User.findOne({ referralCode }).select('_id phone name').lean();
+  const owner = await accounts().findOne({ spReferralCode: referralCode }, { projection: { _id: 1 } });
+  const own = owner ? await User.findById(owner._id).select('_id phone name').lean() : null;
   if (own) return own;
   const { resolveInviter } = await import('../../../core/referral/inviteCode.service.js');
   const platformId = await resolveInviter(String(code).trim());
@@ -69,20 +78,20 @@ async function findReferrer(code) {
 /** The code to share: the person's one platform code, else this record's own. */
 async function shareCode(userId) {
   const { inviteCodeForRow } = await import('../../../core/referral/inviteCode.service.js');
-  return (await inviteCodeForRow('sp_users', String(userId)).catch(() => null)) || ensureReferralCode(userId);
+  return (await inviteCodeForRow('users', String(userId)).catch(() => null)) || ensureReferralCode(userId);
 }
 
 async function referralSummary(userId) {
   const [code, terms, user] = await Promise.all([
     shareCode(userId),
     referralTerms(),
-    User.findById(userId).select('referralCount').lean()
+    mongoose.Types.ObjectId.isValid(String(userId || '')) ? accounts().findOne({ _id: oid(userId) }, { projection: { spReferralCount: 1 } }) : null
   ]);
   return {
     code,
     reward: terms.reward,
     limit: terms.limit,
-    rewarded: Number(user?.referralCount) || 0,
+    rewarded: Number(user?.spReferralCount) || 0,
     active: terms.reward > 0 && terms.limit > 0
   };
 }
@@ -103,7 +112,10 @@ async function applyReferralAtSignup({ refereeId, refereePhone, code }) {
     }
 
     // Who referred them is kept whatever the reward, for reporting.
-    await User.updateOne({ _id: refereeId, referredBy: null }, { $set: { referredBy: referrer._id } });
+    await accounts().updateOne(
+      { _id: oid(refereeId), $or: [{ spReferredBy: null }, { spReferredBy: { $exists: false } }] },
+      { $set: { spReferredBy: oid(referrer._id) } }
+    );
 
     const reject = async (reason) => {
       await ReferralLog.create({ referrerId: referrer._id, refereeId, refereePhone, status: 'rejected', reason });
@@ -123,9 +135,9 @@ async function applyReferralAtSignup({ refereeId, refereePhone, code }) {
 
     // Claim a slot under the limit atomically: two sign-ups at once cannot both
     // take the last one.
-    const claimed = await User.updateOne(
-      { _id: referrer._id, $or: [{ referralCount: { $lt: limit } }, { referralCount: { $exists: false } }] },
-      { $inc: { referralCount: 1 } }
+    const claimed = await accounts().updateOne(
+      { _id: oid(referrer._id), $or: [{ spReferralCount: { $lt: limit } }, { spReferralCount: { $exists: false } }] },
+      { $inc: { spReferralCount: 1 } }
     );
     if (claimed.modifiedCount !== 1) {
       await releaseReferralClaim({ phone: refereePhone, programme: 'serviceProvider' });

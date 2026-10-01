@@ -185,9 +185,49 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// A linked customer's wallet balance is their ONE wallet (food_user_wallets),
+// The old customer rows, read only by the merge (core/identity/spCustomer.js,
+// scripts/migrations/mergeSpUsers.mjs). No wallet bridge: nothing writes them.
+const LegacySPUser = mongoose.models.SPLegacyUser || mongoose.model('SPLegacyUser', userSchema.clone(), 'sp_users');
+
+/*
+ * Since the sp_users merge a Services customer IS their platform account
+ * (`users`); this model is their Services profile, sp_profiles, under the SAME
+ * _id: what only Services keeps (the cancellation-fee bucket, plans, settings,
+ * booking stats, favourites, its address list, the session id and the
+ * Services app's own password). Name and phone are kept here too, as Services
+ * screens read them. A new profile takes the platform account's _id for its
+ * phone -- found, or made -- so every path that creates a customer (the
+ * Services app's own sign-up, the platform bridge, seeds) stays one person.
+ */
+userSchema.pre('validate', async function adoptPlatformId() {
+  if (!this.isNew || this.$locals.platformIdSet) return;
+  const { spCustomers } = await import('../../../core/identity/spCustomer.js');
+  const account = await spCustomers.customerForPhone(this.phone, { name: this.name });
+  if (!account?._id) throw new Error('Could not find or make the platform account for this phone');
+  this._id = account._id;
+  this.platformUserId = account._id;
+  this.$locals.platformIdSet = true;
+  await spCustomers.markJoined(account._id);
+});
+
+// The Services admin's block (and soft delete) is this profile's isActive; the
+// platform account carries it as spBlocked, so other services and the
+// platform's screens see it -- without switching the account off everywhere.
+userSchema.post('save', async function mirrorServicesBlock(doc) {
+  if (!doc.$locals.wasActiveModified) return;
+  await mongoose.connection.collection('users').updateOne(
+    { _id: doc._id },
+    { $set: { spBlocked: doc.isActive === false } },
+  );
+});
+userSchema.pre('save', function noteActiveChange() {
+  this.$locals.wasActiveModified = this.isModified('isActive');
+});
+
+// The customer's wallet balance is their ONE wallet (food_user_wallets),
 // shared with Food, Rides and Quick & Medical -- utils/sharedWalletBridge.js.
 require('../utils/sharedWalletBridge').attachSharedWallet(userSchema);
 
-module.exports = mongoose.models.SPUser || mongoose.model('SPUser', userSchema, 'sp_users');
+module.exports = mongoose.models.SPUser || mongoose.model('SPUser', userSchema, 'sp_profiles');
+module.exports.LegacySPUser = LegacySPUser;
 

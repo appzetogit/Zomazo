@@ -14,8 +14,12 @@ const { referralSummary, findReferrer, applyReferralAtSignup } = require('../../
  * ones: never one's own code, once per phone number, within the limit.
  */
 const canApplyCode = async (userId) => {
-  const user = await User.findById(userId).select('referredBy').lean();
-  if (!user || user.referredBy) return false;
+  // Who referred them is on the platform account since the sp_users merge.
+  const mongoose = require('mongoose');
+  if (!mongoose.Types.ObjectId.isValid(String(userId || ''))) return false;
+  const account = await mongoose.connection.collection('users')
+    .findOne({ _id: new mongoose.Types.ObjectId(String(userId)) }, { projection: { spReferredBy: 1 } });
+  if (!account || account.spReferredBy) return false;
   return !(await Booking.exists({ userId }));
 };
 

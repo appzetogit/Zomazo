@@ -206,12 +206,15 @@ await check('Ravi\'s one code pays Quick\'s programme through the sign-in (via=q
 });
 
 await check('and Services\' programme (via=services)', async () => {
+  // Services customers are platform accounts with a Services profile under the
+  // same _id (the sp_users merge); who referred them is spReferredBy.
   const me = await signUp({ ref: 'USR0001ABCDEF', refService: 'services' });
-  const mine = await db.collection('sp_users').findOne({ phone: me.phone });
-  const his = await db.collection('sp_users').findOne({ phone: '9000000001' });
-  assert.ok(mine && his, 'both get a Services record');
-  assert.equal(String(mine.referredBy), String(his._id));
-  const log = await db.collection('sp_referral_logs').findOne({ refereeId: mine._id });
+  const myId = new mongoose.Types.ObjectId(String(me.id));
+  const mine = await db.collection('sp_profiles').findOne({ _id: myId });
+  const his = await db.collection('sp_profiles').findOne({ _id: ravi });
+  assert.ok(mine && his, 'both get a Services profile');
+  assert.equal(String((await db.collection('users').findOne({ _id: myId })).spReferredBy), String(ravi));
+  const log = await db.collection('sp_referral_logs').findOne({ refereeId: myId });
   assert.equal(log?.status, 'credited');
 });
 
@@ -228,9 +231,8 @@ await check('an old Services code still names its person, in Food and in the Sho
 
 await check('every share screen shows the same code', async () => {
   assert.equal(await inviteCodeForRow('ecom_users', String(raviShop)), 'USR0001ABCDEF');
-  const hisSp = await db.collection('sp_users').findOne({ phone: '9000000001' });
-  assert.equal((await spReferral.referralSummary(hisSp._id)).code, 'USR0001ABCDEF');
-  // An account with no code yet gets its id, as Food always shared.
+  assert.equal((await spReferral.referralSummary(ravi)).code, 'USR0001ABCDEF');
+  // An old Services row still shows its person's one code.
   const meeraSp = await db.collection('sp_users').findOne({ phone: '9000000002' });
   assert.equal(await inviteCodeForRow('sp_users', String(meeraSp._id)), String(meera));
 });

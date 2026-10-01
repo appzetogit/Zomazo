@@ -47,16 +47,22 @@ for (const M of [User, Booking, Transaction, CustomerWallet]) await M.createColl
 
 const oid = () => new mongoose.Types.ObjectId();
 const asha = oid(); // platform account
-const ashaSp = oid(); // her Services record, linked by platformUserId
+let ashaSp = oid(); // her Services record, linked by platformUserId
 const ravi = oid();
-const raviSp = oid(); // linked only by phone
+let raviSp = oid(); // linked only by phone
 const loner = oid(); // Services only
 await db.collection('users').insertMany([{ _id: asha, phone: '9876543210' }, { _id: ravi, phone: '9123456789' }]);
-await User.collection.insertMany([
+// The Services rows as they were before the sp_users merge, then merged: each
+// customer is their platform account, with a Services profile under that _id.
+await db.collection('sp_users').insertMany([
   { _id: ashaSp, platformUserId: asha, name: 'Asha', phone: '9876543210', wallet: { balance: 0, penalty: 0 } },
   { _id: raviSp, name: 'Ravi', phone: '+91 91234 56789', wallet: { balance: 0, penalty: 0 } },
   { _id: loner, name: 'Loner', phone: '9000000000', wallet: { balance: 80, penalty: 0 } },
 ]);
+const { mergeSpUsers } = await import('../scripts/migrations/mergeSpUsers.mjs');
+await mergeSpUsers({ apply: true, log: () => {} });
+ashaSp = asha;
+raviSp = ravi;
 
 const shared = async (id) => (await CustomerWallet.findOne({ userId: id }).lean())?.balance ?? 0;
 const apiBalance = async (spId) => {
@@ -129,11 +135,11 @@ await check('a customer linked only by phone shares that account\'s wallet', asy
   await walletPay(raviSp, 60);
   assert.equal(await shared(ravi), 0);
 });
-await check('a Services-only customer keeps their own balance, as before', async () => {
+await check('a Services-only customer now has an account; their balance moved into its wallet', async () => {
   assert.equal(await apiBalance(loner), 80);
   await walletPay(loner, 30);
-  assert.equal((await User.collection.findOne({ _id: loner })).wallet.balance, 50);
-  assert.equal(await db.collection('food_user_wallets').countDocuments({ userId: loner }), 0);
+  assert.equal(await shared(loner), 50);
+  assert.equal((await User.collection.findOne({ _id: loner })).wallet.balance, 0);
 });
 await check('a saved Services document does not copy the shared balance onto its record', async () => {
   const doc = await User.findById(ashaSp);

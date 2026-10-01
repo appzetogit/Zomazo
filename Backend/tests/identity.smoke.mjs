@@ -24,7 +24,8 @@ const { FoodUser } = await import('../src/core/users/user.model.js');
 // Pre-merge rows (the qc_users merge moved Quick's customers into users).
 const { LegacyQcUser: QCUser } = await import('../src/modules/quickCommerce/core/users/user.model.js');
 const require = createRequire(import.meta.url);
-const SPUser = require('../src/modules/serviceProvider/models/User.js');
+// The Services rows as they were before the sp_users merge (satellites).
+const { LegacySPUser: SPUser } = require('../src/modules/serviceProvider/models/User.js');
 const { ensurePlatformUser, linkSatellite } = await import('../src/core/identity/identityLink.service.js');
 const { resolveCustomerIdentities } = await import('../src/core/activity/identityResolver.js');
 

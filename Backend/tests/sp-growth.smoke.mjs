@@ -106,6 +106,9 @@ const main = async () => {
     await Service.collection.insertOne({ _id: serviceId, title: 'AC repair', basePrice: 500, category: 'Appliance' });
     const newUser = async (extra = {}) => {
         const _id = oid();
+        // A Services customer is a platform account with a Services profile
+        // under the same _id (the sp_users merge).
+        await mongoose.connection.collection('users').insertOne({ _id, name: 'U', phone: String(seq), role: 'USER', isActive: true, spJoinedAt: new Date() });
         await User.collection.insertOne({ _id, name: 'U', email: `c${seq}@t.test`, phone: String(seq++), wallet: { balance: 0, penalty: 0 }, isActive: true, ...extra });
         return _id;
     };
@@ -366,7 +369,9 @@ const main = async () => {
         const r = await call('GET', '/users/referral', null, referrerToken);
         assert.equal(r.status, 200, JSON.stringify(r.json));
         code = r.json.data.code;
-        assert.match(code, /^SP[0-9A-F]{6}$/);
+        // The person's one platform code (one code per person); an old SPxxxxxx
+        // code still names them (core/referral/inviteCode.service.js).
+        assert.ok(code);
         assert.equal(r.json.data.active, false);
         assert.equal((await call('GET', '/users/referral', null, referrerToken)).json.data.code, code, 'the code is kept');
         const s = await signUp('9111111111', code);
@@ -384,7 +389,8 @@ const main = async () => {
         assert.equal((await signUp('9111111114', code)).status, 201, 'sign-up still works past the limit');
         assert.equal(await balanceOf(referrer), 80, 'but pays nothing more');
         const joined = await User.findOne({ phone: '9111111112' }).lean();
-        assert.equal(String(joined.referredBy), String(referrer));
+        const joinedAccount = await mongoose.connection.collection('users').findOne({ _id: joined._id });
+        assert.equal(String(joinedAccount.spReferredBy), String(referrer));
     });
 
     await check("an unknown code or one's own never pays, and never blocks sign-up", async () => {
@@ -398,6 +404,7 @@ const main = async () => {
 
     await check('the same phone never pays twice', async () => {
         await User.deleteOne({ phone: '9111111112' });
+        await mongoose.connection.collection('users').deleteOne({ phone: '9111111112' });
         assert.equal((await signUp('9111111112', code)).status, 201);
         assert.equal(await balanceOf(referrer), 80);
     });

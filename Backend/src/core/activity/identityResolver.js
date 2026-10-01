@@ -54,7 +54,8 @@ export const resolveCustomerIdentities = async (masterUserId) => {
     try {
         const { createRequire } = await import('node:module');
         const require = createRequire(import.meta.url);
-        const SPUser = require('../../modules/serviceProvider/models/User.js');
+        // Rows not merged into `users` yet (the sp_users merge); merged ones use the master id.
+        const { LegacySPUser: SPUser } = require('../../modules/serviceProvider/models/User.js');
         const sp = await SPUser.findOne(bySatellite).select('_id').lean();
         if (sp?._id) { ids.push(sp._id); resolved.push('serviceProvider'); }
     } catch (err) {

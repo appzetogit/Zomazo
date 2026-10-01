@@ -53,55 +53,55 @@ const toTenDigits = (phone) => {
 const resolveSharedCustomer = async (masterUserId) => {
   if (!masterUserId) return null;
 
-  // Master's model is ESM and this module is CommonJS, so the crossing has to
-  // be a dynamic import. Cheap after the first call -- Node caches the module.
+  // Since the sp_users merge the customer IS their platform account, and their
+  // Services profile (sp_profiles, models/User.js) has the SAME _id. The id may
+  // be a platform id or an old sp_users id (a token from before the merge):
+  // both resolve to the account, merging a waiting sp_users row on the spot.
+  let resolveSpCustomerId;
   let FoodUser;
   try {
+    ({ resolveSpCustomerId } = await import('../../../core/identity/spCustomer.js'));
     ({ FoodUser } = await import('../../../core/users/user.model.js'));
   } catch (error) {
-    console.error('[SP identity bridge] could not load master user model:', error.message);
+    console.error('[SP identity bridge] could not load the platform identity:', error.message);
     return null;
   }
-
-  const shared = await FoodUser.findById(masterUserId)
-    .select('name phone email')
-    .lean()
-    .catch(() => null);
-  if (!shared) return null;
-
-  const phone = toTenDigits(shared.phone);
-  if (!phone) {
-    console.warn(`[SP identity bridge] master user ${masterUserId} has no usable phone; not bridging`);
-    return null;
+  const accountId = await resolveSpCustomerId(String(masterUserId)).catch(() => null);
+  if (!accountId) {
+    // A profile under an id with no platform account (one written straight to
+    // the profile collection, e.g. a seed): it is still that customer.
+    return SPUser.findById(masterUserId).select('-password').lean().catch(() => null);
   }
 
-  // Match on the normalised number, but also accept whatever raw form an
-  // SP-native signup stored, so we link rather than duplicate.
-  const existing = await SPUser.findOne({
-    $or: [{ phone }, { phone: `+91${phone}` }, { phone: `91${phone}` }],
-  })
-    .select('-password')
-    .lean();
-  if (existing) return existing;
+  const profile = await SPUser.findById(accountId).select('-password').lean();
+  if (profile) return profile;
 
-  // First time this customer has touched Services. `name` is required on the
-  // SP schema and optional on master's, hence the fallback.
+  // First time this customer has touched Services: their profile is made under
+  // the account's _id (models/User.js). `name` is required on the profile and
+  // optional on the account, hence the fallback.
+  const shared = await FoodUser.findById(accountId).select('name phone email').lean().catch(() => null);
+  const phone = toTenDigits(shared?.phone);
+  if (!shared || !phone) {
+    console.warn(`[SP identity bridge] platform user ${accountId} has no usable phone; not bridging`);
+    return null;
+  }
   try {
-    const created = await SPUser.create({
+    const created = new SPUser({
+      _id: shared._id,
+      platformUserId: shared._id,
       name: (shared.name && shared.name.trim()) || 'Customer',
       phone,
       email: shared.email || undefined,
       isPhoneVerified: true,
     });
-    console.log(`[SP identity bridge] provisioned sp_user ${created._id} for master user ${masterUserId}`);
+    created.$locals.platformIdSet = true;
+    await created.save();
+    await FoodUser.updateOne({ _id: shared._id, spJoinedAt: null }, { $set: { spJoinedAt: new Date() } });
     const { password, ...rest } = created.toObject();
     return rest;
   } catch (error) {
-    // A concurrent first request can lose the unique-index race. The other one
-    // won and the document now exists, so just read it back.
-    if (error && error.code === 11000) {
-      return SPUser.findOne({ phone }).select('-password').lean();
-    }
+    // A concurrent first request won the race: its profile is the one.
+    if (error && error.code === 11000) return SPUser.findById(accountId).select('-password').lean();
     console.error('[SP identity bridge] provisioning failed:', error.message);
     return null;
   }

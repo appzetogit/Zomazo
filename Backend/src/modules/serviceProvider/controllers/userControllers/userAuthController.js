@@ -7,6 +7,21 @@ const { USER_ROLES } = require('../../utils/constants');
 const { validationResult } = require('express-validator');
 
 /**
+ * Since the sp_users merge a customer's Services profile (models/User.js) sits
+ * under their platform account's _id. A customer from before the merge whom the
+ * migration has not reached yet is merged here, before their phone is looked
+ * up, so the Services app's own sign-in finds them. Never throws.
+ */
+const mergeWaitingCustomer = async (phone) => {
+  try {
+    const { spCustomers } = await import('../../../../core/identity/spCustomer.js');
+    await spCustomers.mergeWaitingForPhone(phone);
+  } catch (err) {
+    console.warn('[SP auth] waiting customer not merged:', err.message);
+  }
+};
+
+/**
  * Helper to save FCM token during auth (login/verifyLogin/register) if provided in req.body
  */
 const handleAuthFcmToken = async (Model, docId, req) => {
@@ -84,6 +99,7 @@ const sendOTP = async (req, res) => {
     // code for a victim's phone mailed to themselves and sign in as them (the
     // OTP store is keyed by phone and shared by user, vendor and worker login).
     if (email) {
+      await mergeWaitingCustomer(phone);
       const owner = await User.findOne({ phone }).select('email').lean();
       const onFile = String(owner?.email || '').trim().toLowerCase();
       if (onFile && onFile === String(email).trim().toLowerCase()) {
@@ -127,6 +143,7 @@ const verifyLogin = async (req, res) => {
     }
 
     // 2. Check if user exists
+    await mergeWaitingCustomer(phone);
     const user = await User.findOne({ phone });
 
     if (user) {
@@ -224,6 +241,7 @@ const register = async (req, res) => {
     }
 
     // Check if user already exists
+    await mergeWaitingCustomer(phone);
     const existingUser = await User.findOne({ phone });
     if (existingUser) {
       return res.status(400).json({
@@ -241,12 +259,8 @@ const register = async (req, res) => {
       isEmailVerified: email ? false : true
     });
 
-    // Link to the customer's one platform identity (identity merge, phase 1).
-    // Fire-and-forget by contract: linkSatellite never throws, and an unlinked
-    // document is repaired by the backfill script.
-    import('../../../../core/identity/identityLink.service.js')
-      .then(({ linkSatellite }) => linkSatellite(User, user._id, { phone, name, email }))
-      .catch((err) => console.warn(`[Identity] SP link skipped: ${err.message}`));
+    // The profile was made under the customer's platform account (found or
+    // made for this phone, models/User.js), so there is nothing left to link.
 
     // A referral code entered at sign-up. Awaited so the referrer is credited
     // before we answer, but it never fails the sign-up (applyReferralAtSignup
@@ -321,6 +335,7 @@ const login = async (req, res) => {
     }
 
     // Find user
+    await mergeWaitingCustomer(phone);
     const user = await User.findOne({ phone });
     if (!user) {
       return res.status(404).json({
@@ -422,8 +437,10 @@ const refreshToken = async (req, res) => {
       });
     }
 
-    // Check if user exists
-    const user = await User.findById(decoded.userId);
+    // Check if user exists. A refresh token from before the sp_users merge
+    // names the old sp_users id: translated to the profile's (platform) id.
+    const { resolveSpCustomerId } = await import('../../../../core/identity/spCustomer.js');
+    const user = await User.findById((await resolveSpCustomerId(decoded.userId)) || decoded.userId);
     if (!user) {
       return res.status(404).json({
         success: false,

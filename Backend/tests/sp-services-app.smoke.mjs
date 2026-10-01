@@ -152,6 +152,9 @@ const main = async () => {
     let seq = 9700000000;
     const newUser = async (extra = {}) => {
         const _id = oid();
+        // A Services customer is a platform account with a Services profile
+        // under the same _id (the sp_users merge).
+        await mongoose.connection.collection('users').insertOne({ _id, name: 'Asha Rao', phone: String(seq), role: 'USER', isActive: true, spJoinedAt: new Date() });
         await User.collection.insertOne({ _id, name: 'Asha Rao', email: `s${seq}@t.test`, phone: String(seq++), wallet: { balance: 0, penalty: 0 }, isActive: true, referredBy: null, ...extra });
         return { id: _id, token: generateAccessToken({ userId: String(_id), role: 'USER' }) };
     };
@@ -305,7 +308,8 @@ const main = async () => {
         assert.equal(summary.json.data.canApplyCode, true);
         const r = await call('POST', '/users/referral/apply', { code: code.toLowerCase() }, joiner.token);
         assert.equal(r.status, 200, JSON.stringify(r.json));
-        assert.equal(String((await User.findById(joiner.id).lean()).referredBy), String(friend.id));
+        const account = await mongoose.connection.collection('users').findOne({ _id: joiner.id });
+        assert.equal(String(account.spReferredBy), String(friend.id));
         assert.equal((await call('GET', '/users/referral', null, joiner.token)).json.data.canApplyCode, false);
         const again = await call('POST', '/users/referral/apply', { code }, joiner.token);
         assert.equal(again.status, 400);
@@ -318,7 +322,7 @@ const main = async () => {
         assert.equal((await call('POST', '/users/referral/apply', { code: 'SPNOPE00' }, other.token)).status, 400);
         assert.equal((await call('POST', '/users/referral/apply', { code }, booker.token)).status, 400, 'booker has a booking');
         assert.equal((await call('GET', '/users/referral', null, booker.token)).json.data.canApplyCode, false);
-        assert.equal((await User.findById(other.id).lean()).referredBy, null);
+        assert.equal((await mongoose.connection.collection('users').findOne({ _id: other.id })).spReferredBy ?? null, null);
     });
 
     await new Promise((r) => setTimeout(r, 1000));

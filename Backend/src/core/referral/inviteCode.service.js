@@ -68,7 +68,11 @@ export async function resolveInviter(ref) {
         const byId = await users().findOne({ _id: oid }, { projection: { _id: 1 } });
         if (byId) return byId._id;
     }
-    const byCode = await users().findOne({ referralCode: { $in: codes } }, { projection: { _id: 1 } });
+    // Its own code, or a Services code (SPxxxxxx) kept on it since the sp_users merge.
+    const byCode = await users().findOne(
+        { $or: [{ referralCode: { $in: codes } }, { spReferralCode: { $in: codes } }] },
+        { projection: { _id: 1 } },
+    );
     if (byCode) return byCode._id;
 
     const projection = { platformUserId: 1, phone: 1 };

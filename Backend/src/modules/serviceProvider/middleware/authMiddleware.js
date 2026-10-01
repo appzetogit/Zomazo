@@ -45,23 +45,24 @@ const authenticate = async (req, res, next) => {
     // console.log('Role from token:', decoded.role); // Debug
     switch (decoded.role) {
       case USER_ROLES.USER:
-        user = await User.findById(decoded.userId).select('-password').lean();
-        // A customer signed in through the super app carries a MASTER-issued
-        // token, so decoded.userId names a document in the shared `users`
-        // collection rather than `sp_users`. Bridge it (and provision on first
-        // use) so one login serves food, taxi and services. An SP-native token
-        // resolved above and never reaches this. See utils/identityBridge.js.
-        if (!user) {
-          user = await resolveSharedCustomer(decoded.userId);
-          // The rest of the request must act as the SP user, not the master
-          // one: every SP document -- bookings, cart, wallet -- is keyed by
-          // sp_users._id, and the socket rooms the server emits to are
-          // `user_<spUserId>`.
-          if (user) {
-            decoded.userId = user._id.toString();
-            // Master tokens carry no loginSessionId, so the session check below
-            // is skipped for them by design; do not inherit the SP user's.
-          }
+        // Since the sp_users merge a customer IS their platform account and
+        // their Services profile has the same _id. The token may be the
+        // platform's or the Services app's own, and may name an old sp_users id
+        // (minted before the merge): resolveSharedCustomer translates it,
+        // merging a waiting row and making the profile on first use. See
+        // utils/identityBridge.js.
+        user = await resolveSharedCustomer(decoded.userId);
+        if (user) {
+          const oldId = String(decoded.userId);
+          decoded.userId = user._id.toString();
+          // A token minted for the old id carries the old row's session id; the
+          // profile kept it, so the session check below still applies.
+          if (oldId !== decoded.userId) decoded.translatedFrom = oldId;
+          // Off everywhere (the platform's isActive) or only in Services
+          // (spBlocked, which the Services admin sets with the profile's isActive).
+          const { FoodUser } = await import('../../../core/users/user.model.js');
+          const account = await FoodUser.findById(user._id).select('isActive spBlocked').lean();
+          if (account && (account.isActive === false || account.spBlocked === true)) user.isActive = false;
         }
         break;
       case USER_ROLES.VENDOR:

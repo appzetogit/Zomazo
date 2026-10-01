@@ -51,10 +51,10 @@ async function sharedOwner(spUserId, platformUserIdHint) {
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.owner;
   const { platformUserIdFor } = await mods();
   const resolved = await platformUserIdFor(key).catch(() => null);
-  // Only a Services id that resolves to a DIFFERENT, platform account is bridged.
-  const owner = resolved?.platformId && resolved.vertical === 'serviceProvider'
-    ? new mongoose.Types.ObjectId(resolved.platformId)
-    : null;
+  // Since the sp_users merge a customer's Services profile has their platform
+  // account's _id, so the id is usually the account itself; an old sp_users id
+  // resolves to the account it was merged into. Every customer has one now.
+  const owner = resolved?.platformId ? new mongoose.Types.ObjectId(resolved.platformId) : null;
   if (ownerCache.size > 5000) ownerCache.clear();
   ownerCache.set(key, { owner, at: Date.now() });
   return owner;

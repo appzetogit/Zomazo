@@ -351,7 +351,17 @@ async function removeInvalidTokens(tokens) {
 async function sendNotificationToUser(userId, payload, includeMobile = true) {
   try {
     const User = require('../models/User');
-    const user = await User.findById(userId);
+    let user = await User.findById(userId);
+    if (!user) {
+      // An old sp_users id (a booking not merged yet, the sp_users merge):
+      // the customer's profile, merged on the spot.
+      const { resolveSharedCustomer } = require('../utils/identityBridge');
+      const bridged = await resolveSharedCustomer(userId).catch(() => null);
+      if (bridged) {
+        user = await User.findById(bridged._id);
+        userId = String(bridged._id);
+      }
+    }
 
     if (!user) {
       console.log(`[FCM] ❌ User not found for notification: ${userId}`);

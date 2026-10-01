@@ -113,6 +113,8 @@ export const phoneFilter = (phone) => {
  * @param {string} [config.payerModel]   payments.payerModel the service wrote
  * @param {(row) => object} [config.created]           extra fields for an account made from a row
  * @param {(row, account) => object} [config.linked]   extra $set for an existing account
+ * @param {boolean} [config.copyAddresses]  false when the rows' addresses are another shape
+ * @param {(row, platformId, info) => Promise} [config.afterMerge]  the service's own side of a merge
  * @param {object} [config.rowFields]    names on the row when they differ:
  *        { referredBy: 'referredBy', referralCount: 'referralCount', active: (row) => bool }
  */
@@ -164,7 +166,7 @@ export function createCustomerMerge(config) {
             isVerified: row.isVerified === true,
             isActive: true,
             role: 'USER',
-            addresses: Array.isArray(row.addresses) ? row.addresses : [],
+            addresses: config.copyAddresses === false ? [] : (Array.isArray(row.addresses) ? row.addresses : []),
             isBlockedFromCOD: false,
             [fields.joinedAt]: row.createdAt || now,
             [fields.blocked]: !row$.active(row),
@@ -264,7 +266,7 @@ export function createCustomerMerge(config) {
         let clashes = 0;
         if (String(platformId) !== String(oldId)) {
             await mergeFieldsInto(row, platformId, referredBy);
-            await mergeLegacyAddresses(collection, oldId, platformId);
+            if (config.copyAddresses !== false) await mergeLegacyAddresses(collection, oldId, platformId);
             for (const ref of refs) {
                 const r = await rewriteRef(ref, oldId, platformId);
                 if (r.moved) moved[refName(ref)] = r.moved;
@@ -281,6 +283,9 @@ export function createCustomerMerge(config) {
             if (r.moved) moved[`users.${fields.referredBy}`] = r.moved;
             await coll(collection).updateOne({ _id: oldId }, { $set: { addressesMergedAt: new Date() } });
         }
+
+        // What the service keeps on its own side (Services: its profile row).
+        if (config.afterMerge) await config.afterMerge(row, platformId, { created: String(platformId) === String(oldId) });
 
         await coll(collection).updateOne(
             { _id: oldId },
@@ -373,6 +378,14 @@ export function createCustomerMerge(config) {
         }
     }
 
+    /** Merge every waiting row with this phone (a service's own sign-in, before it looks the phone up). */
+    async function mergeWaitingForPhone(phone) {
+        const byPhone = phoneFilter(phone);
+        if (!byPhone || (await allMerged())) return;
+        const waiting = await coll(collection).find({ mergedAt: { $exists: false }, ...byPhone }).toArray();
+        for (const row of waiting) await mergeRow(row);
+    }
+
     /** Mark the account a customer of this service (first use). */
     async function markJoined(id) {
         if (!isId(id)) return;
@@ -393,6 +406,7 @@ export function createCustomerMerge(config) {
         mappedId,
         resolveId,
         customerForPhone,
+        mergeWaitingForPhone,
         markJoined,
         countRefs: (id) => countRefs(refs, id),
         clearCache,

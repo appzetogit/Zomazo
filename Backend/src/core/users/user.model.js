@@ -175,7 +175,22 @@ const userSchema = new mongoose.Schema(
         shopReferredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', default: null, index: true },
         shopReferralCount: { type: Number, default: 0, min: 0 },
         shopTokenVersion: { type: Number, default: 0 },
-        mergedEcomIds: { type: [mongoose.Schema.Types.ObjectId], default: undefined }
+        mergedEcomIds: { type: [mongoose.Schema.Types.ObjectId], default: undefined },
+
+        /*
+         * Services customers, since the sp_users merge (core/identity/spCustomer.js).
+         * Identity is this account; what only Services keeps (plans, the unpaid
+         * cancellation-fee bucket, settings, booking stats, favourites, an
+         * SP-native password) is on its profile row, sp_profiles, under this _id.
+         * spBlocked is the Services admin's switch; isActive stays every app's.
+         */
+        spJoinedAt: { type: Date, default: null, index: true },
+        spBlocked: { type: Boolean, default: false },
+        spReferredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'FoodUser', default: null, index: true },
+        spReferralCount: { type: Number, default: 0, min: 0 },
+        /** The Services share code (SPxxxxxx) people already hold. */
+        spReferralCode: { type: String, trim: true, uppercase: true, default: undefined, index: true },
+        mergedSpIds: { type: [mongoose.Schema.Types.ObjectId], default: undefined }
     },
     {
         collection: 'users',
