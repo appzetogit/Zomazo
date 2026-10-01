@@ -170,6 +170,21 @@ export const validateConfig = () => {
             }
         }
 
+        // Bank payouts are optional, but half a setup is worse than none: without
+        // the webhook secret a payout's result can never be trusted, so a failed
+        // transfer would never return the money to the partner's balance.
+        const payoutVars = [
+            ['RAZORPAYX_KEY_ID', config.razorpayxKeyId],
+            ['RAZORPAYX_KEY_SECRET', config.razorpayxKeySecret],
+            ['RAZORPAYX_ACCOUNT_NUMBER', config.razorpayxAccountNumber],
+            ['RAZORPAYX_WEBHOOK_SECRET', config.razorpayxWebhookSecret],
+        ];
+        if (payoutVars.some(([, value]) => value)) {
+            for (const [name, value] of payoutVars) {
+                if (!value) missing.push(`${name} (RazorpayX payouts are configured, so all four values are required)`);
+            }
+        }
+
         if (config.socketCorsOrigin === '*') {
             warnings.push('SOCKET_CORS_ORIGIN is "*" — restrict it to your frontend origin(s)');
         }

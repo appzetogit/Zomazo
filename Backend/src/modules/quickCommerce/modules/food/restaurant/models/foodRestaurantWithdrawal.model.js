@@ -31,6 +31,8 @@ const foodRestaurantWithdrawalSchema = new mongoose.Schema({
     adminNote: String,
     rejectionReason: String,
     transactionId: String, // Final bank transaction reference from admin
+    // Bank payout through RazorpayX (state, payout id, UTR); see core/payouts/payout.service.js.
+    payout: { type: mongoose.Schema.Types.Mixed, default: undefined },
     processedAt: Date
 }, { 
     collection: 'food_restaurant_withdrawals', 

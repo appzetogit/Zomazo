@@ -337,6 +337,13 @@ const startServer = async () => {
                 .then(({ startLedgerNightly }) => { ledgerNightlyInterval = startLedgerNightly(); })
                 .catch((err) => logger.error(`Ledger nightly failed to start: ${err.message}`));
 
+            // Re-asks RazorpayX about bank payouts with no news, in case a webhook was
+            // lost. Only runs when RazorpayX is configured; every update it makes is
+            // a conditional claim, so two instances cannot apply one result twice.
+            import('./src/core/payouts/payout.service.js')
+                .then(({ startPayoutSync }) => startPayoutSync())
+                .catch((err) => logger.error(`Payout sync failed to start: ${err.message}`));
+
             // Releases new orders to the restaurant when their cancellation hold ends.
             // Not tied to BACKGROUND_JOBS_ENABLED: a held order must always reach the
             // restaurant, and each release is claimed in the database, so a second

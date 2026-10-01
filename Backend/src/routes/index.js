@@ -23,6 +23,7 @@ import { getQueuesController } from '../controllers/admin.controller.js';
 import { getPublicEnvController } from '../modules/food/landing/controllers/publicEnv.controller.js';
 import { getMyActivityController, getMySpendController } from '../core/activity/activity.controller.js';
 import webhookRoutes from '../core/payments/routes/webhook.routes.js'; // ✅ NEW
+import payoutRoutes from '../core/payouts/payout.routes.js';
 import petpoojaWebhookRoutes from '../modules/food/orders/routes/petpooja.routes.js';
 import searchRoutes from '../modules/food/search/routes/search.routes.js';
 import { taxiRouter } from '../modules/taxi/routes/index.js';
@@ -180,6 +181,7 @@ router.use('/v1/food/chat', authMiddleware, requireRoles('USER', 'RESTAURANT', '
 router.use('/v1/food/orders', requireModuleEnabled(MODULES.FOOD), authMiddleware, requireRoles('USER'), orderUserRoutes);
 router.use('/v1/food/payments', authMiddleware, paymentRoutes);
 router.use('/v1/payments/webhook', webhookRoutes); // ✅ NEW: Public Webhook
+router.use('/v1/payouts', payoutRoutes); // public RazorpayX payout webhook (signature-checked)
 router.use('/v1/petpooja/webhook', petpoojaWebhookRoutes);
 router.use('/v1/fcm-tokens', fcmRoutes);
 router.use('/fcm-tokens', fcmRoutes);

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../../middlewares/authMiddleware.js';
+import { payoutAdminHandlers, payoutConfigHandler } from '../../../../core/payouts/payoutAdmin.js';
 import { requireServiceAccess } from '../../../../core/roles/serviceAccess.middleware.js';
 import { requireFinancePermission } from '../../../../core/admin/requireFinancePermission.middleware.js';
 import {
@@ -314,6 +315,11 @@ adminRouter.get('/admin/wallet/drivers/withdrawals/request/:requestId', authenti
 adminRouter.get('/admin/wallet/drivers/:id/withdrawals', authenticate(['admin']), getDriverWithdrawals);
 adminRouter.patch('/admin/wallet/drivers/withdrawals/:requestId/approve', authenticate(['admin']), approveDriverWithdrawalRequest);
 adminRouter.patch('/admin/wallet/drivers/withdrawals/:requestId/reject', authenticate(['admin']), rejectDriverWithdrawalRequest);
+// Bank payouts (RazorpayX) for a completed withdrawal; see core/payouts/payout.service.js.
+const driverPayout = payoutAdminHandlers('taxi_driver', 'requestId');
+adminRouter.get('/admin/payouts/config', authenticate(['admin']), payoutConfigHandler);
+adminRouter.post('/admin/wallet/drivers/withdrawals/:requestId/payout', authenticate(['admin']), driverPayout.pay);
+adminRouter.post('/admin/wallet/drivers/withdrawals/:requestId/payout/refresh', authenticate(['admin']), driverPayout.refresh);
 adminRouter.get('/admin/driver-ratings', authenticate(['admin']), getDriverRatings);
 adminRouter.get('/admin/driver-ratings/:id', authenticate(['admin']), getDriverRatingDetail);
 

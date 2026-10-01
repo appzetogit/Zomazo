@@ -41,6 +41,11 @@ const withdrawalSchema = new mongoose.Schema({
   rejectionReason: {
     type: String
   },
+  // Bank payout through RazorpayX (state, payout id, UTR); see core/payouts/payout.service.js.
+  payout: {
+    type: mongoose.Schema.Types.Mixed,
+    default: undefined
+  },
   bankDetails: {
     accountNumber: String,
     ifscCode: String,

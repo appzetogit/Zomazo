@@ -63,4 +63,15 @@ router.get('/withdrawals', authenticate, isAdmin, getWithdrawalRequests);
 router.post('/withdrawals/:withdrawalId/approve', authenticate, isAdmin, approveWithdrawal);
 router.post('/withdrawals/:withdrawalId/reject', authenticate, isAdmin, rejectWithdrawal);
 
+// Bank payouts (RazorpayX) for an approved withdrawal; see core/payouts/payout.service.js.
+// The payout module is ESM, so it is imported on first use.
+const payoutHandler = (pick) => async (req, res) => {
+  const { payoutAdminHandlers, payoutConfigHandler } = await import('../../../../core/payouts/payoutAdmin.js');
+  if (pick === 'config') return payoutConfigHandler(req, res);
+  return payoutAdminHandlers('sp_withdrawal', 'withdrawalId')[pick](req, res);
+};
+router.get('/payouts/config', authenticate, isAdmin, payoutHandler('config'));
+router.post('/withdrawals/:withdrawalId/payout', authenticate, isAdmin, payoutHandler('pay'));
+router.post('/withdrawals/:withdrawalId/payout/refresh', authenticate, isAdmin, payoutHandler('refresh'));
+
 module.exports = router;

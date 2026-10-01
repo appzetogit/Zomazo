@@ -14,6 +14,7 @@ import { getAdminPageController, upsertAdminPageController } from '../controller
 import * as incentiveController from '../../../../core/incentives/controllers/incentiveController.js';
 import { upload } from '../../../../middleware/upload.js';
 import { requireFinancePermission } from '../../../../core/admin/requireFinancePermission.middleware.js';
+import { payoutAdminHandlers, payoutConfigHandler } from '../../../../core/payouts/payoutAdmin.js';
 import { enforceAdminAccess } from '../../../../core/admin/enforceAdminAccess.middleware.js';
 import { resolveStoreAdminResource } from '../../../../core/admin/adminAccessPolicy.js';
 
@@ -226,6 +227,15 @@ router.get('/withdrawals', adminController.getWithdrawals);
 router.patch('/withdrawals/:id', requireFinancePermission('WITHDRAWAL_DECIDE'), adminController.updateWithdrawalStatus);
 router.get('/delivery/withdrawals', adminController.getDeliveryWithdrawals);
 router.patch('/delivery/withdrawals/:id', requireFinancePermission('WITHDRAWAL_DECIDE'), adminController.updateDeliveryWithdrawalStatus);
+
+// Bank payouts (RazorpayX) for an approved withdrawal; see core/payouts/payout.service.js.
+const restaurantPayout = payoutAdminHandlers('food_restaurant');
+const riderPayout = payoutAdminHandlers('food_rider');
+router.get('/payouts/config', payoutConfigHandler);
+router.post('/withdrawals/:id/payout', requireFinancePermission('WITHDRAWAL_DECIDE'), restaurantPayout.pay);
+router.post('/withdrawals/:id/payout/refresh', requireFinancePermission('WITHDRAWAL_DECIDE'), restaurantPayout.refresh);
+router.post('/delivery/withdrawals/:id/payout', requireFinancePermission('WITHDRAWAL_DECIDE'), riderPayout.pay);
+router.post('/delivery/withdrawals/:id/payout/refresh', requireFinancePermission('WITHDRAWAL_DECIDE'), riderPayout.refresh);
 router.get('/delivery/cash-limit-settlements', adminController.getCashLimitSettlements);
 
 // ----- Delivery partners & general -----
