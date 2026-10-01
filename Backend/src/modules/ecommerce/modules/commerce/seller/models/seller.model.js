@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 import { ecomModel } from '../../../../config/ecomModel.js';
+import { phoneLast10Plugin } from '../../../../../../core/identity/phoneLast10.cjs';
 const normalizeRatingValue = (value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
@@ -542,6 +543,10 @@ sellerSchema.index(
 sellerSchema.index({ status: 1, createdAt: -1 });
 sellerSchema.index({ "channels.quick.status": 1 });
 sellerSchema.index({ "channels.shop.status": 1 });
+
+// Indexed last-10-digit phone, so sign-in finds the row without a regex scan
+// (core/identity/phoneLast10.cjs).
+sellerSchema.plugin(phoneLast10Plugin, { pairs: [['ownerPhone', 'ownerPhoneLast10'], ['primaryContactNumber', 'primaryContactLast10', { blank: '' }]] });
 
 export const Seller = ecomModel('Seller',
   sellerSchema,

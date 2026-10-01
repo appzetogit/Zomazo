@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { phoneLast10Plugin } from '../../core/identity/phoneLast10.cjs';
 
 const userAddressSchema = new mongoose.Schema(
     {
@@ -200,6 +201,10 @@ const userSchema = new mongoose.Schema(
 
 userSchema.index({ phone: 1 }, { unique: true });
 userSchema.index({ 'addresses.location': '2dsphere' });
+
+// Indexed last-10-digit phone, so sign-in finds the row without a regex scan
+// (core/identity/phoneLast10.cjs).
+userSchema.plugin(phoneLast10Plugin, { pairs: [['phone', 'phoneLast10']] });
 
 export const FoodUser = mongoose.model('FoodUser', userSchema);
 

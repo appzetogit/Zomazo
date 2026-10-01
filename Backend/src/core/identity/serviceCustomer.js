@@ -97,9 +97,18 @@ export async function countRefs(refs, id) {
 }
 
 // The last ten digits, whatever is written between them ('+91 91234 56789').
+// On `users` the indexed phoneLast10 answers it; the regex branch only reads
+// rows that field has not been stamped on yet (legacy service collections never
+// have it, so there it is the whole match, as before).
 export const phoneFilter = (phone) => {
     const ten = lastTen(phone);
-    return ten.length === 10 ? { phone: new RegExp(`${ten.split('').join('\\D*')}\\D*$`) } : null;
+    if (ten.length !== 10) return null;
+    return {
+        $or: [
+            { phoneLast10: ten },
+            { phoneLast10: null, phone: new RegExp(`${ten.split('').join('\\D*')}\\D*$`) },
+        ],
+    };
 };
 
 /**
@@ -151,6 +160,8 @@ export function createCustomerMerge(config) {
         return {
             _id: row._id,
             phone: ten.length === 10 ? ten : String(row.phone || ''),
+            // A raw insert skips the model's hooks; stamp it here (phoneLast10.cjs).
+            ...(ten ? { phoneLast10: ten } : {}),
             countryCode: row.countryCode || '+91',
             ...(row.name ? { name: row.name } : {}),
             ...(row.email ? { email: row.email } : {}),

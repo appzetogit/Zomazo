@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { phoneLast10Plugin } from '../../../../../../core/identity/phoneLast10.cjs';
 
 const normalizeRatingValue = (value) => {
   const numeric = Number(value);
@@ -625,6 +626,10 @@ restaurantSchema.index(
   },
 );
 restaurantSchema.index({ status: 1, createdAt: -1 });
+
+// Indexed last-10-digit phone, so sign-in finds the row without a regex scan
+// (core/identity/phoneLast10.cjs).
+restaurantSchema.plugin(phoneLast10Plugin, { pairs: [['ownerPhone', 'ownerPhoneLast10'], ['primaryContactNumber', 'primaryContactLast10', { blank: '' }]] });
 
 export const FoodRestaurant = mongoose.models.QCRestaurant || mongoose.model(
   'QCRestaurant',

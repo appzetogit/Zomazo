@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { VEHICLE_TYPES } from '../../constants/index.js';
+import { phoneLast10Plugin } from '../../../../core/identity/phoneLast10.cjs';
 
 const geoPointSchema = new mongoose.Schema(
   {
@@ -570,6 +571,10 @@ driverSchema.index({ 'activeAssignments.jobId': 1 });
 driverSchema.index({ 'activeAssignments.jobType': 1 });
 driverSchema.index({ location: '2dsphere' });
 driverSchema.index({ 'routeBooking.anchorLocation': '2dsphere' });
+
+// Indexed last-10-digit phone, so sign-in finds the row without a regex scan
+// (core/identity/phoneLast10.cjs).
+driverSchema.plugin(phoneLast10Plugin, { pairs: [['phone', 'phoneLast10']] });
 
 export const Driver = mongoose.models.TaxiDriver || mongoose.model('TaxiDriver', driverSchema);
 

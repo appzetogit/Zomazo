@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { logger } from '../../utils/logger.js';
+import { byLast10 } from './phoneLast10.cjs';
 
 /**
  * One person, one registration, both job streams.
@@ -24,6 +25,7 @@ import { logger } from '../../utils/logger.js';
  * capability, which a backfill can repair later.
  */
 
+const PHONE_PAIRS = [['phone', 'phoneLast10']];
 const normalizePhone = (value) => String(value || '').replace(/\D/g, '').slice(-10);
 
 /**
@@ -45,9 +47,7 @@ export async function ensureDeliveryCapability(driver) {
         // Match on the last 10 digits, because the two apps store country codes
         // differently and a '+91' prefix would otherwise create a duplicate
         // partner for someone who already exists.
-        let partner = await FoodDeliveryPartner.findOne({
-            phone: { $regex: `${phone}$` },
-        });
+        let partner = await FoodDeliveryPartner.findOne(byLast10(phone, PHONE_PAIRS));
 
         if (!partner) {
             partner = await FoodDeliveryPartner.create({
@@ -133,7 +133,7 @@ export async function ensureQuickCommerceCapability(driver) {
             '../../modules/quickCommerce/modules/food/delivery/models/deliveryPartner.model.js'
         );
 
-        let partner = await QCDeliveryPartner.findOne({ phone: { $regex: `${phone}$` } });
+        let partner = await QCDeliveryPartner.findOne(byLast10(phone, PHONE_PAIRS));
 
         if (!partner) {
             partner = await QCDeliveryPartner.create({
@@ -339,7 +339,7 @@ export async function ensureUnifiedDriverForPartner(partner, { approved } = {}) 
 
     let driver = partner.driverId ? await Driver.findById(partner.driverId) : null;
     if (!driver) {
-        driver = await Driver.findOne({ phone: { $regex: phone10 + '$' } });
+        driver = await Driver.findOne(byLast10(phone10, PHONE_PAIRS));
     }
 
     if (!driver) {

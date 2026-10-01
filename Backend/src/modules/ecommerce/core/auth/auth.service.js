@@ -42,6 +42,7 @@ import {
 } from "../notifications/firebase.service.js";
 import { assertStrongAdminPassword } from "../admin/adminPassword.js";
 import { withSharedProfile } from "../../../../core/identity/sharedProfile.js";
+import { byLast10 } from "../../../../core/identity/phoneLast10.cjs";
 
 const ROLES = {
   USER: "USER",
@@ -371,6 +372,12 @@ export const requestSellerOtp = async (phone) => {
   return devOtpEnabled() ? { otp } : {};
 };
 
+// Owner or primary-contact number, by the indexed last-10-digit fields.
+const OWNER_PHONE_PAIRS = [
+  ["ownerPhone", "ownerPhoneLast10"],
+  ["primaryContactNumber", "primaryContactLast10"],
+];
+
 export const verifySellerOtpAndLogin = async (phone, otp, fcmToken, platform) => {
   console.log(
     `[FCM-LOGIN] Seller login platform received: rawPlatform=${String(platform ?? "") || "<empty>"}, hasToken=${Boolean(fcmToken)}`,
@@ -380,23 +387,10 @@ export const verifySellerOtpAndLogin = async (phone, otp, fcmToken, platform) =>
     throw new AuthError(result.reason || "OTP verification failed");
   }
 
-  // Sellers may store ownerPhone with country code or formatting.
-  // Match by exact phone, last-10 digits, or suffix match to avoid false "needsRegistration".
-  const digits = String(phone || "").replace(/\D/g, "");
-  const last10 = digits.slice(-10);
-  const phoneCandidates = [phone, digits, last10].filter(Boolean);
-  const phoneOrFields = (field) => [
-    { [field]: { $in: phoneCandidates } },
-    ...(last10 ? [{ [field]: { $regex: new RegExp(last10 + "$") } }] : []),
-  ];
+  // Sellers may store ownerPhone with country code or formatting, so match
+  // on the last 10 digits (indexed) to avoid a false "needsRegistration".
 
-  console.log(`[AUTH] Verifying OTP for seller phone: ${phone}`);
-  const seller = await Seller.findOne({
-    $or: [
-      ...phoneOrFields("ownerPhone"),
-      ...phoneOrFields("primaryContactNumber"),
-    ],
-  });
+  const seller = await Seller.findOne(byLast10(phone, OWNER_PHONE_PAIRS) || { _id: null });
 
   console.log(`[AUTH] Seller lookup result:`, seller ? { id: seller._id, status: seller.status, name: seller.sellerName } : "NOT FOUND");
 
@@ -511,12 +505,7 @@ export const verifyDeliveryOtpAndLogin = async (phone, otp, fcmToken, platform) 
     return { needsRegistration: true, phone };
   }
 
-  const deliveryPartner = await DeliveryPartner.findOne({
-    $or: [
-      { phone: normalized },
-      { phone: { $regex: new RegExp(normalized + "$") } },
-    ],
-  });
+  const deliveryPartner = await DeliveryPartner.findOne(byLast10(normalized, [["phone", "phoneLast10"]]));
 
   if (!deliveryPartner) {
     return { needsRegistration: true, phone };

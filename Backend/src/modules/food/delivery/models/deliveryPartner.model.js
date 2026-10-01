@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { phoneLast10Plugin } from '../../../../core/identity/phoneLast10.cjs';
 
 const normalizeRatingValue = (value) => {
     const numeric = Number(value);
@@ -172,6 +173,10 @@ const deliveryPartnerSchema = new mongoose.Schema(
 
 // Indices
 deliveryPartnerSchema.index({ lastLocation: '2dsphere' });
+
+// Indexed last-10-digit phone, so sign-in finds the row without a regex scan
+// (core/identity/phoneLast10.cjs).
+deliveryPartnerSchema.plugin(phoneLast10Plugin, { pairs: [['phone', 'phoneLast10']] });
 
 export const FoodDeliveryPartner = mongoose.model('FoodDeliveryPartner', deliveryPartnerSchema);
 

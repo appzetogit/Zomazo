@@ -69,6 +69,7 @@ import { claimReferralForPhone, releaseReferralClaim } from '../../../../core/re
 import { resolveInviter } from '../../../../core/referral/inviteCode.service.js';
 import { ensureQuickCustomer } from './auth.middleware.js';
 import { quickCustomerForPhone, resolveQuickCustomerId } from "../../../../core/identity/quickCustomer.js";
+import { byLast10 } from "../../../../core/identity/phoneLast10.cjs";
 const ROLES = {
   USER: "USER",
   RESTAURANT: "RESTAURANT",
@@ -440,23 +441,17 @@ export const requestRestaurantOtp = async (phone) => {
  * The seller holding this phone number, or null.
  *
  * Sellers store their number with or without a country code or formatting, so
- * this matches the exact value, its digits, the last 10 digits, or a number
- * ending in them -- otherwise a seller who exists reads as needing to register.
+ * this matches on the last 10 digits (an indexed field) -- otherwise a seller
+ * who exists reads as needing to register.
  */
+// Owner or primary-contact number, by the indexed last-10-digit fields.
+const OWNER_PHONE_PAIRS = [
+  ["ownerPhone", "ownerPhoneLast10"],
+  ["primaryContactNumber", "primaryContactLast10"],
+];
+
 export const findRestaurantByPhone = async (phone) => {
-  const digits = String(phone || "").replace(/\D/g, "");
-  const last10 = digits.slice(-10);
-  const phoneCandidates = [phone, digits, last10].filter(Boolean);
-  const phoneOrFields = (field) => [
-    { [field]: { $in: phoneCandidates } },
-    ...(last10 ? [{ [field]: { $regex: new RegExp(last10 + "$") } }] : []),
-  ];
-  return FoodRestaurant.findOne({
-    $or: [
-      ...phoneOrFields("ownerPhone"),
-      ...phoneOrFields("primaryContactNumber"),
-    ],
-  });
+  return FoodRestaurant.findOne(byLast10(phone, OWNER_PHONE_PAIRS) || { _id: null });
 };
 
 /**
@@ -586,12 +581,7 @@ export const verifyDeliveryOtpAndLogin = async (phone, otp, fcmToken, platform) 
     return { needsRegistration: true, phone };
   }
 
-  const deliveryPartner = await FoodDeliveryPartner.findOne({
-    $or: [
-      { phone: normalized },
-      { phone: { $regex: new RegExp(normalized + "$") } },
-    ],
-  });
+  const deliveryPartner = await FoodDeliveryPartner.findOne(byLast10(normalized, [["phone", "phoneLast10"]]));
 
   if (!deliveryPartner) {
     return { needsRegistration: true, phone };

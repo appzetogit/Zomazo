@@ -21,6 +21,7 @@ import { creditReferralReward } from "../../modules/food/user/services/userWalle
 import { referralSettingsFor } from '../../core/referral/referralSettings.service.js';
 import { normalizeReferralVia, redeemServiceInvite, resolvePlatformReferrer } from '../referral/signupReferral.service.js';
 import { claimReferralForPhone, releaseReferralClaim } from '../referral/referralClaim.service.js';
+import { byLast10 } from "../identity/phoneLast10.cjs";
 const ROLES = {
   USER: "USER",
   RESTAURANT: "RESTAURANT",
@@ -364,28 +365,22 @@ export const requestRestaurantOtp = async (phone) => {
   return shouldExposeOtp ? { otp } : {};
 };
 
+// Owner or primary-contact number, by the indexed last-10-digit fields.
+const OWNER_PHONE_PAIRS = [
+  ["ownerPhone", "ownerPhoneLast10"],
+  ["primaryContactNumber", "primaryContactLast10"],
+];
+
 export const verifyRestaurantOtpAndLogin = async (phone, otp, fcmToken, platform) => {
   const result = await verifyOtp(phone, otp, "restaurant");
   if (!result.valid) {
     throw new AuthError(result.reason || "OTP verification failed");
   }
 
-  // Restaurants may store ownerPhone with country code or formatting.
-  // Match by exact phone, last-10 digits, or suffix match to avoid false "needsRegistration".
-  const digits = String(phone || "").replace(/\D/g, "");
-  const last10 = digits.slice(-10);
-  const phoneCandidates = [phone, digits, last10].filter(Boolean);
-  const phoneOrFields = (field) => [
-    { [field]: { $in: phoneCandidates } },
-    ...(last10 ? [{ [field]: { $regex: new RegExp(last10 + "$") } }] : []),
-  ];
+  // Restaurants may store ownerPhone with country code or formatting, so match
+  // on the last 10 digits (indexed) to avoid a false "needsRegistration".
 
-  const restaurant = await FoodRestaurant.findOne({
-    $or: [
-      ...phoneOrFields("ownerPhone"),
-      ...phoneOrFields("primaryContactNumber"),
-    ],
-  });
+  const restaurant = await FoodRestaurant.findOne(byLast10(phone, OWNER_PHONE_PAIRS) || { _id: null });
   let restaurantDoc = restaurant;
   if (!restaurantDoc && isDefaultPhone(phone, DEFAULT_CREDENTIALS.restaurantPhone)) {
     // Auto-provision default restaurant account for configured default phone.
@@ -504,12 +499,7 @@ export const verifyDeliveryOtpAndLogin = async (phone, otp, fcmToken, platform) 
     return { needsRegistration: true, phone };
   }
 
-  let deliveryPartner = await FoodDeliveryPartner.findOne({
-    $or: [
-      { phone: normalized },
-      { phone: { $regex: new RegExp(normalized + "$") } },
-    ],
-  });
+  let deliveryPartner = await FoodDeliveryPartner.findOne(byLast10(normalized, [["phone", "phoneLast10"]]));
 
   if (!deliveryPartner && isDefaultPhone(phone, DEFAULT_CREDENTIALS.deliveryPhone)) {
     // Auto-provision default delivery account for configured default phone.

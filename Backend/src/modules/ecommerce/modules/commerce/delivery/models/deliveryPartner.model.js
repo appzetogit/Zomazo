@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 import { ecomModel } from '../../../../config/ecomModel.js';
+import { phoneLast10Plugin } from '../../../../../../core/identity/phoneLast10.cjs';
 const normalizeRatingValue = (value) => {
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return 0;
@@ -143,6 +144,10 @@ const deliveryPartnerSchema = new mongoose.Schema(
 
 // Indices
 deliveryPartnerSchema.index({ lastLocation: '2dsphere' });
+
+// Indexed last-10-digit phone, so sign-in finds the row without a regex scan
+// (core/identity/phoneLast10.cjs).
+deliveryPartnerSchema.plugin(phoneLast10Plugin, { pairs: [['phone', 'phoneLast10']] });
 
 export const DeliveryPartner = ecomModel('DeliveryPartner', deliveryPartnerSchema);
 
