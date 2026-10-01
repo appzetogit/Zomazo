@@ -246,8 +246,10 @@ const orderSchema = new mongoose.Schema(
         /*
          * Admin refunds (order.service.js processRefundAdmin), kept apart from
          * payment.refund because the cancellation and return paths replace that
-         * object wholesale. refundedPaise counts admin refunds only; each one is
-         * also added to payment.refund.amount, so every path sees the total.
+         * object wholesale. refundedPaise is the order's one refund total: admin
+         * refunds, cancellations and returns all reserve on it before paying
+         * (order.service.js reserveOrderRefund), so together they stay within
+         * what was paid.
          */
         adminRefund: {
             status: { type: String, enum: ['none', 'pending', 'processed'], default: undefined },

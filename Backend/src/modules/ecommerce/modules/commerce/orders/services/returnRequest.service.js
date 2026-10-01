@@ -467,13 +467,24 @@ async function refundReturn(ret) {
         description,
     });
     if (result.processed) {
-        return { processed: true, amount, method: result.method || order.payment?.method, refundId: result.refundId || '' };
+        return { processed: true, amount: result.amount ?? amount, method: result.method || order.payment?.method, refundId: result.refundId || '' };
     }
 
-    // Cash on delivery has no payment to reverse: the money goes to the wallet.
+    // Cash on delivery has no payment to reverse: the money goes to the wallet --
+    // still within what was paid, on the same counter as every other refund.
     if (result.reason === 'cash_payment') {
-        await userWalletService.refundWalletBalance(order.userId, amount, description, { orderId: refKey, cancelledBy: 'return' });
-        return { processed: true, amount, method: 'wallet' };
+        const { reserveOrderRefund, releaseOrderRefund } = await import('./order.service.js');
+        const reservation = await reserveOrderRefund(order._id, amount);
+        if (reservation.blocked) return { processed: false, reason: 'admin_refund_in_progress' };
+        if (reservation.grantPaise <= 0) return { processed: false, reason: 'nothing_left_to_refund' };
+        const granted = reservation.grantPaise / 100;
+        try {
+            await userWalletService.refundWalletBalance(order.userId, granted, description, { orderId: refKey, cancelledBy: 'return' });
+        } catch (err) {
+            await releaseOrderRefund(order._id, reservation.grantPaise);
+            throw err;
+        }
+        return { processed: true, amount: granted, method: 'wallet' };
     }
     return { processed: false, reason: result.reason || 'refund_not_processed' };
 }

@@ -139,6 +139,47 @@ await check('stale claim that never paid: released', async () => {
   assert.equal((await Order.findById(_id).lean()).adminRefund.refundedPaise, 30000);
 });
 
+const { applyCancellationRefund } = await import(`${BASE}/orders/services/order.service.js`);
+const cancelRefund = async (_id) => {
+  const doc = await Order.findById(_id);
+  const r = await applyCancellationRefund(doc, { cancelledBy: 'user' });
+  await Order.updateOne({ _id }, { $set: { 'payment.status': doc.payment.status, 'payment.refund': doc.payment.refund } });
+  return r;
+};
+
+await check('cancel while an admin refund is being paid: refused, nothing extra paid', async () => {
+  const { _id, userId } = await makeOrder();
+  await Order.collection.updateOne({ _id }, { $set: { adminRefund: {
+    status: 'pending', refundedPaise: 20000, claim: { key: 'rf_live', at: new Date(), amountPaise: 20000, prevStatus: 'none' },
+  } } });
+  const r = await cancelRefund(_id);
+  assert.equal(r.reason, 'admin_refund_in_progress');
+  assert.equal(await walletOf(userId), 0);
+});
+
+await check('cancel after an admin partial refund: only the rest goes back', async () => {
+  const { _id, userId } = await makeOrder();
+  await processRefundAdmin(String(_id), 120, adminId, 'partial first');
+  // An admin partial refund marks payment.refund processed; a full cancel
+  // treats that as already refunded, so reset it to exercise the cap itself.
+  await Order.updateOne({ _id }, { $set: { 'payment.refund.status': 'none' } });
+  const r = await cancelRefund(_id);
+  assert.equal(r.processed, true);
+  assert.equal(r.amount, 180);
+  assert.equal(await walletOf(userId), 300);
+  assert.equal((await Order.findById(_id).lean()).adminRefund.refundedPaise, 30000);
+});
+
+await check('admin refund racing a cancellation: together never more than paid', async () => {
+  for (let i = 0; i < 5; i += 1) {
+    const { _id, userId } = await makeOrder();
+    await Promise.allSettled([processRefundAdmin(String(_id), 200, adminId, 'race admin'), cancelRefund(_id)]);
+    const paid = await walletOf(userId);
+    assert.ok(paid <= 300, `paid ${paid}`);
+    assert.equal(Math.round(paid * 100), (await Order.findById(_id).lean()).adminRefund.refundedPaise, 'counter matches money out');
+  }
+});
+
 await mongoose.disconnect();
 await mongo.stop();
 console.log(failed ? `\n${failed} check(s) failed\n` : '\nall checks passed\n');
