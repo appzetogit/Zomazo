@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Search, Edit, Trash2, Calendar, RefreshCw, Loader2 } from "lucide-react"
 import { rewardsAdminAPI } from "@food/api"
-import { ECOMMERCE_ENABLED } from "@/config/features"
+import { ECOMMERCE_ENABLED, SERVICE_PROVIDER_ENABLED } from "@/config/features"
 
 /**
  * Admin > Cashback: the platform's cashback offers. Paid into the customer's one
@@ -17,6 +17,7 @@ const SERVICES = [
   { key: "quickCommerce", label: "Quick & Medical" },
   { key: "taxi", label: "Rides" },
   ...(ECOMMERCE_ENABLED ? [{ key: "ecommerce", label: "Shop" }] : []),
+  ...(SERVICE_PROVIDER_ENABLED ? [{ key: "serviceProvider", label: "Services" }] : []),
 ]
 const LABEL = Object.fromEntries(SERVICES.map((s) => [s.key, s.label]))
 

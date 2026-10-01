@@ -421,6 +421,32 @@ bookingSchema.pre('save', async function (next) {
   next();
 });
 
+/*
+ * Loyalty points and platform cashback when a booking completes
+ * (services/platformRewards.js). A booking is completed in several places --
+ * worker, vendor, cash collection, online and QR payment -- all through save(),
+ * so this is the one place that sees them all. Most save inside a transaction:
+ * the reward waits for the session to end and re-reads the booking, so a
+ * rolled-back completion pays nothing. The core pays once per booking.
+ */
+bookingSchema.pre('save', function (next) {
+  this.$locals.completedNow = this.isModified('status') && this.status === 'completed';
+  next();
+});
+bookingSchema.post('save', function () {
+  if (!this.$locals.completedNow) return;
+  const id = this._id;
+  const run = () => {
+    const Booking = mongoose.models.SPBooking;
+    Booking.findById(id).lean()
+      .then((fresh) => fresh && require('../services/platformRewards').rewardCompletedBooking(fresh))
+      .catch((err) => console.warn(`[SP] booking rewards hook failed for ${id}: ${err?.message || err}`));
+  };
+  const session = this.$session();
+  if (session && session.inTransaction()) session.once('ended', run);
+  else run();
+});
+
 // Core compound indexes
 bookingSchema.index({ userId: 1, status: 1, createdAt: -1 });
 bookingSchema.index({ vendorId: 1, status: 1, createdAt: -1 });

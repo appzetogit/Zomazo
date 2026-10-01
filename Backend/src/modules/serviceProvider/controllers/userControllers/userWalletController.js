@@ -201,11 +201,19 @@ const verifyWalletTopup = async (req, res) => {
       });
     }
 
+    // Admin > Wallet Bonus, once per Razorpay order, after the top-up committed.
+    const bonus = await require('../../services/platformRewards').applyTopupBonus({
+      customerId: userId,
+      topupAmount: amount,
+      reference: razorpay_order_id
+    });
+
     res.status(200).json({
       success: true,
       message: 'Money added to wallet successfully',
       data: {
-        balance: outcome.balance
+        balance: Math.round((Number(outcome.balance) + bonus) * 100) / 100,
+        bonus
       }
     });
   } catch (error) {
