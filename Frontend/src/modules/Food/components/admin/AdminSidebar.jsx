@@ -1153,7 +1153,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate(masterItems[0].path)}
                 className={cn(
-                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                   location.pathname.startsWith("/admin/master")
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1175,7 +1175,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate("/admin/food")}
                 className={cn(
-                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                   location.pathname.includes("/admin/food") || location.pathname === "/admin" || location.pathname === "/admin/"
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1197,7 +1197,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate("/taxi/admin/dashboard")}
                 className={cn(
-                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                   location.pathname.startsWith("/taxi")
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1219,7 +1219,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate("/admin/sp/dashboard")}
                 className={cn(
-                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                   location.pathname.startsWith("/admin/sp")
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1239,7 +1239,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate("/admin/quick-commerce")}
                 className={cn(
-                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                   location.pathname.startsWith("/admin/quick-commerce")
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1251,7 +1251,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                     location.pathname.startsWith("/admin/quick-commerce") ? "text-[var(--sb-active-ink)]" : "text-[var(--sb-ink-faint)]"
                   )}
                 />
-                Quick
+                Quick Commerce
               </button>
               )}
               {/* Medical: the quick-commerce panel narrowed to pharmacies. Its own
@@ -1261,7 +1261,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate("/admin/medical")}
                 className={cn(
-                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                   location.pathname.startsWith("/admin/medical")
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1283,7 +1283,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate("/admin/shop")}
                 className={cn(
-                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                   location.pathname.startsWith("/admin/shop")
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1295,7 +1295,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                     location.pathname.startsWith("/admin/shop") ? "text-[var(--sb-active-ink)]" : "text-[var(--sb-ink-faint)]"
                   )}
                 />
-                Shop
+                E-commerce
               </button>
               )}
             </div>
