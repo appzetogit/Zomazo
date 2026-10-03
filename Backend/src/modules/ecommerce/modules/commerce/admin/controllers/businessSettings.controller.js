@@ -1,5 +1,6 @@
 import { BusinessSettings } from '../models/businessSettings.model.js';
 import { sendResponse } from '../../../../utils/response.js';
+import { overlayBusinessSettings } from '../../../../../../core/settings/platformProfile.service.js';
 import { uploadImageBufferDetailed } from '../../../../services/cloudinary.service.js';
 
 /** The web-config keys the admin panel may write. Anything else is ignored. */
@@ -182,7 +183,8 @@ export async function getBusinessSettings(req, res, next) {
             payload.firebaseServiceAccount = describeServiceAccount(withSecret?.firebaseServiceAccount);
         }
 
-        return sendResponse(res, 200, 'Business settings fetched successfully', payload);
+        // Master > Platform settings owns the brand, as on Food and Quick.
+        return sendResponse(res, 200, 'Business settings fetched successfully', await overlayBusinessSettings(payload));
     } catch (error) {
         next(error);
     }
@@ -436,7 +438,7 @@ export async function updateBusinessSettings(req, res, next) {
         const payload = settings.toObject();
         payload.firebaseServiceAccount = describeServiceAccount(settings.firebaseServiceAccount);
 
-        return sendResponse(res, 200, 'Business settings updated successfully', payload);
+        return sendResponse(res, 200, 'Business settings updated successfully', await overlayBusinessSettings(payload));
     } catch (error) {
         next(error);
     }
