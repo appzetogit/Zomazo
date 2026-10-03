@@ -122,6 +122,17 @@ await check('Services can save an admin that Master made (role ADMIN) and one ta
     }
 });
 
+await check('only Food stamps a default servicesAccess; taxi and Services admins are made without one', async () => {
+    const hashed = await bcrypt.hash('secret1', 4);
+    const taxi = await TaxiAdmin.create({ name: 'T', email: 'access-taxi@x.in', password: hashed });
+    const sp = await SPAdmin.create({ name: 'S', email: 'access-sp@x.in', password: 'plain12' });
+    const food = await FoodAdmin.create({ email: 'access-food@x.in', password: 'plain12' });
+    const raw = (id) => mongoose.connection.collection('admins').findOne({ _id: id });
+    assert.equal((await raw(taxi._id)).servicesAccess, undefined);
+    assert.equal((await raw(sp._id)).servicesAccess, undefined);
+    assert.deepEqual((await raw(food._id)).servicesAccess, ['food']);
+});
+
 await check('taxi does not hash a password it already hashed; Food and Services do hash', async () => {
     const hashed = await bcrypt.hash('secret1', 4);
     const taxi = await TaxiAdmin.create({ name: 'T', email: 'hash-taxi@x.in', password: hashed });

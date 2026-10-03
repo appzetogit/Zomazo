@@ -1,11 +1,13 @@
 const jwt = require('jsonwebtoken');
+const { config } = require('../../../config/env.js');
 
-// Master's src/config/env.js resolves jwtAccessSecret as JWT_ACCESS_SECRET || JWT_SECRET.
-// SP used to read JWT_SECRET alone, so when both vars are set the two halves of the app
-// sign with different keys and cross-module tokens (one admin login, three panels) fail
-// to verify. Resolve it exactly the way master does.
-const ACCESS_SECRET = () => process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
-const REFRESH_SECRET = () => process.env.JWT_REFRESH_SECRET;
+// The platform's secrets, from the platform's config -- not re-read from
+// process.env. One admin login serves every panel, so SP must sign and verify
+// with exactly the key master does. Reading the env vars here missed master's
+// fallback: with them unset (dev, tests) master generated a key and SP signed
+// with `undefined`, so every SP sign-in failed. Production requires them set.
+const ACCESS_SECRET = () => config.jwtAccessSecret;
+const REFRESH_SECRET = () => config.jwtRefreshSecret;
 
 /**
  * Generate access token
