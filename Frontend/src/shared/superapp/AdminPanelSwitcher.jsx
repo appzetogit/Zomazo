@@ -39,7 +39,7 @@ export default function AdminPanelSwitcher({ current, onNavigate }) {
       {items.map((item) => {
         const Icon = PANEL_ICONS[item.service] || Settings2
         const active = item.service === current
-        const className = `min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300 ${
+        const className = `min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300 ${
           active
             ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
             : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -47,7 +47,7 @@ export default function AdminPanelSwitcher({ current, onNavigate }) {
         const body = (
           <>
             <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? "text-[var(--sb-active-ink)]" : "text-[var(--sb-ink-faint)]"}`} />
-            <span className="max-w-full truncate">{item.label}</span>
+            <span className="max-w-full">{item.label}</span>
           </>
         )
         return onNavigate ? (
