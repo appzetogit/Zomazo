@@ -27,11 +27,10 @@ import { ADMIN_LEVELS, ADMIN_MODULES } from './adminHierarchy.constants.js';
  * @param {object} [opts.defaults]           role, admin_type and servicesAccess defaults.
  */
 export function buildAdminSchema({ hashOnSave = true, hidePassword = false, defaults = {} } = {}) {
-    const {
-        role = 'ADMIN',
-        admin_type = 'subadmin',
-        servicesAccess = ['food'],
-    } = defaults;
+    const { role = 'ADMIN', admin_type = 'subadmin' } = defaults;
+    // Not a destructuring default: `servicesAccess: undefined` means "no default",
+    // and a destructuring default would quietly turn it into ['food'].
+    const servicesAccess = 'servicesAccess' in defaults ? defaults.servicesAccess : ['food'];
 
     const schema = new mongoose.Schema(
         {
