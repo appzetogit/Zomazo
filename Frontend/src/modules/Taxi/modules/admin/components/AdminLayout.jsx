@@ -1522,7 +1522,7 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate(masterEntry)}
                   className={cn(
-                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                     "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
                   )}
                 >
@@ -1533,7 +1533,7 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate("/admin/food")}
                   className={cn(
-                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                     "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
                   )}
                 >
@@ -1544,7 +1544,7 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate("/taxi/admin/dashboard")}
                   className={cn(
-                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                     // Was bg-white/text-black, which marked the current module only
                     // because the strip behind it was dark. On a light strip that is
                     // the least distinguishable fill available, so the active tab
@@ -1561,7 +1561,7 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate("/admin/sp/dashboard")}
                   className={cn(
-                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                     "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
                   )}
                 >
@@ -1572,12 +1572,12 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate("/admin/quick-commerce")}
                   className={cn(
-                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                     "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
                   )}
                 >
                   <ShoppingBasket className="w-3.5 h-3.5 text-[var(--sb-ink-faint)]" />
-                  Quick
+                  Quick Commerce
                 </button>}
                 {/* Medical sits beside Quick in every panel's switcher; it was only
                     added to the food one, so it vanished on the way here. */}
@@ -1585,7 +1585,7 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate("/admin/medical")}
                   className={cn(
-                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                     "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
                   )}
                 >
@@ -1597,12 +1597,12 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate("/admin/shop")}
                   className={cn(
-                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-tight text-center font-bold rounded-lg transition-all duration-300",
                     "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
                   )}
                 >
                   <Store className="w-3.5 h-3.5 text-[var(--sb-ink-faint)]" />
-                  Shop
+                  E-commerce
                 </button>}
               </div>
             )}
