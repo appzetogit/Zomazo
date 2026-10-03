@@ -266,12 +266,15 @@ check('the deploy webhook signs the raw body and compares in constant time', () 
     assert.match(app, /'\/api\/deploy'/, 'app.js no longer captures the raw body for /api/deploy');
 });
 
-check('devOtpEnabled needs USE_DEFAULT_OTP AND a non-production NODE_ENV', () => {
+check('devOtpEnabled needs USE_DEFAULT_OTP AND (non-production OR the acknowledged override)', () => {
     const probe = `const { devOtpEnabled } = await import('./src/core/otp/devOtp.js'); console.log('RESULT:' + devOtpEnabled());`;
     const run = (env) => runNode(probe, env).out.match(/RESULT:(true|false)/)?.[1];
     assert.equal(run({ NODE_ENV: 'development' }), 'false', 'on by default in development');
     assert.equal(run({ NODE_ENV: '' }), 'false', 'on when NODE_ENV is unset');
     assert.equal(run({ NODE_ENV: 'development', USE_DEFAULT_OTP: 'true' }), 'true', 'opt-in does not work');
+    assert.equal(run({ NODE_ENV: 'production', USE_DEFAULT_OTP: 'true' }), 'false', 'USE_DEFAULT_OTP alone turns it on in production');
+    assert.equal(run({ NODE_ENV: 'production', USE_DEFAULT_OTP: 'true', ALLOW_INSECURE_DEFAULT_OTP: 'true' }), 'true', 'the acknowledged production override does not work');
+    assert.equal(run({ NODE_ENV: 'production', ALLOW_INSECURE_DEFAULT_OTP: 'true' }), 'false', 'the override alone turns it on');
 });
 
 check('the razorpay mock bypass is not reachable via useDefaultOtp', () => {
