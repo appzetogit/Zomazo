@@ -4,6 +4,7 @@ import { requireRoles } from '../roles/role.middleware.js';
 import { sendResponse, sendError } from '../../utils/response.js';
 import { loadAdminCached } from '../../modules/food/admin/middlewares/foodAdmin.middleware.js';
 import * as service from './platformAdmins.service.js';
+import { isAdminActive } from './admin.model.js';
 
 /**
  * /v1/platform/admins -- admin accounts for every panel.
@@ -29,7 +30,7 @@ router.use(async (req, res, next) => {
   try {
     const admin = await loadAdminCached(req.user?.userId || req.user?.id);
     if (!admin) return sendError(res, 403, 'Admin account not found');
-    if (admin.isActive === false) return sendError(res, 403, 'Your admin account has been deactivated');
+    if (!isAdminActive(admin)) return sendError(res, 403, 'Your admin account has been deactivated');
     req.platformAdmin = admin;
     return next();
   } catch (err) {

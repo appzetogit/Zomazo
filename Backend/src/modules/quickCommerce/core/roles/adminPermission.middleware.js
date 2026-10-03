@@ -8,6 +8,7 @@
  * Medical; requireFinancePermission now finds every Quick admin in `admins`.
  */
 import { sendError } from '../../utils/response.js';
+import { isAdminActive } from '../../../../core/admin/admin.model.js';
 
 const isSuperAdmin = (admin) =>
     !admin?.adminType || admin?.adminType === 'super_admin' || admin?.isSuperAdmin === true;
@@ -53,7 +54,7 @@ export const requireAdminPermission = (section, action = 'view') => async (req, 
         }
 
         const admin = await hydrateAdmin(req);
-        if (!admin || admin.isDeleted || admin.isActive === false) {
+        if (!admin || admin.isDeleted || !isAdminActive(admin)) {
             return sendError(res, 403, 'Admin account is inactive');
         }
 
@@ -78,7 +79,7 @@ export const requireAnyAdminPermission = (rules = []) => async (req, res, next) 
         }
 
         const admin = await hydrateAdmin(req);
-        if (!admin || admin.isDeleted || admin.isActive === false) {
+        if (!admin || admin.isDeleted || !isAdminActive(admin)) {
             return sendError(res, 403, 'Admin account is inactive');
         }
 

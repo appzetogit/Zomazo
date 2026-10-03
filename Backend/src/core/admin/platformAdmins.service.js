@@ -7,7 +7,7 @@
  * permissions from adminAccessPolicy.js.
  */
 import mongoose from 'mongoose';
-import { FoodAdmin } from './admin.model.js';
+import { FoodAdmin, isAdminActive } from './admin.model.js';
 import { ADMIN_LEVELS } from './adminHierarchy.constants.js';
 import { getDescendantAdminIds } from './adminHierarchy.service.js';
 import {
@@ -89,7 +89,7 @@ function roleOf(doc) {
 
 function serialize(doc, names = {}) {
   const role = roleOf(doc);
-  const active = doc.isActive !== false && doc.active !== false && String(doc.status || 'active') !== 'inactive';
+  const active = isAdminActive(doc);
   return {
     id: String(doc._id),
     name: doc.name || '',

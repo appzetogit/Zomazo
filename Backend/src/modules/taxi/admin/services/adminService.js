@@ -3649,6 +3649,9 @@ export const deleteUser = async (id) => {
         deletedAt: new Date(),
         deletion_reason: 'admin_delete',
         active: false,
+        // The account is gone from every app, not just taxi: Food, Quick and the
+        // Shop sign in on isActive alone.
+        isActive: false,
       },
     },
     { returnDocument: 'after' },
@@ -3693,6 +3696,7 @@ export const restoreDeletedUser = async (id) => {
         deletedAt: null,
         deletion_reason: '',
         active: true,
+        isActive: true,
       },
     },
     { returnDocument: 'after', runValidators: true },

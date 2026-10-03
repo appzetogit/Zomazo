@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { ForbiddenError, AuthError } from '../../../../core/auth/errors.js';
-import { FoodAdmin } from '../../../../core/admin/admin.model.js';
+import { FoodAdmin, isAdminActive } from '../../../../core/admin/admin.model.js';
 import { serializeAdminContext, hasAdminPermission } from '../../../../core/admin/adminHierarchy.service.js';
 import { logger } from '../../../../utils/logger.js';
 
@@ -91,7 +91,7 @@ export const attachFoodAdminContext = async (req, res, next) => {
       return next(new AuthError('Admin account not found'));
     }
 
-    if (admin.isActive === false) {
+    if (!isAdminActive(admin)) {
       // Never serve a deactivated admin from cache on a later request.
       invalidateAdminCache(userId);
       return next(new ForbiddenError('Your account has been deactivated'));

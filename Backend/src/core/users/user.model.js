@@ -78,10 +78,20 @@ const userSchema = new mongoose.Schema(
             default: '+91'
         },
         name: {
-            type: String
+            type: String,
+            trim: true
         },
         email: {
-            type: String
+            type: String,
+            trim: true,
+            lowercase: true
+        },
+        // Taxi's customer password, for the admin-made accounts that sign in with
+        // one. Hidden: nothing outside taxi reads it, and taxi asks with '+password'.
+        password: {
+            type: String,
+            minlength: 5,
+            select: false
         },
         profileImage: {
             type: String,
@@ -191,7 +201,39 @@ const userSchema = new mongoose.Schema(
         spReferralCount: { type: Number, default: 0, min: 0 },
         /** The Services share code (SPxxxxxx) people already hold. */
         spReferralCode: { type: String, trim: true, uppercase: true, default: undefined, index: true },
-        mergedSpIds: { type: [mongoose.Schema.Types.ObjectId], default: undefined }
+        mergedSpIds: { type: [mongoose.Schema.Types.ObjectId], default: undefined },
+
+        /*
+         * Taxi's customers have always been rows of this collection; these are the
+         * fields only taxi writes. They used to live in a second schema
+         * (modules/taxi/user/models/User.js) over the same documents, which meant a
+         * taxi write skipped this schema's hooks -- phoneLast10 among them.
+         *
+         * `active` is taxi's own switch, like quickBlocked/shopBlocked above;
+         * isActive stays every app's. Deleting an account (deletedAt) is not a
+         * per-app matter, so whatever sets deletedAt sets isActive false too.
+         */
+        active: { type: Boolean, default: true },
+        deletedAt: { type: Date, default: null },
+        deletion_reason: { type: String, default: '', trim: true },
+        deletionRequest: {
+            status: {
+                type: String,
+                enum: ['none', 'pending', 'approved', 'rejected'],
+                default: 'none',
+                index: true
+            },
+            reason: { type: String, default: '', trim: true },
+            requestedAt: { type: Date, default: null },
+            reviewedAt: { type: Date, default: null },
+            reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'TaxiAdmin', default: null },
+            adminNote: { type: String, default: '', trim: true }
+        },
+        currentRideId: { type: mongoose.Schema.Types.ObjectId, ref: 'TaxiRide', default: null },
+        pending_cancellation_due: { type: Number, default: 0 },
+        /** Taxi's referral reward: rides the invitee has completed, and when it paid. */
+        referredRideCompletionCount: { type: Number, default: 0, min: 0 },
+        referralRewardGrantedAt: { type: Date, default: null }
     },
     {
         collection: 'users',
@@ -201,6 +243,7 @@ const userSchema = new mongoose.Schema(
 
 userSchema.index({ phone: 1 }, { unique: true });
 userSchema.index({ 'addresses.location': '2dsphere' });
+userSchema.index({ 'deletionRequest.status': 1, deletedAt: 1 });
 
 // Indexed last-10-digit phone, so sign-in finds the row without a regex scan
 // (core/identity/phoneLast10.cjs).

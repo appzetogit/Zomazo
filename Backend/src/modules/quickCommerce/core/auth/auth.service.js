@@ -70,6 +70,7 @@ import { resolveInviter } from '../../../../core/referral/inviteCode.service.js'
 import { ensureQuickCustomer } from './auth.middleware.js';
 import { quickCustomerForPhone, resolveQuickCustomerId } from "../../../../core/identity/quickCustomer.js";
 import { byLast10 } from "../../../../core/identity/phoneLast10.cjs";
+import { isAdminActive } from "../../../../core/admin/admin.model.js";
 const ROLES = {
   USER: "USER",
   RESTAURANT: "RESTAURANT",
@@ -391,7 +392,7 @@ export const adminLogin = async (email, password) => {
     throw new AuthError("Invalid credentials");
   }
 
-  if (admin.isDeleted || admin.isActive === false) {
+  if (admin.isDeleted || !isAdminActive(admin)) {
     throw new AuthError("Admin account is inactive");
   }
 

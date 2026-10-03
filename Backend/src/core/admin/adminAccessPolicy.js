@@ -20,6 +20,7 @@
  */
 import { ADMIN_LEVELS } from './adminHierarchy.constants.js';
 import { resolveAdminLevel, resolveAdminModule } from './adminHierarchy.service.js';
+import { isAdminActive } from './admin.model.js';
 
 export const ADMIN_SERVICES = [
   { key: 'food', label: 'Food' },
@@ -199,7 +200,7 @@ export const OPEN = '__open__';
 
 export function decideAdminAccess(admin, { service, resource, write, remove = false }) {
   if (!admin) return { allowed: false, reason: 'no_admin' };
-  if (admin.isActive === false || admin.isDeleted === true) return { allowed: false, reason: 'inactive' };
+  if (!isAdminActive(admin) || admin.isDeleted === true) return { allowed: false, reason: 'inactive' };
 
   const level = effectiveAdminLevel(admin);
   if (level === ADMIN_LEVELS.PLATFORM_SUPERADMIN) return { allowed: true, reason: 'platform_superadmin' };

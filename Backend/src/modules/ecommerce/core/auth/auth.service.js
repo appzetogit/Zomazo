@@ -43,6 +43,7 @@ import {
 import { assertStrongAdminPassword } from "../admin/adminPassword.js";
 import { withSharedProfile } from "../../../../core/identity/sharedProfile.js";
 import { byLast10 } from "../../../../core/identity/phoneLast10.cjs";
+import { isAdminActive } from "../../../../core/admin/admin.model.js";
 
 const ROLES = {
   USER: "USER",
@@ -325,7 +326,7 @@ export const adminLogin = async (email, password) => {
     throw new AuthError("Invalid credentials");
   }
 
-  if (admin.isDeleted || admin.isActive === false) {
+  if (admin.isDeleted || !isAdminActive(admin)) {
     throw new AuthError("Admin account is inactive");
   }
 

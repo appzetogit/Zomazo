@@ -1,92 +1,16 @@
 import mongoose from 'mongoose';
+import { buildAdminSchema } from '../../../../core/admin/admin.model.js';
 
-const adminSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    email: {
-      type: String,
-      lowercase: true,
-      trim: true,
-      unique: true,
-    },
-    phone: {
-      type: String,
-      trim: true,
-    },
-    password: {
-      type: String,
-      required: true,
-      minlength: 5,
-      select: false,
-    },
-    role: {
-      type: String,
-      default: 'superadmin',
-      trim: true,
-    },
-    admin_type: {
-      type: String,
-      enum: ['superadmin', 'subadmin'],
-      default: 'superadmin',
-      trim: true,
-    },
-    permissions: {
-      type: [String],
-      default: [],
-    },
-    service_location_ids: {
-      type: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'TaxiServiceLocation',
-        },
-      ],
-      default: [],
-    },
-    zone_ids: {
-      type: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'TaxiZone',
-        },
-      ],
-      default: [],
-    },
-    active: {
-      type: Boolean,
-      default: true,
-    },
-    status: {
-      type: String,
-      enum: ['active', 'inactive'],
-      default: 'active',
-      trim: true,
-    },
-    resetPasswordOtp: {
-      type: String,
-      select: false,
-    },
-    resetPasswordExpires: {
-      type: Date,
-      select: false,
-    },
-    // Wrong reset codes submitted against the current code. See adminService.
-    resetPasswordAttempts: {
-      type: Number,
-      default: 0,
-      select: false,
-    },
-  },
-  {
-    collection: 'admins',
-    timestamps: true,
-  },
-);
-
-adminSchema.index({ admin_type: 1, active: 1 });
+/*
+ * Taxi's view of the shared `admins` collection. The fields are the platform's
+ * one admin schema (core/admin/admin.model.js); only taxi's habits differ:
+ * it hashes passwords itself before writing, asks for them with '+password',
+ * and makes superadmins by default.
+ */
+const adminSchema = buildAdminSchema({
+  hashOnSave: false,
+  hidePassword: true,
+  defaults: { role: 'superadmin', admin_type: 'superadmin', servicesAccess: undefined },
+});
 
 export const Admin = mongoose.models.TaxiAdmin || mongoose.model('TaxiAdmin', adminSchema);
