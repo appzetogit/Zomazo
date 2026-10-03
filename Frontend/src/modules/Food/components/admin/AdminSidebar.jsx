@@ -1140,7 +1140,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
 
           {/* Module Switcher Tabs */}
           {!isCollapsed && (
-            <div className="flex p-1 bg-[var(--sb-surface-raised)] backdrop-blur-sm rounded-xl mb-4 border border-[var(--sb-border)] shadow-inner animate-[slideIn_0.4s_ease-out_0.15s_both]">
+            <div className="grid grid-cols-4 gap-1 p-1.5 bg-[var(--sb-surface-raised)] backdrop-blur-sm rounded-xl mb-4 border border-[var(--sb-border)] shadow-inner animate-[slideIn_0.4s_ease-out_0.15s_both]">
               {/* Master: the cross-module engine (earnings, incentives, promo
                   limits, brand, legal). Shown when the admin can open at least
                   one of its screens, and it opens on the first one they may --
@@ -1152,7 +1152,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate(masterItems[0].path)}
                 className={cn(
-                  "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                   location.pathname.startsWith("/admin/master")
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1174,7 +1174,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate("/admin/food")}
                 className={cn(
-                  "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                   location.pathname.includes("/admin/food") || location.pathname === "/admin" || location.pathname === "/admin/"
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1196,7 +1196,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate("/taxi/admin/dashboard")}
                 className={cn(
-                  "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                   location.pathname.startsWith("/taxi")
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1218,7 +1218,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate("/admin/sp/dashboard")}
                 className={cn(
-                  "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                   location.pathname.startsWith("/admin/sp")
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1238,7 +1238,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate("/admin/quick-commerce")}
                 className={cn(
-                  "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                   location.pathname.startsWith("/admin/quick-commerce")
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1260,7 +1260,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate("/admin/medical")}
                 className={cn(
-                  "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                   location.pathname.startsWith("/admin/medical")
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
@@ -1282,7 +1282,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                 type="button"
                 onClick={() => navigate("/admin/shop")}
                 className={cn(
-                  "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                  "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                   location.pathname.startsWith("/admin/shop")
                     ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
                     : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"

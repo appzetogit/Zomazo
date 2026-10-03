@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import "./adminSidebarPalette.css"
 import { UtensilsCrossed, Truck, Wrench, ShoppingBasket, Pill, ShoppingBag, Settings2 } from "lucide-react"
 import { useAdminAccess } from "@food/utils/adminAccess"
 import { masterEntryFor, visibleAdminPanels } from "./adminPanels"
@@ -14,7 +15,7 @@ const PANEL_ICONS = {
 }
 
 /**
- * The service switcher for a dark admin sidebar: Master (when this admin may
+ * The service switcher for an admin sidebar (light --sb-* palette): Master (when this admin may
  * open it), then every panel they were given (shared/superapp/adminPanels.js).
  *
  * `current` is the panel showing it. `onNavigate` moves within the host app's
@@ -34,18 +35,18 @@ export default function AdminPanelSwitcher({ current, onNavigate }) {
   if (items.length < 2) return null
 
   return (
-    <div className="grid grid-cols-4 gap-0.5 p-1 bg-neutral-800/40 backdrop-blur-sm rounded-xl mb-1 border border-white/5 shadow-inner">
+    <div className="admin-sb-palette grid grid-cols-4 gap-1 p-1.5 bg-[var(--sb-surface-raised)] backdrop-blur-sm rounded-xl mb-1 border border-[var(--sb-border)] shadow-inner">
       {items.map((item) => {
         const Icon = PANEL_ICONS[item.service] || Settings2
         const active = item.service === current
-        const className = `min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300 ${
+        const className = `min-w-0 overflow-hidden flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300 ${
           active
-            ? "bg-white text-black shadow-[0_4px_12px_rgba(255,255,255,0.15)]"
-            : "text-neutral-400 hover:text-neutral-200 hover:bg-white/5"
+            ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
+            : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
         }`
         const body = (
           <>
-            <Icon className={`w-3.5 h-3.5 ${active ? "text-black" : "text-neutral-500"}`} />
+            <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? "text-[var(--sb-active-ink)]" : "text-[var(--sb-ink-faint)]"}`} />
             <span className="max-w-full truncate">{item.label}</span>
           </>
         )

@@ -29,11 +29,11 @@ const AdminBottomNav = () => {
   const iconVariants = {
     inactive: {
       scale: 1,
-      color: "#878787",
+      color: "#6E655B",
     },
     active: {
       scale: 1.1,
-      color: "#2874F0", // Primary color
+      color: "#1A1A1A", // Same black active as the rest of the admin shell
       transition: {
         duration: 0.3,
         ease: "easeOut",
@@ -60,7 +60,7 @@ const AdminBottomNav = () => {
               className="flex flex-col items-center justify-center flex-1 h-full gap-1">
               <motion.div
                 className={`relative flex items-center justify-center ${
-                  active ? "text-[#2874F0]" : "text-[#878787]"
+                  active ? "text-[#1A1A1A]" : "text-[#6E655B]"
                 }`}
                 variants={iconVariants}
                 initial="inactive"

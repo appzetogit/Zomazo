@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import "@/shared/superapp/adminSidebarPalette.css";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiHome,
@@ -358,8 +359,8 @@ const AdminSidebar = ({ isOpen, onClose }) => {
           className={`
             flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer text-sm
             ${active
-              ? "bg-white/10 text-white font-semibold border border-white/15 shadow-sm"
-              : "text-neutral-400 hover:text-white hover:bg-white/5"
+              ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] font-semibold border border-[var(--sb-active-bg)] shadow-[0_2px_8px_rgba(26,26,26,0.18)]"
+              : "text-[var(--sb-ink-soft)] hover:text-[var(--sb-ink)] hover:bg-[var(--sb-hover)]"
             }
           `}
           onClick={() => {
@@ -370,7 +371,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
             }
           }}>
           <Icon
-            className={`text-lg flex-shrink-0 ${active ? "text-white" : "text-neutral-400"
+            className={`text-lg flex-shrink-0 ${active ? "text-[var(--sb-active-ink)]" : "text-[var(--sb-ink-faint)]"
               }`}
           />
           <span className="font-semibold flex-1 text-sm">{item.title}</span>
@@ -401,7 +402,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
             <motion.div
               animate={{ rotate: isExpanded ? 180 : 0 }}
               transition={{ duration: 0.2 }}>
-              <ChevronDown className="text-neutral-400 text-sm w-4 h-4" />
+              <ChevronDown className="text-current text-sm w-4 h-4" />
             </motion.div>
           )}
         </div>
@@ -415,7 +416,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="overflow-hidden">
-              <div className="ml-4 mt-1 pl-3 border-l border-neutral-800 space-y-1">
+              <div className="ml-4 mt-1 pl-3 border-l border-[var(--sb-border)] space-y-1">
                 {item.children.map((child, index) => {
                   const childRoute = getChildRoute(item.route, child);
                   const isChildActive =
@@ -432,8 +433,8 @@ const AdminSidebar = ({ isOpen, onClose }) => {
                       className={`
                         px-3 py-2 text-xs rounded-lg transition-colors cursor-pointer flex justify-between items-center
                         ${isChildActive
-                          ? "bg-white/10 text-white font-semibold"
-                          : "text-neutral-400 hover:text-white hover:bg-white/5"
+                          ? "bg-[var(--sb-active-bg)] text-[var(--sb-active-ink)] font-semibold"
+                          : "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink)] hover:bg-[var(--sb-hover)]"
                         }
                       `}>
                       <span>{child}</span>
@@ -463,12 +464,12 @@ const AdminSidebar = ({ isOpen, onClose }) => {
 
   // Sidebar content
   const sidebarContent = (
-    <div className="h-full w-full flex flex-col bg-neutral-950 border-r border-neutral-800/60 overflow-hidden">
+    <div className="admin-sb-palette h-full w-full flex flex-col bg-[var(--sb-surface)] border-r border-[var(--sb-border)] overflow-hidden">
       {/* Header Section */}
-      <div className="shrink-0 px-3 py-3 border-b border-neutral-800/60 bg-neutral-900">
+      <div className="shrink-0 px-3 py-3 border-b border-[var(--sb-border)] bg-[var(--sb-surface-raised)]">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3.5">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/5 p-1 transition-all">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--sb-border)] bg-[var(--sb-surface)] p-1 transition-all">
               <img
                 src={effectiveLogo}
                 alt={servicesTitle}
@@ -481,13 +482,13 @@ const AdminSidebar = ({ isOpen, onClose }) => {
               />
             </div>
             <div className="flex flex-col min-w-0">
-              <h3 className="text-[15px] font-extrabold leading-tight text-white tracking-tight truncate">
+              <h3 className="text-[15px] font-extrabold leading-tight text-[var(--sb-ink)] tracking-tight truncate">
                 {servicesTitle}
               </h3>
               <div className="mt-1 flex items-center gap-1.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                  {adminUser.role === 'super_admin' ? '⭐ Super Admin' : 'System Admin'}
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--sb-ink-faint)]">
+                  System Admin
                 </span>
               </div>
             </div>
@@ -496,7 +497,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
           {/* Close Button - Mobile Only */}
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-white/5 rounded-lg transition-colors flex-shrink-0 lg:hidden text-neutral-300 hover:text-white"
+            className="p-1.5 hover:bg-[var(--sb-hover)] rounded-lg transition-colors flex-shrink-0 lg:hidden text-[var(--sb-ink-soft)] hover:text-[var(--sb-ink)]"
             aria-label="Close sidebar">
             <FiX className="text-xl" />
           </button>
@@ -504,7 +505,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
 
         {/* Admin Panel Label */}
         <div className="mb-3">
-          <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wider text-left">
+          <h2 className="text-sm font-semibold text-[var(--sb-ink-soft)] uppercase tracking-wider text-left">
             Admin Panel
           </h2>
         </div>
@@ -516,7 +517,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 overflow-y-auto p-3 admin-sidebar-scroll lg:pb-3 space-y-1">
+      <nav className="flex-1 overflow-y-auto p-3 admin-sb-scroll lg:pb-3 space-y-1">
         {filteredMenu.map((item) => renderMenuItem(item))}
       </nav>
     </div>
@@ -524,26 +525,6 @@ const AdminSidebar = ({ isOpen, onClose }) => {
 
   return (
     <>
-      <style>{`
-        .admin-sidebar-scroll::-webkit-scrollbar {
-          width: 5px;
-        }
-        .admin-sidebar-scroll::-webkit-scrollbar-track {
-          background: rgba(17, 24, 39, 0.4);
-        }
-        .admin-sidebar-scroll::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.15);
-          border-radius: 4px;
-        }
-        .admin-sidebar-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.3);
-        }
-        .admin-sidebar-scroll {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(255, 255, 255, 0.15) rgba(17, 24, 39, 0.4);
-        }
-      `}</style>
-
       {/* Mobile: Overlay Backdrop */}
       <AnimatePresence>
         {isOpen && (

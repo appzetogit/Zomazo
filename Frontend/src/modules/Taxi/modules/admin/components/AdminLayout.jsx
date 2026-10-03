@@ -558,7 +558,7 @@ const ModeSwitcher = ({ mode, setMode }) => {
         onClick={() => setIsOpen((current) => !current)}
         className="group flex items-center gap-3 rounded-2xl border border-neutral-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2 shadow-sm transition-all hover:border-amber-400/30 hover:shadow-md active:scale-95"
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#f8fafc] dark:bg-slate-900mber-50 text-amber-600 group-hover:bg-[#f8fafc] dark:bg-slate-900mber-600 group-hover:text-white transition-all">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
           <Briefcase size={16} />
         </div>
         <div className="text-left leading-tight">
@@ -580,7 +580,7 @@ const ModeSwitcher = ({ mode, setMode }) => {
                   setMode(option.id);
                   setIsOpen(false);
                 }}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all ${selected ? 'bg-[#f8fafc] dark:bg-slate-900mber-600 text-white shadow-lg shadow-amber-200' : 'hover:bg-neutral-50 dark:bg-slate-900'
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all ${selected ? 'bg-amber-600 text-white shadow-lg shadow-amber-200' : 'hover:bg-neutral-50 dark:bg-slate-900'
                   }`}
               >
                 <span
@@ -1513,7 +1513,7 @@ const AdminLayout = () => {
 
             {/* Module Switcher Tabs */}
             {!isCollapsed && (
-              <div className="flex p-1 bg-[var(--sb-surface-raised)] backdrop-blur-sm rounded-xl mb-1 border border-[var(--sb-border)] shadow-inner">
+              <div className="grid grid-cols-4 gap-1 p-1.5 bg-[var(--sb-surface-raised)] backdrop-blur-sm rounded-xl mb-1 border border-[var(--sb-border)] shadow-inner">
                 {/* Master: the cross-module engine, same screens from every panel.
                     Shown when this admin can open at least one of them, and it
                     opens on the first one they may. */}
@@ -1521,7 +1521,7 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate(masterEntry)}
                   className={cn(
-                    "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                     "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
                   )}
                 >
@@ -1532,7 +1532,7 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate("/admin/food")}
                   className={cn(
-                    "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                     "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
                   )}
                 >
@@ -1543,7 +1543,7 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate("/taxi/admin/dashboard")}
                   className={cn(
-                    "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                     // Was bg-white/text-black, which marked the current module only
                     // because the strip behind it was dark. On a light strip that is
                     // the least distinguishable fill available, so the active tab
@@ -1560,7 +1560,7 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate("/admin/sp/dashboard")}
                   className={cn(
-                    "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                     "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
                   )}
                 >
@@ -1571,7 +1571,7 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate("/admin/quick-commerce")}
                   className={cn(
-                    "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                     "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
                   )}
                 >
@@ -1584,7 +1584,7 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate("/admin/medical")}
                   className={cn(
-                    "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                     "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
                   )}
                 >
@@ -1596,7 +1596,7 @@ const AdminLayout = () => {
                   type="button"
                   onClick={() => navigate("/admin/shop")}
                   className={cn(
-                    "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
+                    "min-w-0 overflow-hidden whitespace-nowrap flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] leading-none font-bold rounded-lg transition-all duration-300",
                     "text-[var(--sb-ink-faint)] hover:text-[var(--sb-ink-soft)] hover:bg-[var(--sb-hover)]"
                   )}
                 >
@@ -1655,7 +1655,7 @@ const AdminLayout = () => {
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-neutral-100 dark:bg-slate-950">
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-neutral-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="h-6 w-1 rounded-full bg-[#f8fafc] dark:bg-slate-900mber-600" />
+            <div className="h-6 w-1 rounded-full bg-amber-600" />
             <h2 className="text-[15px] font-bold tracking-tight text-neutral-800 dark:text-neutral-200">{pageTitle}</h2>
           </div>
 
@@ -1703,7 +1703,7 @@ const AdminLayout = () => {
                             Clear
                           </button>
                         ) : null}
-                        <span className="rounded-full bg-[#f8fafc] dark:bg-slate-900mber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700">
+                        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700">
                           {totalNotificationItems}
                         </span>
                       </div>
@@ -1783,7 +1783,7 @@ const AdminLayout = () => {
                                     Pickup: {formatAdminNotificationLocation(item.pickupLabel, 'Pickup location set')}
                                   </p>
                                 </div>
-                                <span className="shrink-0 rounded-full bg-[#f8fafc] dark:bg-slate-900mber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                                <span className="shrink-0 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">
                                   {item.tripStatus || 'Upcoming'}
                                 </span>
                               </div>

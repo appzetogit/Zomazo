@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react"
 import { Outlet, useLocation } from "@shop/router"
 import AdminSidebar from "./AdminSidebar"
 import AdminNavbar from "./AdminNavbar"
-import { useAdminPanel } from "./useAdminPanel"
 import { API_BASE_URL } from "@shop/api/config"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -11,7 +10,6 @@ const debugError = (...args) => {}
 
 export default function AdminLayout() {
   const location = useLocation();
-  const { panel } = useAdminPanel();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const mainContentRef = useRef(null);
@@ -80,8 +78,6 @@ export default function AdminLayout() {
       `}>
         {/* Top Navbar */}
         <AdminNavbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        {/* Panel accent: amber for Quick, indigo for Shop, matching the navbar switcher */}
-        <div className={`h-1 w-full ${panel === "shop" ? "bg-indigo-600" : "bg-amber-500"}`} />
 
         {/* Backend disconnected banner */}
         {!API_BASE_URL && (

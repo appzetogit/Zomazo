@@ -1,0 +1,23 @@
+/*
+ * Admin sidebar palette, shared by the Services and Shop admin rails so they
+ * match the Food/Quick/Medical/Master/Taxi rails (Food's AdminSidebar.jsx and
+ * Taxi's AdminLayout.jsx declare the same values inline). Put the class on the
+ * sidebar root; every var(--sb-*) inside resolves from it.
+ */
+.admin-sb-palette {
+  --sb-surface: #FAF8F5;
+  --sb-surface-raised: #FFFFFF;
+  --sb-border: #E8E2D9;
+  --sb-hover: #F1ECE4;
+  --sb-ink: #1A1A1A;
+  --sb-ink-soft: #5C5247;
+  --sb-ink-faint: #6E655B;
+  --sb-active-bg: #1A1A1A;
+  --sb-active-ink: #FFFFFF;
+}
+
+.admin-sb-palette .admin-sb-scroll::-webkit-scrollbar { width: 6px; }
+.admin-sb-palette .admin-sb-scroll::-webkit-scrollbar-track { background: transparent; }
+.admin-sb-palette .admin-sb-scroll::-webkit-scrollbar-thumb { background: var(--sb-border); border-radius: 3px; }
+.admin-sb-palette .admin-sb-scroll::-webkit-scrollbar-thumb:hover { background: var(--sb-ink-faint); }
+.admin-sb-palette .admin-sb-scroll { scrollbar-width: thin; scrollbar-color: var(--sb-border) transparent; }
