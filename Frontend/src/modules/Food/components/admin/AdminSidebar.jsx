@@ -67,6 +67,7 @@ import { rulesFor, VERTICAL } from "@food/utils/verticalVocabulary"
 import { getCachedSettings, loadBusinessSettings } from "@food/utils/businessSettings"
 import quickSpicyLogo from "@food/assets/k9-logo.jpg"
 import { useSettings } from "../../../Taxi/shared/context/SettingsContext"
+import { MEDICAL_TAB_ENABLED } from "@/shared/superapp/adminPanels"
 import { useAdminAccess, filterMenuForAccess, hasPanel, isRestricted } from "@food/utils/adminAccess"
 import { SERVICE_PROVIDER_ENABLED, ECOMMERCE_ENABLED } from "@/config/features"
 /**
@@ -1255,7 +1256,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
               )}
               {/* Medical: the quick-commerce panel narrowed to pharmacies. Its own
                   switch in admin accounts, so a pharmacy team need not see groceries. */}
-              {serviceAccess.medical && (
+              {MEDICAL_TAB_ENABLED && serviceAccess.medical && (
               <button
                 type="button"
                 onClick={() => navigate("/admin/medical")}

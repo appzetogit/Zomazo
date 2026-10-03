@@ -13,12 +13,15 @@
 import { SERVICE_PROVIDER_ENABLED, ECOMMERCE_ENABLED } from "@/config/features"
 import { canOpenPath, hasPanel } from "@food/utils/adminAccess"
 
+/** Medical is hidden from every panel switcher for now; its pages still work by URL. */
+export const MEDICAL_TAB_ENABLED = false
+
 export const ADMIN_PANELS = [
   { service: "food", label: "Food", path: "/admin/food", base: "/admin/food" },
   { service: "taxi", label: "Taxi", path: "/taxi/admin/dashboard", base: "/taxi/admin" },
   { service: "serviceProvider", label: "Services", path: "/admin/sp/dashboard", base: "/admin/sp", enabled: SERVICE_PROVIDER_ENABLED },
   { service: "quickCommerce", label: "Quick", path: "/admin/quick-commerce", base: "/admin/quick-commerce" },
-  { service: "medical", label: "Medical", path: "/admin/medical", base: "/admin/medical" },
+  { service: "medical", label: "Medical", path: "/admin/medical", base: "/admin/medical", enabled: MEDICAL_TAB_ENABLED },
   { service: "ecommerce", label: "Shop", path: "/admin/shop", base: "/admin/shop", enabled: ECOMMERCE_ENABLED },
 ]
 

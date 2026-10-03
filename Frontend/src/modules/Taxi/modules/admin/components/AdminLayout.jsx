@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { MEDICAL_TAB_ENABLED } from "@/shared/superapp/adminPanels";
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { socketService } from '../../../shared/api/socket';
 import { useSettings } from '../../../shared/context/SettingsContext';
@@ -1580,7 +1581,7 @@ const AdminLayout = () => {
                 </button>}
                 {/* Medical sits beside Quick in every panel's switcher; it was only
                     added to the food one, so it vanished on the way here. */}
-                {showPanel("medical") && <button
+                {MEDICAL_TAB_ENABLED && showPanel("medical") && <button
                   type="button"
                   onClick={() => navigate("/admin/medical")}
                   className={cn(
