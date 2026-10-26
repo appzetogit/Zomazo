@@ -65,7 +65,7 @@ for (const m of ecomModels) {
 }
 
 // Deliberate links out to the platform: the satellite -> shared identity.
-const PLATFORM_REFS = new Set(['EcomUser.platformUserId:FoodUser']);
+const PLATFORM_REFS = new Set(['EcomUser.platformUserId:FoodUser', 'EcomDeliveryPartner.driverId:TaxiDriver']);
 
 const refsOf = (schema, prefix = '') => {
     const out = [];

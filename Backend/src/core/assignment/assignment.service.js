@@ -47,6 +47,7 @@ import {
 const jobTypeForVertical = Object.freeze({
     food: JOB_TYPES.FOOD_DELIVERY,
     quickCommerce: JOB_TYPES.QUICK_COMMERCE_DELIVERY,
+    ecommerce: JOB_TYPES.ECOMMERCE_DELIVERY,
     taxi: JOB_TYPES.TAXI_RIDE,
     serviceProvider: JOB_TYPES.SERVICE_BOOKING,
 });
@@ -285,6 +286,9 @@ const TERMINAL = Object.freeze({
     [JOB_TYPES.QUICK_COMMERCE_DELIVERY]: [
         'delivered', 'cancelled_by_user', 'cancelled_by_restaurant', 'cancelled_by_admin',
     ],
+    [JOB_TYPES.ECOMMERCE_DELIVERY]: [
+        'delivered', 'cancelled_by_user', 'cancelled_by_seller', 'cancelled_by_admin',
+    ],
     [JOB_TYPES.SERVICE_BOOKING]: ['completed', 'cancelled', 'rejected'],
 });
 
@@ -313,6 +317,16 @@ const resolveJobState = async (entry) => {
             const order = await QCOrder.findById(jobId).select('orderStatus').lean();
             if (!order) return { known: true, terminal: true };
             return { known: true, terminal: TERMINAL[jobType].includes(String(order.orderStatus || '').toLowerCase()) };
+        }
+        if (jobType === JOB_TYPES.ECOMMERCE_DELIVERY) {
+            const { Order: EcomOrder } = await import(
+                '../../modules/ecommerce/modules/commerce/orders/models/order.model.js'
+            );
+            const order = await EcomOrder.findById(jobId).select('orderStatus deliveryBy').lean();
+            if (!order) return { known: true, terminal: true };
+            const status = String(order.orderStatus || '').toLowerCase();
+            // A rider order handed to a courier instead holds no rider.
+            return { known: true, terminal: order.deliveryBy === 'courier' || TERMINAL[jobType].includes(status) };
         }
         if (jobType === JOB_TYPES.SERVICE_BOOKING) {
             const Booking = (await import('../../modules/serviceProvider/models/Booking.js')).default;

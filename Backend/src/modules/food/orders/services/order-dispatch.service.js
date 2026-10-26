@@ -18,6 +18,7 @@ import { getIO, rooms } from '../../../../config/socket.js';
 import { loadActiveZones, filterCandidatesToZone, resolveZoneIdForPoint } from '../../shared/zoneMatching.js';
 import { compareInBackground } from '../../../../core/finance/eligibilityShadow.js';
 import { foodPartnerIdsBusyOnQc } from '../../../../core/identity/qcRiderBridge.js';
+import { foodPartnerIdsBusyOnEcom } from '../../../../core/identity/ecomRiderBridge.js';
 import { addOrderJob } from '../../../../queues/producers/order.producer.js';
 import {
   buildDeliverySocketPayload,
@@ -408,6 +409,8 @@ export async function tryAutoAssign(orderId, options = {}) {
     // A rider out on a quick-commerce delivery (same person, grocery pool --
     // see core/identity/qcRiderBridge.js) is not free for this one.
     const onGroceryJob = await foodPartnerIdsBusyOnQc().catch(() => new Set());
+    // Same for a shop delivery from the e-commerce pool (core/identity/ecomRiderBridge.js).
+    for (const id of await foodPartnerIdsBusyOnEcom().catch(() => new Set())) onGroceryJob.add(id);
     const codEligiblePartners = (await filterPartnersByCodCashLimit(partners, order))
       .filter((p) => !onGroceryJob.has(String(p.partnerId)));
     const eligible = codEligiblePartners.filter(p => !offeredIds.includes(p.partnerId.toString()));

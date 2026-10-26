@@ -52,6 +52,7 @@ import {
 import { claimFirstOrder, releaseFirstOrderClaim, releaseFirstOrderClaimIfVoid, recordPaymentFingerprint } from './firstOrderGuard.service.js';
 import { normalizeDeliveryAddress } from '../../shared/geo.utils.js';
 import * as dispatchService from './order-dispatch.service.js';
+import { decideDeliveryBy, isRiderDelivered, DELIVERY_BY } from './deliveryRouting.js';
 import * as deliveryService from './order-delivery.service.js';
 import * as paymentService from './order-payment.service.js';
 import {
@@ -902,6 +903,8 @@ export async function createOrder(userId, dto, options = {}) {
       note: String(dto.note || ""),
       deliveryInstructions: String(dto.deliveryInstructions || ""),
       deliveryFleet: String(dto.deliveryFleet || "standard"),
+      // Platform rider or courier: see deliveryRouting.js for the rule.
+      deliveryBy: decideDeliveryBy(seller, deliveryAddress, distanceKm),
       scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : null,
       riderEarning: Number(riderEarning) || 0,
       platformProfit: Number(platformProfit) || 0,
@@ -2312,12 +2315,19 @@ export async function updateOrderStatusSeller(
   // Real-time: delivery request / ready notifications.
   try {
     const io = getIO();
-    if (io) {
-      // On accept (confirmed or preparing) -> request delivery partners via central logic
-      if (
-        (String(orderStatus) === "preparing" || String(orderStatus) === "confirmed") && 
-        (String(from) !== "preparing" && String(from) !== "confirmed")
-      ) {
+    // The rider hunt starts when the seller ACCEPTS (as in food and quick
+    // commerce), so the ride to the store overlaps the packing. Sellers accept
+    // with 'confirmed' and then mark 'ready_for_pickup' with no preparing step;
+    // a seller who jumps straight from 'created' to 'ready_for_pickup' accepted
+    // in the same tap, so that starts it too. Exactly one start per order: a
+    // second would run a parallel hunt. Courier orders are ignored inside
+    // tryAutoAssign. Not tied to the socket server being up -- dispatch also
+    // pushes over FCM.
+    const ACCEPTED_STATES = ["confirmed", "preparing", "ready_for_pickup"];
+    const startsRiderHunt =
+      ACCEPTED_STATES.includes(String(orderStatus)) && !ACCEPTED_STATES.includes(String(from));
+    {
+      if (startsRiderHunt) {
         console.log(
           `[DEBUG] Order ${order._id.toString()} status changed to '${orderStatus}'. Triggering central delivery dispatch.`,
         );
@@ -2340,7 +2350,7 @@ export async function updateOrderStatusSeller(
       }
 
             // When ready for pickup -> ping assigned delivery partner.
-            if (String(orderStatus) === 'ready_for_pickup' && String(from) !== 'ready_for_pickup') {
+            if (io && String(orderStatus) === 'ready_for_pickup' && String(from) !== 'ready_for_pickup') {
                 console.log(`[DEBUG] Order ${order._id.toString()} changed to 'ready_for_pickup'.`);
                 const assignedId = order.dispatch?.deliveryPartnerId?.toString?.() || order.dispatch?.deliveryPartnerId;
                 if (assignedId) {
@@ -3243,6 +3253,26 @@ export async function createOrderShipmentSeller(orderId, sellerId) {
 export async function bookOrderShipment(order, { byRole = 'SELLER', byId = null } = {}) {
   if (order.shipment?.awb) {
     return { order: normalizeOrderForClient(order), shipment: order.shipment };
+  }
+
+  // A rider order goes to a courier only while no rider holds it: this is the
+  // fallback when the rider hunt finds nobody. Switched atomically, so a rider
+  // accepting at the same instant wins cleanly instead of both carrying it; the
+  // rider hunt stops at its next round (tryAutoAssign skips courier orders) and
+  // accept refuses courier orders.
+  if (isRiderDelivered(order) && order.fulfilmentMode !== 'quick') {
+    const switched = await Order.updateOne(
+      { _id: order._id, deliveryBy: DELIVERY_BY.RIDER, 'dispatch.status': { $ne: 'accepted' } },
+      {
+        $set: { deliveryBy: DELIVERY_BY.COURIER, 'dispatch.status': 'unassigned', 'dispatch.deliveryPartnerId': null },
+      },
+    );
+    if (!switched.matchedCount) {
+      throw new ValidationError('A delivery partner is already on this order, so a courier cannot be booked.');
+    }
+    order.deliveryBy = DELIVERY_BY.COURIER;
+    order.dispatch.status = 'unassigned';
+    order.dispatch.deliveryPartnerId = null;
   }
   const sellerId = order.sellerId;
 

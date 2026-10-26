@@ -53,10 +53,10 @@ const activeAssignmentSchema = new mongoose.Schema(
  */
 const activeAssignmentEntrySchema = new mongoose.Schema(
   {
-    vertical: { type: String, enum: ['food', 'quickCommerce', 'taxi', 'serviceProvider'] },
+    vertical: { type: String, enum: ['food', 'quickCommerce', 'ecommerce', 'taxi', 'serviceProvider'] },
     jobType: {
       type: String,
-      enum: ['foodDelivery', 'quickCommerceDelivery', 'taxiRide', 'serviceBooking'],
+      enum: ['foodDelivery', 'quickCommerceDelivery', 'ecommerceDelivery', 'taxiRide', 'serviceBooking'],
     },
     jobId: { type: mongoose.Schema.Types.ObjectId },
     at: { type: Date },

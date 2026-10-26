@@ -5,8 +5,13 @@
 // than kept, since /v1/orders, /v1/user and /v1/admin already mean something
 // else at the platform level.
 //
+// /delivery is the platform rider app's: the same paths and response shapes as
+// /api/v1/qc/delivery/*. Riders sign in on the platform (food) and their token
+// is bridged onto an ecom_delivery_partners row (core/identity/ecomRiderBridge.js).
+// Only orders with deliveryBy 'rider' are ever offered to them; courier orders
+// still ship through the shipment service.
+//
 // Not mounted, on purpose (the code is still in the tree):
-//   /delivery      -- this vertical ships by courier; the platform owns riders.
 //   /ai, /chat     -- later; not in the first release.
 //   /notifications/opened -- push campaigns are later too.
 //
@@ -14,6 +19,7 @@
 import express from 'express';
 import authRoutes from '../core/auth/auth.routes.js';
 import sellerRoutes from '../modules/commerce/seller/routes/seller.routes.js';
+import deliveryRoutes from '../modules/commerce/delivery/routes/delivery.routes.js';
 import landingRoutes from '../modules/commerce/landing/routes/landing.routes.js';
 import uploadRoutes from '../modules/uploads/routes/upload.routes.js';
 import adminRoutes from '../modules/commerce/admin/routes/admin.routes.js';
@@ -67,7 +73,10 @@ router.use('/payments', authMiddleware, paymentRoutes);
 // Sellers; the router guards its own routes.
 router.use('/seller', sellerRoutes);
 
-router.use('/notifications', authMiddleware, requireRoles('USER', 'SELLER'), notificationRoutes);
+// Platform riders; the router guards its own routes (DELIVERY_PARTNER).
+router.use('/delivery', deliveryRoutes);
+
+router.use('/notifications', authMiddleware, requireRoles('USER', 'SELLER', 'DELIVERY_PARTNER'), notificationRoutes);
 router.use('/fcm-tokens', fcmRoutes);
 
 // Admin. The queue view is registered first so the admin router's section

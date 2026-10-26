@@ -9,6 +9,7 @@ import {
 } from "../../../../core/notifications/firebase.service.js";
 import { getIO, rooms } from '../../../../config/socket.js';
 import { addOrderJob } from '../../../../queues/producers/order.producer.js';
+import { ecomRiderOnOtherJob, ecomPartnerIdsBusyElsewhere } from '../../../../../../core/identity/ecomRiderBridge.js';
 
 export function enqueueOrderEvent(action, payload = {}) {
   try {
@@ -63,8 +64,32 @@ export function sanitizeOrderForDeliveryPartner(orderDoc) {
   const o = sanitizeOrderForExternal(orderDoc);
   const cookingNote = String(o.note || "").trim();
   const deliveryInstructions = String(o.deliveryInstructions || "").trim();
+
+  // The rider app's order screens were built for food and quick-commerce, which
+  // populate `restaurantId` with a `restaurantName`. The shop's pickup is the
+  // seller, so it is given under those names too (the seller fields stay).
+  const seller = o.sellerId && typeof o.sellerId === 'object' && !(o.sellerId instanceof mongoose.Types.ObjectId)
+    ? o.sellerId
+    : null;
+  const pickupAlias = seller
+    ? {
+        restaurantId: {
+          ...seller,
+          restaurantName: seller.sellerName || seller.name || '',
+          address: seller.location?.address || seller.location?.formattedAddress || seller.addressLine1 || '',
+        },
+        restaurantName: seller.sellerName || seller.name || '',
+        restaurantAddress: seller.location?.address || seller.location?.formattedAddress || seller.addressLine1 || '',
+        sellerName: seller.sellerName || seller.name || '',
+        sellerAddress: seller.location?.address || seller.location?.formattedAddress || seller.addressLine1 || '',
+      }
+    : { restaurantId: o.sellerId };
+
   return {
     ...o,
+    ...pickupAlias,
+    vertical: 'ecommerce',
+    orderType: 'ecommerce',
     cookingNote,
     deliveryInstructions,
     note: deliveryInstructions,
@@ -122,8 +147,11 @@ export async function partnerHasActiveDelivery(deliveryPartnerId) {
     'dispatch.status': 'accepted',
     orderStatus: { $nin: TERMINAL_ORDER_STATUSES },
   });
+  if (active) return true;
 
-  return Boolean(active);
+  // A rider from the platform app may be out on a food or quick-commerce order;
+  // that is just as much an active delivery (core/identity/ecomRiderBridge.js).
+  return ecomRiderOnOtherJob(deliveryPartnerId).catch(() => false);
 }
 
 export async function getBusyDeliveryPartnerIds() {
@@ -135,7 +163,10 @@ export async function getBusyDeliveryPartnerIds() {
     .select('dispatch.deliveryPartnerId')
     .lean();
 
-  return new Set(rows.map((row) => String(row.dispatch.deliveryPartnerId)));
+  const busy = new Set(rows.map((row) => String(row.dispatch.deliveryPartnerId)));
+  // Bridged riders carrying a food or grocery order are not free for this either.
+  for (const id of await ecomPartnerIdsBusyElsewhere().catch(() => new Set())) busy.add(id);
+  return busy;
 }
 
 export function buildOrderIdentityFilter(orderIdOrMongoId) {
@@ -414,7 +445,25 @@ export function buildDeliverySocketPayload(orderDoc, sellerDoc = null) {
   console.log(`[DEBUG] buildDeliverySocketPayload - riderEarning in doc: ${order?.riderEarning}`);
   console.log(`[DEBUG] buildDeliverySocketPayload - deliveryFee in doc: ${order?.pricing?.deliveryFee}`);
 
+  const sellerName = seller?.sellerName || order?.sellerName;
+  const sellerAddress =
+    sellerLocation?.address ||
+    sellerLocation?.formattedAddress ||
+    seller?.addressLine1 ||
+    "";
+  const sellerPhone = seller?.phone || seller?.ownerPhone || "";
+  const sellerIdStr =
+    order?.sellerId?._id?.toString?.() ||
+    order?.sellerId?.toString?.() ||
+    order?.sellerId;
+  const sellerCoverImage =
+    seller?.coverImage || (Array.isArray(seller?.coverImages) ? seller.coverImages[0] : '') || '';
+
   return {
+    // Which vertical this job belongs to, so the one rider app can route its
+    // accept/pickup/drop calls to /api/v1/ecom/delivery rather than food's.
+    vertical: 'ecommerce',
+    orderType: 'ecommerce',
     orderMongoId:
       orderDoc?._id?.toString?.() || order?._id?.toString?.() || order?._id,
     orderId: order?.order_id || order?._id?.toString?.(),
@@ -456,6 +505,30 @@ export function buildDeliverySocketPayload(orderDoc, sellerDoc = null) {
         sellerLocation?.formattedAddress ||
         seller?.addressLine1 ||
         "",
+      area: sellerLocation?.area || seller?.area || "",
+      city: sellerLocation?.city || seller?.city || "",
+      state: sellerLocation?.state || seller?.state || "",
+    },
+    // The same pickup under the names the food / quick-commerce rider screens
+    // read, so a rider UI built for restaurants renders a shop pickup as is.
+    restaurantId: sellerIdStr,
+    restaurantName: sellerName,
+    restaurantAddress: sellerAddress,
+    restaurantPhone: sellerPhone,
+    restaurantCallUri: buildTelUri(sellerPhone),
+    restaurantCoverImage: sellerCoverImage,
+    restaurantGalleryImages: Array.isArray(seller?.galleryImages) ? seller.galleryImages : [],
+    restaurantLandmark: seller?.landmark || "",
+    restaurantLocation: {
+      latitude: Number.isFinite(sellerLat) ? sellerLat : undefined,
+      longitude: Number.isFinite(sellerLng) ? sellerLng : undefined,
+      lat: Number.isFinite(sellerLat) ? sellerLat : undefined,
+      lng: Number.isFinite(sellerLng) ? sellerLng : undefined,
+      coordinates:
+        Number.isFinite(sellerLat) && Number.isFinite(sellerLng)
+          ? [sellerLng, sellerLat]
+          : undefined,
+      address: sellerAddress,
       area: sellerLocation?.area || seller?.area || "",
       city: sellerLocation?.city || seller?.city || "",
       state: sellerLocation?.state || seller?.state || "",

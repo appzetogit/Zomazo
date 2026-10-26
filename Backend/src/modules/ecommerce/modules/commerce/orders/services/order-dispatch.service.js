@@ -20,6 +20,7 @@ import {
 } from './order.helpers.js';
 import { fetchDrivingRoute } from '../utils/googleMaps.js';
 import { parseGeoPoint } from '../../shared/geo.utils.js';
+import { isRiderDelivered } from './deliveryRouting.js';
 
 /**
  * Resolve seller â†’ customer road distance once per dispatch broadcast.
@@ -117,6 +118,10 @@ export function buildIncomingOrderPushData(order, payload, acceptanceDeadlineAt)
 
   return {
     type: 'new_order',
+    // Which vertical the offer is from, so the rider app sends accept / pickup /
+    // drop to /api/v1/ecom/delivery rather than food's endpoints.
+    vertical: 'ecommerce',
+    orderType: 'ecommerce',
     // Carried INSIDE data on purpose.
     //
     // This push is data-only, so FCM omits the notification block and
@@ -132,6 +137,11 @@ export function buildIncomingOrderPushData(order, payload, acceptanceDeadlineAt)
     orderDisplayId: s(order?.order_id || order?._id),
     sellerName: s(payload?.sellerName),
     sellerAddress: s(payload?.sellerAddress),
+    // The same pickup under the names the food rider alert reads.
+    restaurantId: s(payload?.sellerId),
+    restaurantName: s(payload?.sellerName),
+    restaurantAddress: s(payload?.sellerAddress),
+    sellerId: s(payload?.sellerId),
     customerAddress: s(payload?.customerAddress),
     tripDistanceKm: s(payload?.tripDistanceKm ?? ''),
     tripDurationMins: s(payload?.tripDurationMins ?? ''),
@@ -257,6 +267,44 @@ function orderCollectsCash(order) {
   return method === 'cash' || method === 'razorpay_qr';
 }
 
+/** The platform-wide switch food, taxi and quick-commerce dispatch read too. */
+export const unifiedDispatchEnabled = () => process.env.UNIFIED_DISPATCH_ENABLED === 'true';
+
+/**
+ * Driver unification for e-commerce, as quick-commerce does it.
+ *
+ * Keeps only partners whose linked unified Driver is free of the cross-service
+ * busy-lock and whose work mode takes deliveries. Partners with no driverId are
+ * kept, so riders not yet linked keep working. The capability is not checked:
+ * no driver holds an e-commerce one yet, and a rider in this pool came in
+ * through the delivery app, so 'delivery' work mode is the consent that counts.
+ * No-op, and no extra query, while UNIFIED_DISPATCH_ENABLED is off.
+ */
+async function filterByUnifiedWorkMode(partners) {
+  if (!unifiedDispatchEnabled() || !partners?.length) return partners || [];
+
+  const ids = partners.map((p) => p.partnerId);
+  const rows = await DeliveryPartner.find({ _id: { $in: ids } }).select('_id driverId').lean();
+  const driverIdByPartner = new Map(rows.filter((r) => r.driverId).map((r) => [String(r._id), r.driverId]));
+  if (driverIdByPartner.size === 0) return partners;
+
+  const { Driver } = await import('../../../../../taxi/driver/models/Driver.js');
+  const freeDrivers = await Driver.find({
+    _id: { $in: [...driverIdByPartner.values()] },
+    activeAssignment: null,
+    workMode: { $in: ['all', 'delivery', 'quickCommerce'] },
+  })
+    .select('_id')
+    .lean();
+  const freeIds = new Set(freeDrivers.map((d) => String(d._id)));
+
+  return partners.filter((p) => {
+    const linked = driverIdByPartner.get(String(p.partnerId));
+    if (!linked) return true;
+    return freeIds.has(String(linked));
+  });
+}
+
 async function listNearbyOnlineDeliveryPartners(
   sellerId,
   { maxKm = 15, limit = 25 } = {},
@@ -337,7 +385,7 @@ async function listNearbyOnlineDeliveryPartners(
     ? picked.filter(p => p.status === 'approved')
     : picked;
 
-  return { partners: final };
+  return { partners: await filterByUnifiedWorkMode(final) };
 }
 
 export async function getDispatchSettings() {
@@ -362,14 +410,13 @@ export async function updateDispatchSettings(dispatchMode, adminId) {
 export async function tryAutoAssign(orderId, options = {}) {
   const attempt = options.attempt || 1;
 
-  // Riders carry QUICK orders only. A standard order ships by courier (its
-  // shipment is booked by the seller or admin), but the seller-accept and
-  // auto-accept paths call this without looking at the mode, so standard orders
-  // were being offered to riders too. Inside the platform this vertical is
-  // courier-only and has no riders of its own, so this is the gate that keeps a
-  // shop order from ever reaching one.
-  const mode = await Order.findById(orderId).select('fulfilmentMode').lean();
-  if (!mode || mode.fulfilmentMode !== 'quick') {
+  // Riders carry only the orders routed to them (Order.deliveryBy 'rider', or a
+  // legacy quick order); everything else ships by courier, booked by the seller
+  // or admin. The seller-accept and auto-accept paths call this without looking,
+  // so this is the gate that keeps a courier order from ever reaching a rider --
+  // and that stops a pending hunt once a courier is booked instead.
+  const mode = await Order.findById(orderId).select('fulfilmentMode deliveryBy').lean();
+  if (!mode || !isRiderDelivered(mode)) {
     return null;
   }
 
