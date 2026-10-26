@@ -130,6 +130,10 @@ export function buildIncomingOrderPushData(order, payload, acceptanceDeadlineAt)
 
   return {
     type: 'new_order',
+    // Which vertical the offer is from: the platform rider app routes accept /
+    // pickup / drop to /api/v1/qc/delivery on this (untagged means food).
+    vertical: 'quickCommerce',
+    orderType: 'quickCommerce',
     // Carried INSIDE data on purpose.
     //
     // This push is data-only, so FCM omits the notification block and

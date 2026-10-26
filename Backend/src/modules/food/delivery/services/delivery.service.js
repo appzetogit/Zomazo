@@ -9,6 +9,7 @@ import { uploadImageBuffer } from '../../../../services/cloudinary.service.js';
 import { ValidationError } from '../../../../core/auth/errors.js';
 import { getDeliveryCashLimitSettings } from '../../admin/services/admin.service.js';
 import { syncQcFromFoodRider } from '../../../../core/identity/qcRiderBridge.js';
+import { syncEcomFromFoodRider } from '../../../../core/identity/ecomRiderBridge.js';
 
 /**
  * The documents the admin asked for, as the app sent them.
@@ -484,6 +485,8 @@ export const updateDeliveryAvailability = async (userId, payload) => {
     // The same rider in the quick-commerce pool goes online/offline and moves
     // with this one, so grocery dispatch can find them. Never throws.
     await syncQcFromFoodRider(partner);
+    // And in the e-commerce pool (core/identity/ecomRiderBridge.js). Never throws.
+    await syncEcomFromFoodRider(partner);
     return { availabilityStatus: partner.availabilityStatus };
 };
 

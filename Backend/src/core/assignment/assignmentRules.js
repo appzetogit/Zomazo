@@ -22,6 +22,8 @@
 export const JOB_TYPES = Object.freeze({
     FOOD_DELIVERY: 'foodDelivery',
     QUICK_COMMERCE_DELIVERY: 'quickCommerceDelivery',
+    // E-commerce orders carried by the platform's riders (Order.deliveryBy 'rider').
+    ECOMMERCE_DELIVERY: 'ecommerceDelivery',
     TAXI_RIDE: 'taxiRide',
     SERVICE_BOOKING: 'serviceBooking',
 });
@@ -55,6 +57,7 @@ export const DEFAULT_POLICY = Object.freeze({
     allowedCombinations: Object.freeze({
         [JOB_TYPES.FOOD_DELIVERY]: Object.freeze([]),
         [JOB_TYPES.QUICK_COMMERCE_DELIVERY]: Object.freeze([]),
+        [JOB_TYPES.ECOMMERCE_DELIVERY]: Object.freeze([]),
         [JOB_TYPES.TAXI_RIDE]: Object.freeze([]),
         [JOB_TYPES.SERVICE_BOOKING]: Object.freeze([]),
     }),
@@ -74,6 +77,9 @@ export const EXAMPLE_STACKING_POLICY = Object.freeze({
     allowedCombinations: Object.freeze({
         [JOB_TYPES.FOOD_DELIVERY]: Object.freeze([JOB_TYPES.FOOD_DELIVERY, JOB_TYPES.QUICK_COMMERCE_DELIVERY]),
         [JOB_TYPES.QUICK_COMMERCE_DELIVERY]: Object.freeze([JOB_TYPES.QUICK_COMMERCE_DELIVERY, JOB_TYPES.FOOD_DELIVERY]),
+        // Not stackable even here: a shop parcel's pickup and drop rarely share a
+        // route with a food or grocery run. Listed so the matrix stays total.
+        [JOB_TYPES.ECOMMERCE_DELIVERY]: Object.freeze([]),
         [JOB_TYPES.TAXI_RIDE]: Object.freeze([]),
         [JOB_TYPES.SERVICE_BOOKING]: Object.freeze([]),
     }),

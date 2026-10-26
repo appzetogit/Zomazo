@@ -106,6 +106,27 @@ const deliveryPartnerSchema = new mongoose.Schema(
         lastLat: { type: Number },
         lastLng: { type: Number },
         lastLocationAt: { type: Date },
+        /**
+         * The unified TaxiDriver this partner belongs to, mirrored from the
+         * food rider by core/identity/ecomRiderBridge.js. Carries the
+         * cross-service busy-lock and the work mode. null = not linked; those
+         * partners are kept by dispatch rather than dropped.
+         */
+        driverId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'TaxiDriver',
+            default: null,
+            index: true
+        },
+        /**
+         * The food_delivery_partners row this rider signed up with, when they
+         * came in through the platform rider app (core/identity/ecomRiderBridge.js).
+         * No ref: the model lives in another vertical.
+         */
+        platformDeliveryPartnerId: {
+            type: mongoose.Schema.Types.ObjectId,
+            default: null
+        },
         referralCode: { type: String, index: true },
         referredBy: {
             type: mongoose.Schema.Types.ObjectId,
@@ -144,6 +165,11 @@ const deliveryPartnerSchema = new mongoose.Schema(
 
 // Indices
 deliveryPartnerSchema.index({ lastLocation: '2dsphere' });
+// One shop-pool row per food rider. Partial, so unlinked rows (null) do not collide.
+deliveryPartnerSchema.index(
+    { platformDeliveryPartnerId: 1 },
+    { unique: true, partialFilterExpression: { platformDeliveryPartnerId: { $type: 'objectId' } } }
+);
 
 // Indexed last-10-digit phone, so sign-in finds the row without a regex scan
 // (core/identity/phoneLast10.cjs).

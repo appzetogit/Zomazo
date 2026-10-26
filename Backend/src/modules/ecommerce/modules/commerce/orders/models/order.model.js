@@ -320,6 +320,23 @@ const orderSchema = new mongoose.Schema(
             enum: ['quick', 'standard'],
             default: 'quick'
         },
+        /**
+         * Who carries a standard (shop) order to the door, decided at placement
+         * by orders/services/deliveryRouting.js:
+         *   'rider'   -- the platform's own delivery partners (the same riders
+         *                who do food), dispatched by order-dispatch.service.js
+         *                once the seller accepts;
+         *   'courier' -- a courier shipment booked by the seller or admin.
+         * Missing (orders placed before this field) reads as 'courier'. Booking
+         * a courier shipment on a rider order that no rider has accepted turns
+         * it into a courier order, which is the fallback when no rider is found.
+         */
+        deliveryBy: {
+            type: String,
+            enum: ['rider', 'courier'],
+            default: 'courier',
+            index: true
+        },
         coinsUsed: {
             type: Number,
             default: 0,

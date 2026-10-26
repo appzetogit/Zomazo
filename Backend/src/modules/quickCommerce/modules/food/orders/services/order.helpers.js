@@ -12,6 +12,7 @@ import { holdIfConfigured, registerHoldTarget } from '../../../../../../core/ord
 import { isMedicalStore } from '../../shared/storeType.js';
 import { addOrderJob } from '../../../../queues/producers/order.producer.js';
 import { qcRiderOnFoodJob, qcPartnerIdsBusyOnFood } from '../../../../../../core/identity/qcRiderBridge.js';
+import { qcRiderOnEcomJob, qcPartnerIdsBusyOnEcom } from '../../../../../../core/identity/ecomRiderBridge.js';
 
 export function enqueueOrderEvent(action, payload = {}) {
   try {
@@ -129,7 +130,9 @@ export async function partnerHasActiveDelivery(deliveryPartnerId) {
 
   // A rider from the platform app may be out on a FOOD order; that is just as
   // much an active delivery (core/identity/qcRiderBridge.js).
-  return qcRiderOnFoodJob(deliveryPartnerId);
+  if (await qcRiderOnFoodJob(deliveryPartnerId)) return true;
+  // Or on a shop delivery from the e-commerce pool (core/identity/ecomRiderBridge.js).
+  return qcRiderOnEcomJob(deliveryPartnerId).catch(() => false);
 }
 
 export async function getBusyDeliveryPartnerIds() {
@@ -144,6 +147,7 @@ export async function getBusyDeliveryPartnerIds() {
   const busy = new Set(rows.map((row) => String(row.dispatch.deliveryPartnerId)));
   // Bridged riders carrying a food order are not free for groceries either.
   for (const id of await qcPartnerIdsBusyOnFood()) busy.add(id);
+  for (const id of await qcPartnerIdsBusyOnEcom().catch(() => new Set())) busy.add(id);
   return busy;
 }
 
@@ -428,6 +432,9 @@ export function buildDeliverySocketPayload(orderDoc, restaurantDoc = null) {
   console.log(`[DEBUG] buildDeliverySocketPayload - deliveryFee in doc: ${order?.pricing?.deliveryFee}`);
 
   return {
+    // The platform rider app routes offers by this (untagged means food).
+    vertical: 'quickCommerce',
+    orderType: 'quickCommerce',
     orderMongoId:
       orderDoc?._id?.toString?.() || order?._id?.toString?.() || order?._id,
     orderId: order?.order_id || order?._id?.toString?.(),
