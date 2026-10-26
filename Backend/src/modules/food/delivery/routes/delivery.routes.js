@@ -1,6 +1,7 @@
 import express from 'express';
 import { upload } from '../../../../middleware/upload.js';
 import { authMiddleware, requireFoodDeliveryPartner } from '../../../../core/auth/auth.middleware.js';
+import { getMeController } from '../../../../core/auth/auth.controller.js';
 import { requireRoles } from '../../../../core/roles/role.middleware.js';
 import * as orderController from '../../orders/controllers/order.controller.js';
 import {
@@ -78,6 +79,7 @@ router.get('/check-vehicle/:number', async (req, res) => {
     }
 });
 
+router.get('/profile', authMiddleware, requireFoodDeliveryPartner, getMeController);
 router.patch('/profile', authMiddleware, requireFoodDeliveryPartner, uploadFields, updateDeliveryPartnerProfileController);
 
 // JSON-only profile updates (no files) – safe for web updates like vehicle number.

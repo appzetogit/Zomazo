@@ -15,110 +15,102 @@
 
 const esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-export function defaultTermsHtml({ brand = 'Quick Drop', operator = '', email = '', updated = new Date() } = {}) {
+export function defaultTermsHtml({ brand = 'Zomazo', operator = 'Zomazo', email = 'zomazo.in@gmail.com', updated = new Date() } = {}) {
   const b = esc(brand);
   const op = esc(operator || brand);
+  const em = esc(email || 'zomazo.in@gmail.com');
   const date = updated.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-  const contactLine = email
-    ? `by email at <a href="mailto:${esc(email)}">${esc(email)}</a>, or through <strong>Help &amp; Support</strong> in the app`
-    : 'through <strong>Help &amp; Support</strong> in the app';
+  const contactLine = `by email at <a href="mailto:${em}">${em}</a>, or through <strong>Help &amp; Support</strong> in the app`;
 
   return `
 <h1>Terms &amp; Conditions</h1>
-<p>Last updated: ${date}</p>
+<p><strong>Effective Date / Last Updated:</strong> ${date}</p>
 
-<p>These terms govern your use of the ${b} app and website (the "Platform"), operated by ${op} ("${b}", "we", "us"). By creating an account or placing an order, booking a ride or booking a service, you agree to these terms, our Privacy Policy, and the cancellation and refund policies shown in the app. If you do not agree, please do not use the Platform.</p>
+<p>These Terms &amp; Conditions ("Terms", "Agreement") govern your access to and use of the mobile applications (iOS and Android), web portals, and software platform (collectively, the "Platform") owned and operated by ${op} ("${b}", "we", "us", "our").</p>
 
-<h3>1. What the Platform does</h3>
-<p>${b} is a technology platform that connects you with independent restaurants, stores, pharmacies, delivery partners, drivers and service professionals ("Partners") for food delivery, groceries and daily essentials, medicines, rides and parcel delivery, and home services. Unless we say otherwise for a particular order, the Partner, not ${b}, sells the goods or provides the service and is responsible for its quality, quantity, safety, legality and any licence it needs. We facilitate the order, the payment and the delivery.</p>
+<p>By creating an account, downloading, accessing, or using the Platform, you agree to be legally bound by these Terms, our <a href="/privacy">Privacy Policy</a>, and any applicable cancellation and refund policies. If you do not agree to these Terms, you must not access or use the Platform.</p>
 
-<h3>2. Your account</h3>
+<hr />
+
+<h3>1. Electronic Marketplace &amp; Intermediary Status</h3>
+<p>${b} is an electronic marketplace and technology intermediary platform operating under Section 79 of the Information Technology Act, 2000. We connect users with independent third-party service providers and merchants, including restaurants, grocery sellers, licensed pharmacies, delivery partners, drivers, and service professionals ("Partners"). Unless explicitly stated in writing for a specific product or service, the Partner—not ${b}—is the seller of the goods or provider of the services and is solely responsible for inventory, quality, preparation, safety, warranties, packaging, and regulatory licensing.</p>
+
+<h3>2. App Store &amp; Platform Specific Terms (Apple iOS &amp; Google Android)</h3>
+<p>If you download or access the Platform via the Apple App Store or Google Play Store:</p>
 <ul>
-<li>You must be at least 18 years old and able to enter a binding contract under Indian law.</li>
-<li>You sign in with your mobile number and a one-time code. Keep your phone and codes secure; you are responsible for activity on your account.</li>
-<li>Give accurate details, including delivery addresses and contact numbers, and keep them up to date.</li>
-<li>One account works across every service on the Platform. Do not create multiple accounts or use someone else's.</li>
+  <li><strong>Parties to Agreement:</strong> You acknowledge that this Agreement is entered into between you and ${b} only, and not with Apple Inc. ("Apple") or Google LLC ("Google"). Neither Apple nor Google is responsible for the Platform, its content, maintenance, or support.</li>
+  <li><strong>Maintenance and Support:</strong> ${b} is solely responsible for providing any maintenance and support services with respect to the Platform as specified in these Terms or required under applicable law. Apple and Google have no obligation whatsoever to furnish any maintenance or support services.</li>
+  <li><strong>Third-Party Beneficiaries:</strong> You agree that Apple, Apple's subsidiaries, and Google are third-party beneficiaries of these Terms. Upon your acceptance of these Terms, Apple and Google will have the right (and will be deemed to have accepted the right) to enforce these Terms against you as a third-party beneficiary.</li>
+  <li><strong>Scope of License:</strong> ${b} grants you a limited, non-exclusive, non-transferable, revocable license to download and use the application on devices you own or control, in accordance with the Apple App Store Terms of Service and Google Play Terms of Service.</li>
+  <li><strong>Product Claims &amp; Intellectual Property:</strong> ${b}, and not Apple or Google, is responsible for addressing any claims relating to the Platform or your possession and use of the Platform, including consumer protection claims, regulatory non-compliance, and third-party intellectual property infringement claims.</li>
 </ul>
 
-<h3>3. Orders, prices and availability</h3>
+<h3>3. Eligibility &amp; Account Registration</h3>
 <ul>
-<li>Prices, menus, stock and product details are provided by Partners and may change. What you pay is the total shown at checkout before you confirm.</li>
-<li>The total may include delivery fees, a platform fee, packaging charges, surge or distance-based charges, and applicable taxes (GST), each shown separately at checkout. Any discount shown is already applied to the price you see.</li>
-<li>An order is accepted only when the Partner accepts it. A Partner may decline or partly fulfil an order if an item is unavailable; you will not be charged for what is not supplied.</li>
-<li>Delivery and service is available only inside the areas each Partner serves. Delivery and arrival times are estimates and can change with traffic, weather, preparation time or demand.</li>
-<li>Product images are for illustration. Check labels, ingredients and allergen information yourself; ask the Partner if in doubt.</li>
+  <li>You must be at least 18 years of age and legally capable of entering into a binding contract under Indian law.</li>
+  <li>Account authentication is conducted via your mobile telephone number and a secure One-Time Password (OTP). You are responsible for maintaining the confidentiality of your credentials and devices.</li>
+  <li>You agree to provide true, accurate, and current information, including valid delivery addresses and contact information.</li>
+  <li>A single account works seamlessly across all services offered on the Platform. Creating fake, automated, or multiple duplicate accounts is strictly prohibited.</li>
 </ul>
 
-<h3>4. Medicines</h3>
+<h3>4. Orders, Pricing, and Payments</h3>
 <ul>
-<li>Medicines are sold and dispensed by licensed pharmacies on the Platform, not by ${b}.</li>
-<li>Prescription medicines are supplied only against a valid prescription from a registered medical practitioner, which the pharmacist may verify. The pharmacy may refuse or modify an order that does not meet legal requirements.</li>
-<li>Information on the Platform is not medical advice. Consult a doctor before taking any medicine. Do not order medicines for resale.</li>
+  <li>Prices, menus, descriptions, and stock quantities are published by independent Partners and are subject to change without prior notice. The final payable amount is displayed at checkout before you confirm payment.</li>
+  <li>The total price may include applicable item costs, taxes (GST), packaging charges, delivery charges, platform fees, and surge fees. Any promotional coupon applied is discounted prior to final payment.</li>
+  <li>Orders are subject to acceptance by the Partner. In the event an item is out of stock, the Partner may reject or partially fulfill the order, and you will not be charged for unsupplied goods.</li>
+  <li>Payments can be made via authorized online payment methods (UPI, debit/credit cards, net banking), ${b} in-app wallet, or cash on delivery where available. All online transactions are securely encrypted and processed by RBI-licensed payment aggregators (Razorpay).</li>
 </ul>
 
-<h3>5. Rides and parcel delivery</h3>
+<h3>5. Pharmacy &amp; Prescription Medicine Orders</h3>
 <ul>
-<li>Fares shown before booking are estimates based on distance, time and demand. The final fare may change with the route taken, waiting time, stops, tolls, parking or changes you make during the trip.</li>
-<li>Rides are provided by independent drivers. Wear a seatbelt or helmet where required, follow the driver's reasonable safety instructions, and do not ask a driver to break traffic laws.</li>
-<li>Do not send prohibited, illegal, hazardous or dangerous goods, cash, jewellery or valuables through parcel delivery. Pack items properly and describe them accurately. The driver may refuse a package that appears unsafe or unlawful.</li>
-<li>Rentals and outstation trips are subject to the package, duration and distance limits shown at booking.</li>
+  <li>${b} acts strictly as a technology facilitator connecting customers with independent, licensed retail pharmacies. We do not sell, dispense, or distribute medicines directly.</li>
+  <li>Prescription medications (Schedule H, H1, and X drugs) will be dispensed strictly against a valid, verifiable prescription issued by a Registered Medical Practitioner. The fulfilling pharmacist reserves the statutory right to verify, alter, or reject any prescription order that fails to meet legal and medical standards.</li>
+  <li>Information provided on the Platform regarding pharmaceutical products is for informational purposes only and does not constitute medical advice or a substitute for professional healthcare consultation.</li>
 </ul>
 
-<h3>6. Home services</h3>
-<p>Home services are performed by independent service professionals. Provide safe access to the place of service and accurate details of the work needed. Materials, extra work or changes you ask for on site may cost more; the professional will tell you before doing them.</p>
-
-<h3>7. Payments</h3>
+<h3>6. Taxi Rides &amp; Parcel Logistics</h3>
 <ul>
-<li>You can pay by UPI, card, net banking, the ${b} wallet or, where offered, cash on delivery. Online payments are processed by our payment partner; we do not store your card or UPI details.</li>
-<li>For cash on delivery, pay only the amount shown in the app.</li>
-<li>If a payment fails but money leaves your account, it is reversed by your bank or credited to your wallet, usually within 5 to 7 working days.</li>
+  <li>Fare estimates shown before booking are dynamic and subject to variation based on travel route, waiting time, traffic conditions, night charges, state entry taxes, tolls, and parking fees.</li>
+  <li>Rides are operated by independent vehicle drivers. Riders must comply with traffic safety guidelines (e.g. wearing seatbelts or helmets).</li>
+  <li>Parcel delivery must not be used to transport illegal, hazardous, inflammable, toxic, stolen, or restricted goods, currency, precious metals, or live animals. Drivers reserve the right to inspect packages for safety.</li>
 </ul>
 
-<h3>8. Wallet</h3>
+<h3>7. Home Services</h3>
+<p>Home maintenance, repair, and lifestyle services are carried out by verified independent service professionals. Customers must ensure safe and unobstructed access to the work premises. Any additional material costs or extra scope requested on-site will be communicated and billed accordingly.</p>
+
+<h3>8. In-App Wallet</h3>
 <ul>
-<li>Your ${b} wallet holds refunds, top-ups, cashback and rewards, and one balance can be used across every service on the Platform.</li>
-<li>The wallet balance cannot be transferred to another person or withdrawn as cash, except where the law requires a refund to your original payment method.</li>
-<li>Promotional credits such as cashback and referral rewards may carry their own conditions or expiry, shown when you receive them.</li>
+  <li>The ${b} digital wallet is a closed-loop internal account balance holding refunds, referral rewards, and cashback credits.</li>
+  <li>Wallet balances can be redeemed across any service available on the Platform. Wallet balances are non-transferable to other users and cannot be withdrawn as cash, except where a refund is legally required to be credited back to your original funding source.</li>
 </ul>
 
-<h3>9. Cancellations and refunds</h3>
-<p>You can cancel within the window and on the terms shown in the app for each service. A cancellation fee may apply once a Partner has accepted, started preparing, or reached you. Refunds for cancelled, undelivered, missing, damaged or incorrect items are handled under the refund and cancellation policies shown in the app and are credited to your wallet or original payment method. Report a problem with an order through Help &amp; Support as soon as possible, ideally with photos.</p>
+<h3>9. Cancellations &amp; Refunds</h3>
+<p>Orders, rides, and services may be cancelled according to the cancellation timelines displayed in the app. If a cancellation fee applies due to merchant preparation or driver dispatch, it will be clearly indicated before cancellation confirmation. Refunds for missing, damaged, spoiled, or non-delivered items are processed in accordance with our <a href="/refund">Refund Policy</a> and credited to your wallet or original payment method within 1 to 7 business days.</p>
 
-<h3>10. Offers, coupons and referrals</h3>
-<ul>
-<li>Coupons and offers have their own conditions (minimum order, validity, services and areas) and cannot be exchanged for cash.</li>
-<li>Referral rewards are for genuine new customers. Self-referrals, multiple accounts or other abuse will void rewards, and we may recover rewards obtained this way.</li>
-<li>We may change or withdraw an offer at any time, without affecting orders already placed.</li>
-</ul>
+<h3>10. User Conduct &amp; Prohibited Activities</h3>
+<p>You agree not to misuse the Platform, including but not limited to: placing fraudulent orders; misusing promotional offers or referrals; abusing, harassing, or threatening delivery partners, drivers, or customer support staff; reverse engineering or attempting to exploit the app codebase; or using the Platform for any unlawful purpose. Violation may result in immediate suspension or termination of your account.</p>
 
-<h3>11. Ratings and reviews</h3>
-<p>Reviews must be honest and about your own experience. Do not post anything abusive, defamatory, obscene or misleading, or personal information about others. We may remove reviews that break these rules.</p>
+<h3>11. Account Deletion &amp; Termination</h3>
+<p>In accordance with App Store and Play Store policies, you may delete your account and associated personal data at any time via <code>Account / Profile &rarr; Settings &rarr; Delete Account</code> in the app, or by contacting our team at <a href="mailto:${em}">${em}</a>. Upon receiving your verified deletion request, your profile and identity data will be removed within 30 days, subject to legally mandated financial recordkeeping requirements.</p>
 
-<h3>12. Your conduct</h3>
-<p>You agree not to misuse the Platform, including by: placing fake or fraudulent orders; misusing refunds, offers or cash on delivery; harassing, threatening or abusing Partners, their staff or our team; tampering with the app or accessing it by automated means; or using it for anything unlawful. We may warn, restrict, suspend or close an account that does, and cancel pending orders.</p>
+<h3>12. Intellectual Property Rights</h3>
+<p>All trademarks, logos, UI designs, code, graphics, and content associated with ${b} are the exclusive intellectual property of ${b} or its licensors. You may not copy, reproduce, modify, or distribute any part of the Platform without prior written consent.</p>
 
-<h3>13. Delivery partners and other Partners</h3>
-<p>Restaurants, sellers, pharmacies, delivery partners, drivers and service professionals use the Platform under their own partner agreements, shown in their apps. For delivery partners, the Gig Worker Onboarding Agreement applies in addition to these terms.</p>
+<h3>13. Limitation of Liability</h3>
+<p>To the maximum extent permitted by applicable law, ${b} shall not be liable for any indirect, incidental, special, or consequential damages resulting from the use or inability to use the Platform, or for the quality, safety, or legality of goods and services provided by independent Partners. In any event, ${b}'s aggregate liability shall not exceed the amount actually paid by you for the order or booking giving rise to the claim.</p>
 
-<h3>14. Intellectual property</h3>
-<p>The Platform, its design, software, logos and content belong to ${b} or its licensors. Partner names, logos and menus belong to the Partners. You may use the Platform only for your personal, non-commercial use.</p>
+<h3>14. Governing Law &amp; Dispute Resolution</h3>
+<p>These Terms shall be governed by and construed in accordance with the laws of India. Any dispute arising under or in connection with these Terms shall be subject to the exclusive jurisdiction of the competent courts of India, without prejudice to consumer rights under the Consumer Protection Act, 2019.</p>
 
-<h3>15. Liability</h3>
-<p>We work to keep the Platform accurate and available, but it is provided "as is" and may sometimes be interrupted. To the extent the law allows, ${b} is not liable for goods or services provided by Partners, for delays or failures caused by events beyond our reasonable control, or for indirect or consequential loss. Where we are liable, our liability for any order is limited to the amount you paid for that order. Nothing in these terms limits rights you have under the Consumer Protection Act, 2019 that cannot be excluded.</p>
-
-<h3>16. Indemnity</h3>
-<p>You agree to compensate ${b} for losses arising from your breach of these terms or misuse of the Platform.</p>
-
-<h3>17. Suspension and closing your account</h3>
-<p>You can delete your account at any time from the app. We may suspend or close an account that breaks these terms or the law, or to protect Partners, customers or the Platform, telling you why where we can.</p>
-
-<h3>18. Changes to these terms</h3>
-<p>We may update these terms as our services or the law change. We will post the new version here with a new date and, for significant changes, tell you in the app. Continuing to use the Platform after that means you accept the updated terms.</p>
-
-<h3>19. Governing law and disputes</h3>
-<p>These terms are governed by the laws of India. Please contact us first so we can try to resolve any issue. Disputes are subject to the jurisdiction of the courts at the place of ${b}'s registered office, without affecting your right to approach a consumer commission under the Consumer Protection Act, 2019.</p>
-
-<h3>20. Contact and grievances</h3>
-<p>For questions or complaints about an order or these terms, contact ${b} ${contactLine}. Under the Consumer Protection (E-Commerce) Rules, 2020, we acknowledge complaints within 48 hours and aim to resolve them within one month.</p>
+<h3>15. Contact &amp; Grievance Redressal</h3>
+<p>For questions regarding these Terms, or to report a grievance, please contact us:</p>
+<p>
+  <strong>Grievance Officer:</strong> Customer Grievance Desk<br />
+  <strong>Company / Platform:</strong> ${b} (${op})<br />
+  <strong>Email:</strong> <a href="mailto:${em}">${em}</a><br />
+  <strong>Website:</strong> <a href="https://zomazo.in" target="_blank" rel="noopener noreferrer">https://zomazo.in</a><br />
+  <strong>In-App Support:</strong> Help &amp; Support section
+</p>
+<p>In accordance with the Consumer Protection (E-Commerce) Rules, 2020, we acknowledge complaints within 48 hours and endeavor to resolve them within 30 days.</p>
 `.trim();
 }

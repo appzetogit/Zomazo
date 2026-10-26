@@ -19,6 +19,7 @@ import {
     requestUnifiedOtpController,
     verifyUnifiedOtpController
 } from './unifiedAuth.controller.js';
+import { deleteCurrentUserAccountController } from '../../modules/food/user/controllers/userProfile.controller.js';
 import { authMiddleware, requireAdmin } from './auth.middleware.js';
 import { authRateLimiter } from '../../middleware/rateLimit.js';
 
@@ -57,6 +58,10 @@ router.post('/logout', logoutController);
 
 // Authenticated user profile (requires Bearer token)
 router.get('/me', authMiddleware, getMeController);
+
+// Authenticated user account deletion (requires Bearer token)
+router.delete('/delete-account', authMiddleware, deleteCurrentUserAccountController);
+router.delete('/user/delete-account', authMiddleware, deleteCurrentUserAccountController);
 
 // Admin-only: profile update & change password (Bearer + ADMIN role)
 router.patch('/admin/profile', authMiddleware, requireAdmin, updateAdminProfileController);

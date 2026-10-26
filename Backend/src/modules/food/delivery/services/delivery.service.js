@@ -208,27 +208,96 @@ export const registerDeliveryPartner = async (payload, files) => {
     return partner.toObject();
 };
 
+/*
+ * The fields a rider may edit from the app, applied the same way by both edit
+ * endpoints. Both used to drop most of what they were sent and still answer
+ * 200: /profile/details read only `vehicle` and `profilePhoto`, /profile took
+ * panNumber and aadharNumber and never saved them, and neither knew `email`.
+ *
+ * Accepts flat fields (vehicleNumber) and the nested `vehicle` object the app
+ * also sends ({ number, type, brand, model }). The phone number is the sign-in
+ * number and is not editable here.
+ */
+const KYC_FIELDS = Object.freeze({
+    panNumber: 'PAN number',
+    aadharNumber: 'Aadhaar number',
+    drivingLicenseNumber: 'driving licence number',
+});
+
+const clean = (v) => (v === null || v === undefined ? '' : String(v).trim());
+
+const applyEditableFields = (partner, payload = {}) => {
+    const set = (field, value) => {
+        if (value === undefined) return;
+        partner[field] = clean(value);
+    };
+
+    if (payload.name !== undefined) {
+        const name = clean(payload.name);
+        if (!name) throw new ValidationError('Name cannot be empty');
+        partner.name = name;
+    }
+    if (payload.email !== undefined) {
+        const email = clean(payload.email).toLowerCase();
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ValidationError('Enter a valid email address');
+        partner.email = email;
+    }
+    set('countryCode', payload.countryCode);
+    set('address', payload.address);
+    set('city', payload.city);
+    set('state', payload.state);
+
+    // Vehicle: flat fields, or the nested object. Brand and model are kept
+    // together ("Honda Activa") rather than the model overwriting the brand.
+    set('vehicleType', payload.vehicleType);
+    set('vehicleNumber', payload.vehicleNumber);
+    set('vehicleName', payload.vehicleName);
+    // Form-data (multer) sends a nested vehicle as flat keys: vehicle[number].
+    let vehicle = payload.vehicle && typeof payload.vehicle === 'object' ? payload.vehicle : null;
+    if (!vehicle) {
+        const flat = {};
+        for (const key of ['number', 'type', 'brand', 'model', 'name']) {
+            if (payload[`vehicle[${key}]`] !== undefined) flat[key] = payload[`vehicle[${key}]`];
+        }
+        if (Object.keys(flat).length) vehicle = flat;
+    }
+    if (vehicle) {
+        set('vehicleNumber', vehicle.number);
+        set('vehicleType', vehicle.type);
+        if (vehicle.brand !== undefined || vehicle.model !== undefined) {
+            partner.vehicleName = [clean(vehicle.brand), clean(vehicle.model)].filter(Boolean).join(' ');
+        } else {
+            set('vehicleName', vehicle.name);
+        }
+    }
+
+    // KYC numbers are verified at approval: editable while the rider is not
+    // yet approved; once approved a CHANGE is refused out loud (the app often
+    // sends the unchanged value back, which is fine).
+    for (const [field, label] of Object.entries(KYC_FIELDS)) {
+        if (payload[field] === undefined) continue;
+        const next = clean(payload[field]).toUpperCase();
+        const current = clean(partner[field]).toUpperCase();
+        if (next === current) continue;
+        if (partner.status === 'approved') {
+            throw new ValidationError(`Your ${label} is verified and cannot be changed in the app. Contact support to update it.`);
+        }
+        partner[field] = next;
+    }
+
+    if (payload.profilePhoto !== undefined && typeof payload.profilePhoto === 'string') {
+        partner.profilePhoto = clean(payload.profilePhoto);
+    }
+};
+
 export const updateDeliveryPartnerProfile = async (userId, payload, files) => {
     const partner = await FoodDeliveryPartner.findById(userId);
     if (!partner) {
         throw new ValidationError('Delivery partner not found');
     }
 
-    const {
-        name, countryCode, address, city, state,
-        vehicleType, vehicleName, vehicleNumber, drivingLicenseNumber, panNumber, aadharNumber,
-        fcmToken, platform
-    } = payload;
-
-    if (name) partner.name = name;
-    if (countryCode !== undefined) partner.countryCode = countryCode;
-    if (address !== undefined) partner.address = address;
-    if (city !== undefined) partner.city = city;
-    if (state !== undefined) partner.state = state;
-    if (vehicleType !== undefined) partner.vehicleType = vehicleType;
-    if (vehicleName !== undefined) partner.vehicleName = vehicleName;
-    if (vehicleNumber !== undefined) partner.vehicleNumber = vehicleNumber;
-    if (drivingLicenseNumber !== undefined) partner.drivingLicenseNumber = drivingLicenseNumber;
+    const { fcmToken, platform } = payload || {};
+    applyEditableFields(partner, payload || {});
 
     if (fcmToken) {
         if (platform === 'mobile') {
@@ -263,17 +332,7 @@ export const updateDeliveryPartnerDetails = async (userId, payload) => {
         throw new ValidationError('Delivery partner not found');
     }
 
-    const vehicle = payload?.vehicle;
-    if (vehicle && typeof vehicle === 'object') {
-        if (vehicle.number !== undefined) partner.vehicleNumber = String(vehicle.number || '').trim();
-        if (vehicle.type !== undefined) partner.vehicleType = String(vehicle.type || '').trim();
-        if (vehicle.brand !== undefined) partner.vehicleName = String(vehicle.brand || '').trim();
-        if (vehicle.model !== undefined) partner.vehicleName = String(vehicle.model || '').trim();
-    }
-
-    if (payload?.profilePhoto !== undefined) {
-        partner.profilePhoto = payload.profilePhoto ? String(payload.profilePhoto).trim() : '';
-    }
+    applyEditableFields(partner, payload || {});
 
     await partner.save();
     return partner.toObject();

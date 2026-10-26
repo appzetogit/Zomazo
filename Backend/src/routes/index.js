@@ -195,7 +195,7 @@ router.get('/v1/food/admin/cashback-settings/public', getCashbackSettingsPublicC
 
 router.use('/v1/food/admin', authMiddleware, requireRoles('ADMIN'), requireServiceAccess('food'), adminZoneScope('food'), restaurantAdminRoutes);
 router.use('/v1/food/user', authMiddleware, requireRoles('USER'), userRoutes);
-// router.use('/v1/food/user', userRoutes);
+router.use('/v1/user', authMiddleware, requireRoles('USER'), userRoutes);
 
 router.use('/v1/food/notifications', authMiddleware, requireRoles('USER', 'RESTAURANT', 'DELIVERY_PARTNER'), notificationRoutes);
 // Order chat: customer <-> rider, and support threads with ADMIN. Every role that

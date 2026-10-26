@@ -1,7 +1,8 @@
 /**
  * Seed the platform-wide legal pages (Master settings -> Legal pages) with the
- * full default Privacy Policy and Terms & Conditions, under this site's own
- * brand and, when known, its registered company name.
+ * full default Privacy Policy, Terms & Conditions, and Refund, Cancellation and
+ * Shipping policies, under this site's own brand, contact email and, when
+ * known, its registered company name.
  *
  *   node scripts/seed-legal-pages.mjs           # dry run: prints what it would do
  *   node scripts/seed-legal-pages.mjs --apply
@@ -19,8 +20,14 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import { defaultPrivacyPolicyHtml } from '../src/core/settings/defaultPrivacyPolicy.js';
 import { defaultTermsHtml } from '../src/core/settings/defaultTerms.js';
+import {
+  defaultRefundPolicyHtml,
+  defaultCancellationPolicyHtml,
+  defaultShippingPolicyHtml,
+} from '../src/core/settings/defaultCommercePolicies.js';
 
 const apply = process.argv.includes('--apply');
+const force = process.argv.includes('--force');
 const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
 if (!uri) throw new Error('MONGO_URI is not set');
 
@@ -33,7 +40,7 @@ const settings = (await db.collection('foodbusinesssettings').findOne({})) || (a
 const foodTerms = await db.collection('food_page_contents').findOne({ key: 'terms' });
 const foodTermsHtml = String(foodTerms?.legal?.content || '');
 
-const brand = String(profile.brand?.name || settings.companyName || 'Quick Drop').trim();
+const brand = String(profile.brand?.name || settings.companyName || 'Zomazo').trim();
 // The registered name, if the operator has given it anywhere: Master settings, or
 // the heading of a document they wrote themselves.
 const titleCase = (t) => t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
@@ -44,17 +51,25 @@ const operator = String(
   profile.business?.legalName
   || namesInDoc.find((n) => n !== n.toUpperCase()) // as the operator wrote it, e.g. "QuickDrop Private Limited"
   || (namesInDoc[0] ? titleCase(namesInDoc[0]) : ''),
-).trim();
-console.log(`Brand: ${brand}\nOperator: ${operator || '(not known -- brand name used)'}`);
+).trim() || brand;
+
+// Default to zomazo.in@gmail.com
+const email = [profile.contact?.email, settings.email, 'zomazo.in@gmail.com']
+  .map((e) => String(e || '').trim())
+  .find((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) || 'zomazo.in@gmail.com';
+console.log(`Brand: ${brand}\nOperator: ${operator || '(not known -- brand name used)'}\nEmail: ${email}`);
 
 const pages = {
-  privacy: () => defaultPrivacyPolicyHtml({ brand }),
-  terms: () => defaultTermsHtml({ brand, operator }),
+  privacy: () => defaultPrivacyPolicyHtml({ brand, email }),
+  terms: () => defaultTermsHtml({ brand, operator, email }),
+  refund: () => defaultRefundPolicyHtml({ brand, email }),
+  cancellation: () => defaultCancellationPolicyHtml({ brand, email }),
+  shipping: () => defaultShippingPolicyHtml({ brand, email }),
 };
 for (const [kind, build] of Object.entries(pages)) {
   const existing = String(profile.legal?.[kind] || '').trim();
-  if (existing) {
-    console.log(`${kind}: already set (${existing.length} chars) -- left alone.`);
+  if (existing && !force) {
+    console.log(`${kind}: already set (${existing.length} chars) -- left alone (pass --force to overwrite).`);
     continue;
   }
   const html = build();
@@ -62,9 +77,43 @@ for (const [kind, build] of Object.entries(pages)) {
   if (apply) {
     await db.collection('platform_profile').updateOne(
       { _id: 'platform' },
-      { $set: { [`legal.${kind}`]: html, updatedAt: new Date() }, $setOnInsert: { createdAt: new Date() } },
+      { 
+        $set: { 
+          [`legal.${kind}`]: html,
+          'brand.name': brand,
+          'contact.email': email,
+          updatedAt: new Date() 
+        }, 
+        $setOnInsert: { createdAt: new Date() } 
+      },
       { upsert: true },
     );
+
+    // Also sync to legacy collections for seamless backward compatibility
+    if (kind === 'privacy' || kind === 'terms') {
+      const pageTitle = kind === 'privacy' ? 'Privacy Policy' : 'Terms & Conditions';
+      await db.collection('food_page_contents').updateOne(
+        { key: kind },
+        { 
+          $set: { 
+            key: kind, 
+            legal: { title: pageTitle, content: html },
+            updatedAt: new Date() 
+          },
+          $setOnInsert: { createdAt: new Date() }
+        },
+        { upsert: true }
+      );
+      await db.collection('landingpagesettings').updateMany(
+        {},
+        {
+          $set: {
+            [kind === 'privacy' ? 'privacy_policy' : 'terms_and_condition']: html,
+            updatedAt: new Date()
+          }
+        }
+      );
+    }
   }
 }
 

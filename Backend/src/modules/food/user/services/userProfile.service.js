@@ -62,16 +62,21 @@ export const uploadCurrentUserProfileImage = async (userId, file) => {
 export const deleteCurrentUserAccount = async (userId) => {
     // We import dynamically to avoid circular dependencies if any
     const { FoodUserWallet } = await import('../models/userWallet.model.js');
+    const { FoodRefreshToken, QCRefreshToken } = await import('../../../../core/refreshTokens/refreshToken.model.js');
     
     const user = await FoodUser.findById(userId);
     if (!user) throw new AuthError('Profile not found');
 
-    // Remove Wallet
-    await FoodUserWallet.findOneAndDelete({ userId });
+    // Remove Wallet and revoke active sessions/refresh tokens
+    await Promise.allSettled([
+        FoodUserWallet.findOneAndDelete({ userId }),
+        FoodRefreshToken.deleteMany({ userId }),
+        QCRefreshToken.deleteMany({ userId })
+    ]);
 
-    // Remove User
+    // Remove User from unified collection
     await FoodUser.findByIdAndDelete(userId);
 
-    return { success: true };
+    return { success: true, message: 'Account deleted successfully' };
 };
 
