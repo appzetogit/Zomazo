@@ -15,6 +15,7 @@ import { getIO, rooms } from '../../../../config/socket.js';
 import { getFirebaseDB } from '../../../../config/firebase.js';
 import { fetchPolyline } from '../utils/googleMaps.js';
 import { foodRiderOnQcJob } from '../../../../core/identity/qcRiderBridge.js';
+import { foodRiderOnEcomJob } from '../../../../core/identity/ecomRiderBridge.js';
 
 import * as foodTransactionService from './foodTransaction.service.js';
 import * as dispatchService from './order-dispatch.service.js';
@@ -377,6 +378,10 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
   if (lockOrderId && await foodRiderOnQcJob(partnerId)) {
     await releaseDeliveryLock(partnerId, lockOrderId._id);
     throw new ValidationError('You are on a quick-commerce delivery. Complete it before accepting another order.');
+  }
+  if (lockOrderId && await foodRiderOnEcomJob(partnerId).catch(() => false)) {
+    await releaseDeliveryLock(partnerId, lockOrderId._id);
+    throw new ValidationError('You are on a shop delivery. Complete it before accepting another order.');
   }
 
   const order = await FoodOrder.findOneAndUpdate(

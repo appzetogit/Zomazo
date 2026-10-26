@@ -6,6 +6,8 @@ import { User } from '../users/user.model.js';
 import { resolveShopCustomerId } from '../../../../core/identity/shopCustomer.js';
 import { resolveShopAdminId } from '../../../../core/admin/shopAdmin.js';
 import { Seller } from '../../modules/commerce/seller/models/seller.model.js';
+import { DeliveryPartner } from '../../modules/commerce/delivery/models/deliveryPartner.model.js';
+import { resolveEcomPartnerForFoodRider } from '../../../../core/identity/ecomRiderBridge.js';
 
 export const requireAdmin = (req, res, next) => {
     if (req.user?.role !== 'ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
@@ -21,12 +23,15 @@ export const requireAdmin = (req, res, next) => {
  * browser tabs and machines, so evicting the others on each sign-in would be a
  * regression rather than a safeguard.
  *
- * DELIVERY_PARTNER is absent too: this module ships by courier, and its own
- * rider app is not mounted, so no rider token is ever minted for it.
+ * DELIVERY_PARTNER is the platform's own riders: this module mints no rider
+ * token of its own, so a rider token is a FOOD one, bridged onto the rider's
+ * ecom_delivery_partners row by core/identity/ecomRiderBridge.js (the same way
+ * quick-commerce bridges them). A token naming an ecom row directly still works.
  */
 const SESSION_SCOPED_MODELS = {
     USER: User,
-    SELLER: Seller
+    SELLER: Seller,
+    DELIVERY_PARTNER: DeliveryPartner
 };
 
 const resolveSessionAccount = async (model, decoded) => {
@@ -42,8 +47,24 @@ const resolveSessionAccount = async (model, decoded) => {
     // the spot so its orders, cart and coins are there on this request.
     if (decoded.role === 'USER') return resolveShopCustomer(id);
 
-    // A token minted by this module (a seller).
-    return model.findById(id).select('isActive tokenVersion status').lean();
+    // A token minted by this module (a seller), or naming an ecom rider row.
+    const direct = await model.findById(id).select('isActive tokenVersion status').lean();
+    if (direct) return direct;
+
+    // A rider signed in through the platform rider app carries their FOOD
+    // partner id. The bridge finds (or makes) their shop-pool row and syncs
+    // availability, position and push tokens onto it.
+    if (decoded.role === 'DELIVERY_PARTNER') {
+        const bridged = await resolveEcomPartnerForFoodRider(id);
+        if (!bridged) return null;
+        return {
+            _id: bridged._id,
+            tokenVersion: bridged.tokenVersion,
+            status: bridged.status,
+            bridgedFrom: String(id)
+        };
+    }
+    return null;
 };
 
 /**
@@ -136,6 +157,23 @@ export const authMiddleware = (req, res, next) => {
             }
             if (normalizedDecoded.role === 'USER' && doc.isActive === false) {
                 return sendError(res, 401, 'User account is deactivated');
+            }
+
+            if (doc.bridgedFrom) {
+                req.user.platformDeliveryPartnerId = doc.bridgedFrom;
+                // Food only signs in approved riders, but a token outlives a later
+                // rejection -- and this module's admin can bar the rider here.
+                if (doc.status !== 'approved') {
+                    return sendError(res, 403, 'Your delivery account is not approved for shop deliveries.');
+                }
+                // Food tokens carry no version of their own; the ecom row's
+                // counter is not compared.
+                return next();
+            }
+
+            if (normalizedDecoded.role === 'DELIVERY_PARTNER'
+                && ['rejected', 'deactivated'].includes(String(doc.status || ''))) {
+                return sendError(res, 403, 'This account is no longer active. Contact support.');
             }
 
             // A seller is re-checked on every request, as Food's stores are since

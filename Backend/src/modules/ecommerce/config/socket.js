@@ -79,7 +79,27 @@ export const initSocket = async (rootIo) => {
             }
         }
 
-        socket.user = { userId, role };
+        // A rider from the platform rider app: offers are emitted to
+        // delivery:<ecom_delivery_partners id>, and their token names the FOOD
+        // partner. The bridge maps it (creating the shop-pool row if need be).
+        let platformDeliveryPartnerId;
+        if (role === 'DELIVERY_PARTNER' && userId) {
+            try {
+                const { DeliveryPartner } = await import('../modules/commerce/delivery/models/deliveryPartner.model.js');
+                if (!(await DeliveryPartner.exists({ _id: userId }))) {
+                    const { resolveEcomPartnerForFoodRider } = await import('../../../core/identity/ecomRiderBridge.js');
+                    const bridged = await resolveEcomPartnerForFoodRider(userId);
+                    if (bridged) {
+                        platformDeliveryPartnerId = String(userId);
+                        userId = String(bridged._id);
+                    }
+                }
+            } catch {
+                return next(new Error('AUTH_INVALID'));
+            }
+        }
+
+        socket.user = { userId, role, ...(platformDeliveryPartnerId ? { platformDeliveryPartnerId } : {}) };
         return next();
     });
     io.on('connection', (socket) => {
@@ -139,6 +159,12 @@ export const initSocket = async (rootIo) => {
                 });
                 return;
             }
+            // A bridged rider's app knows only its FOOD partner id: that means
+            // its own ecom room, never another rider's.
+            if (socket.user?.platformDeliveryPartnerId
+                && String(deliveryPartnerId) === String(socket.user.platformDeliveryPartnerId)) {
+                deliveryPartnerId = socket.user.userId;
+            }
             // Security: only join your own delivery room.
             if (String(socket.user?.userId) !== String(deliveryPartnerId)) {
                 logDeliverySocket('Rejected join-delivery due to user mismatch', {
@@ -150,7 +176,8 @@ export const initSocket = async (rootIo) => {
             }
             const room = roomNames.delivery(deliveryPartnerId);
             socket.join(room);
-            const roomSize = io?.sockets?.adapter?.rooms?.get(room)?.size || 0;
+            // io is a Namespace: the adapter hangs off it directly, not .sockets.
+            const roomSize = io?.adapter?.rooms?.get(room)?.size || 0;
             logDeliverySocket('Delivery room joined', {
                 socketId: socket.id,
                 deliveryPartnerId: String(deliveryPartnerId),

@@ -17,6 +17,8 @@ import { getFirebaseDB } from '../../../../config/firebase.js';
 import { fetchDrivingRoute } from '../utils/googleMaps.js';
 
 import * as orderTransactionService from './orderTransaction.service.js';
+import { claimAssignment, releaseAssignment } from '../../../../../../core/assignment/assignment.service.js';
+import { unifiedDispatchEnabled } from './order-dispatch.service.js';
 import * as dispatchService from './order-dispatch.service.js';
 import * as paymentService from './order-payment.service.js';
 
@@ -252,6 +254,8 @@ export async function listOrdersAvailableDelivery(deliveryPartnerId, query) {
               { 'dispatch.offeredTo': { $not: { $elemMatch: { partnerId, action: 'deassigned' } } } },
             ],
             orderStatus: { $in: ['confirmed', 'preparing', 'ready_for_pickup'] },
+            // Not an order handed to a courier after it was offered.
+            deliveryBy: { $ne: 'courier' },
           },
           {
             'dispatch.deliveryPartnerId': partnerId,
@@ -407,6 +411,42 @@ async function assertCashLimitAllows(deliveryPartnerId, order) {
   }
 }
 
+/**
+ * The partner's unified driver id, or null when never linked (the bridge copies
+ * it from the food rider). Unlinked partners are waved through, as food and
+ * quick-commerce do: refusing every un-backfilled rider would be a worse outage
+ * than the race the lock prevents.
+ */
+async function resolveUnifiedDriverId(deliveryPartnerId) {
+  const partner = await DeliveryPartner.findById(deliveryPartnerId).select('driverId').lean();
+  return partner?.driverId || null;
+}
+
+/**
+ * Claim the cross-vertical busy-lock for this shop order (job type
+ * ecommerceDelivery). Gated on UNIFIED_DISPATCH_ENABLED, the switch food and
+ * taxi use, so the verticals turn on together.
+ */
+async function acquireEcomLock(deliveryPartnerId, orderId) {
+  if (!unifiedDispatchEnabled()) return true;
+  const driverId = await resolveUnifiedDriverId(deliveryPartnerId);
+  if (!driverId) return true;
+  const { claimed } = await claimAssignment(driverId, { vertical: 'ecommerce', jobId: orderId });
+  return claimed;
+}
+
+/** Give the lock back. Only clears an entry that is still THIS order. */
+async function releaseEcomLock(deliveryPartnerId, orderId) {
+  if (!unifiedDispatchEnabled()) return;
+  try {
+    const driverId = await resolveUnifiedDriverId(deliveryPartnerId);
+    if (!driverId) return;
+    await releaseAssignment(driverId, orderId);
+  } catch (err) {
+    logger.warn(`releaseEcomLock failed for ${deliveryPartnerId}/${orderId}: ${err?.message || err}`);
+  }
+}
+
 export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
   const identity = buildOrderIdentityFilter(orderId);
   if (!identity) throw new ValidationError('Order id required');
@@ -462,10 +502,23 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
     if (pending) await assertCashLimitAllows(partnerId, pending);
   }
 
+  /*
+   * Claim the cross-vertical lock BEFORE assigning the order: the active-delivery
+   * check above sees shop orders (and bridged food / grocery ones), not a
+   * passenger in the car. Released below if the accept does not land.
+   */
+  const lockOrder = await Order.findOne(identity).select('_id').lean();
+  if (lockOrder && !(await acquireEcomLock(partnerId, lockOrder._id))) {
+    throw new ValidationError('You are already on another job');
+  }
+
   const order = await Order.findOneAndUpdate(
     {
       ...identity,
       orderStatus: { $in: acceptedStatuses },
+      // Only orders the riders carry: a stale offer card on a phone must not
+      // claim an order that has since been handed to a courier.
+      $and: [{ $or: [{ deliveryBy: 'rider' }, { fulfilmentMode: 'quick' }] }],
       $or: [
         {
           'dispatch.status': 'unassigned',
@@ -498,9 +551,14 @@ export async function acceptOrderDelivery(orderId, deliveryPartnerId) {
   ).populate('sellerId userId');
 
   if (!order) {
+    // Accept did not land -- give the busy-lock back. (A retry by the rider who
+    // already holds the order re-claims idempotently, so this cannot strand them.)
     const existing = await Order.findOne(identity)
       .select('orderStatus dispatch')
       .lean();
+    const heldByMe = existing?.dispatch?.status === 'accepted'
+      && String(existing?.dispatch?.deliveryPartnerId || '') === String(deliveryPartnerId);
+    if (lockOrder && !heldByMe) await releaseEcomLock(partnerId, lockOrder._id);
 
     if (!existing) throw new NotFoundError('Order not found');
     if (cancellableStatuses.includes(existing.orderStatus)) {
@@ -760,6 +818,9 @@ export async function rejectOrderDelivery(orderId, deliveryPartnerId) {
     note: 'Rejected',
   });
   await order.save();
+
+  // Free the rider before the order is re-offered.
+  await releaseEcomLock(deliveryPartnerId, order._id);
 
   enqueueOrderEvent('delivery_rejected', {
     orderMongoId: order._id?.toString?.(),
@@ -1163,6 +1224,10 @@ export async function completeDelivery(orderId, deliveryPartnerId, body = {}) {
   }
 
   await order.save();
+
+  // The delivery is done, so the rider is free for work in ANY vertical. Awaited:
+  // a rider left locked is invisible to every dispatcher until reconcile runs.
+  await releaseEcomLock(deliveryPartnerId, order._id);
 
   // Increment the rider's lifetime completed-delivery counter (best-effort).
   DeliveryPartner.updateOne(

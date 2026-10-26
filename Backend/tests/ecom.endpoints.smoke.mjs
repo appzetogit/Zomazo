@@ -164,8 +164,10 @@ for (const path of ['/auth/user/request-otp', '/auth/admin/login', '/auth/delive
     const res = await call(`/api/v1/ecom${path}`, 'POST', { phone: '9876543210', email: 'x@y.z', password: 'x' });
     check(`POST ${path} is gone`, () => assert.equal(res.status, 404));
 }
+// The rider API is mounted for the platform's riders (core/identity/ecomRiderBridge.js),
+// and a customer token is refused at its role gate.
 const riders = await call('/api/v1/ecom/delivery/orders/current', 'GET', null, customerToken);
-check('the rider API is not mounted', () => assert.equal(riders.status, 404));
+check('the rider API refuses a customer', () => assert.equal(riders.status, 403));
 // An empty body: proves the route is mounted (validation answers, not 404)
 // without asking the SMS provider to text anyone.
 const sellerOtp = await call('/api/v1/ecom/auth/seller/request-otp', 'POST', {});
