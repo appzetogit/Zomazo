@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Suspense, lazy, useEffect, useLayoutEffect, useState, useRef } from 'react'
-import { AppShellSkeleton } from '@food/components/ui/loading-skeletons'
+import BrandLoader from '../shared/brand/BrandLoader'
 import { applyFoodUserTheme, applySavedTheme, applyTheme } from '../shared/utils/theme.js'
 import { SERVICE_PROVIDER_ENABLED, ECOMMERCE_ENABLED } from '../config/features'
 
@@ -32,7 +32,7 @@ const AccountApp = lazy(() => import('../modules/SuperApp/AccountApp'))
 import ProtectedRoute from '@food/components/ProtectedRoute'
 import LoginRedirect from '../shared/superapp/LoginRedirect'
 
-const PageLoader = () => <AppShellSkeleton />
+const PageLoader = () => <BrandLoader />
 
 /**
  * FoodAppWrapper — Quick-spicy App. को /food prefix के साथ render करता है.
@@ -155,7 +155,7 @@ const AppRoutes = () => {
           element={
             localStorage.getItem('user_accessToken')
               ? <Navigate to="/home" replace />
-              : <Suspense fallback={<PageLoader />}><LandingPage /></Suspense>
+              : <Suspense fallback={<BrandLoader full />}><LandingPage /></Suspense>
           }
         />
 

@@ -19,7 +19,9 @@
 </head>
 
 <body>
-  <div id="root"></div>
+  <!-- Shown until the app starts, then replaced by it. Yellow only on the landing page. -->
+  <div id="root"><div id="boot" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff"><img src="/zomazo-icon.svg" alt="" width="84" height="84"></div></div>
+  <script>if(location.pathname==='/'&&!localStorage.getItem('user_accessToken'))document.getElementById('boot').style.background='#FFE000'</script>
   <script type="module" src="/src/index.jsx"></script>
 </body>
 

@@ -172,7 +172,9 @@
   .zl-services { padding:70px 0 20px; }
   .zl-services-grid { grid-template-columns:1fr; }
   .zl-box-col { display:none; }
-  .zl-panel { min-height:0; padding:34px 0; border-bottom:2px solid #eef1f5; }
+  .zl-panel { min-height:0; padding:34px 0; border-bottom:2px solid #eef1f5; align-items:center; text-align:center; }
+  .zl .zl-panel ul, .zl-panel-cta { justify-content:center; }
+  .zl-services h2 { text-align:center; }
   .zl-panel:last-child { border:0; }
   .zl-panel-art { display:block; width:130px; }
   .zl-how, .zl-account, .zl-earn, .zl-faq { padding:72px 0; }
