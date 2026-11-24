@@ -187,6 +187,10 @@ const AppRoutes = () => {
         {/* Legal & Policy Modules */}
         <Route path="/terms" element={<Suspense fallback={<PageLoader />}><TermsPage /></Suspense>} />
         <Route path="/privacy" element={<Suspense fallback={<PageLoader />}><PrivacyPage /></Suspense>} />
+        {/* Short links for app store listings; each opens its tab of the legal page. */}
+        {['refund', 'cancellation', 'shipping', 'delete-account'].map((tab) => (
+          <Route key={tab} path={`/${tab}`} element={<Suspense fallback={<PageLoader />}><TermsPage defaultTab={tab} /></Suspense>} />
+        ))}
 
 
         {/* Food Module */}

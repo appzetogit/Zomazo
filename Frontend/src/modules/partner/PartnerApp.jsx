@@ -58,7 +58,7 @@ export default function PartnerApp() {
           </Link>
           <nav className="flex items-center gap-3 md:gap-5">
             <Link to="/" className="hidden text-sm text-slate-500 hover:text-slate-800 md:inline">
-              quickdropsindia.com
+              zomazo.in
             </Link>
             <Link
               to="/support"

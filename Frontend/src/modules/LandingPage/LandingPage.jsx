@@ -1,147 +1,47 @@
-import React, { useEffect, useState, lazy, Suspense } from 'react'
-import Lenis from 'lenis'
-import Navbar from './components/Navbar'
-import Hero from './components/Hero'
+import { useEffect, useState } from 'react'
 import api from '../Taxi/shared/api/axiosInstance'
-import { getCompanyName } from "@food/utils/businessSettings"
-import { withBrand } from "@/shared/superapp/Brand"
+import { useCompanyName } from '@food/hooks/useCompanyName'
+import { Account, Earn, Faq, Footer, Header, Hero, How, Opening, Services } from './sections'
+import './landing.css'
 
-const Ecosystem = lazy(() => import('./components/Ecosystem'))
-const Services = lazy(() => import('./components/Services'))
-const WhyUs = lazy(() => import('./components/WhyUs'))
-const Showcase = lazy(() => import('./components/Showcase'))
-const VideoSection = lazy(() => import('./components/VideoSection'))
-const Partners = lazy(() => import('./components/Partners'))
-const FAQ = lazy(() => import('./components/FAQ'))
-const Footer = lazy(() => import('./components/Footer'))
+// Baloo 2 echoes the logo's lettering; Hind Siliguri covers Latin and Bengali.
+const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap'
 
 export default function LandingPage() {
-  const [landingSettings, setLandingSettings] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const brand = useCompanyName()
+  const [settings, setSettings] = useState(null)
 
   useEffect(() => {
-    // Dynamic SEO Title & Meta tags for better discoverability
-    document.title = `${getCompanyName()} - All-in-One Super-App for Rides, Food & Logistics`
-
-    // Find or create meta description tag
-    let metaDesc = document.querySelector('meta[name="description"]')
-    if (!metaDesc) {
-      metaDesc = document.createElement('meta')
-      metaDesc.name = 'description'
-      document.head.appendChild(metaDesc)
+    document.title = `${brand}: food, rides, groceries, services and shopping`
+    let meta = document.querySelector('meta[name="description"]')
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.name = 'description'
+      document.head.appendChild(meta)
     }
-    metaDesc.setAttribute('content', withBrand('Quick Drop is the ultimate multi-service super-app for Ride Hailing (Taxi & Shares), Food & Dining Delivery, secure Courier Parcels, Airport Transfers, Hourly rentals, and Logistics cargo.'))
+    meta.content = `${brand} brings food delivery, rides and parcels, groceries, home services and online shopping together with one login.`
+  }, [brand])
 
-    // Fetch dynamic landing settings
-    const fetchLandingSettings = async () => {
-      try {
-        const res = await api.get('/common/landing-page/settings')
-        if (res?.success && res?.data) {
-          setLandingSettings(res.data)
-        }
-      } catch (err) {
-        console.error('Error loading landing page settings:', err)
-      } finally {
-        setLoading(false)
-      }
+  useEffect(() => {
+    if (!document.querySelector(`link[href="${FONT_HREF}"]`)) {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = FONT_HREF
+      document.head.appendChild(link)
     }
-    fetchLandingSettings()
-
-    // Smooth scrolling using Lenis (desktop only to prevent heavy execution on mobile)
-    let lenis = null
-    let rafId = null
-
-    if (window.innerWidth >= 768) {
-      lenis = new Lenis({
-        duration: 1.4,
-        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-        smoothWheel: true,
-        wheelMultiplier: 1.0,
-        touchMultiplier: 1.5,
-      })
-
-      const raf = (time) => {
-        lenis?.raf(time)
-        rafId = requestAnimationFrame(raf)
-      }
-
-      rafId = requestAnimationFrame(raf)
-    }
-
-    return () => {
-      if (lenis) lenis.destroy()
-      if (rafId) cancelAnimationFrame(rafId)
-    }
+    let alive = true
+    api.get('/common/landing-page/settings')
+      .then((res) => { if (alive && res?.success) setSettings(res.data) })
+      .catch(() => { /* contact details stay hidden */ })
+    return () => { alive = false }
   }, [])
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 antialiased overflow-x-clip" style={{ fontFamily: "'Poppins', system-ui, sans-serif", WebkitFontSmoothing: 'antialiased' }}>
-      {/* Navigation Header */}
-      <Navbar settings={landingSettings} />
-
-      {/* Overlapping Hero & Ecosystem Container */}
-      <div className="relative">
-        {/* Hero Section - Base Stacking Panel */}
-        <div className="sticky top-0 z-10 bg-[#FAFBFC] w-full h-screen overflow-hidden">
-          <Hero settings={landingSettings} />
-        </div>
-
-        {/* Unified Services Selector Ecosystem - Slides over Hero with a nice shadow */}
-        <div className="relative z-20 bg-white shadow-[0_-20px_50px_rgba(0,0,0,0.06)]">
-          <Suspense fallback={null}>
-            <Ecosystem settings={landingSettings} />
-          </Suspense>
-        </div>
-      </div>
-
-      {/* Key Super-App Services */}
-      <div className="relative z-20 bg-slate-50">
-        <Suspense fallback={null}>
-          <Services settings={landingSettings} />
-        </Suspense>
-      </div>
-
-      {/* Platform Value Propositions & Count Stats */}
-      <div className="relative z-20 bg-white">
-        <Suspense fallback={null}>
-          <WhyUs settings={landingSettings} />
-        </Suspense>
-      </div>
-
-      {/* Premium Fleet Showcase - Dark theme managed internally */}
-      <div className="relative z-20">
-        <Suspense fallback={null}>
-          <Showcase settings={landingSettings} />
-        </Suspense>
-      </div>
-
-      {/* Dynamic Video Section */}
-      <div className="relative z-20 bg-slate-950 text-white">
-        <Suspense fallback={null}>
-          <VideoSection settings={landingSettings} />
-        </Suspense>
-      </div>
-
-      {/* Driver and Merchant Partners Portals */}
-      <div className="relative z-20 bg-slate-950">
-        <Suspense fallback={null}>
-          <Partners settings={landingSettings} />
-        </Suspense>
-      </div>
-
-      {/* Frequently Asked Questions */}
-      <div className="relative z-20 bg-slate-50">
-        <Suspense fallback={null}>
-          <FAQ settings={landingSettings} />
-        </Suspense>
-      </div>
-
-      {/* SEO Optimized Footer Links */}
-      <div className="relative z-20 bg-slate-950 text-white">
-        <Suspense fallback={null}>
-          <Footer settings={landingSettings} />
-        </Suspense>
-      </div>
+    <div className="zl">
+      <Opening />
+      <Header />
+      <main><Hero /><Services /><How /><Account /><Earn /><Faq /></main>
+      <Footer settings={settings} brand={brand} />
     </div>
   )
 }

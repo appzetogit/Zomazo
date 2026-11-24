@@ -1,11 +1,61 @@
 import React, { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { motion } from "framer-motion"
-import { ArrowLeft, FileText, Shield, Receipt, Truck, X, Loader2 } from "lucide-react"
+import { ArrowLeft, FileText, Shield, Receipt, Truck, X, Loader2, UserX } from "lucide-react"
 import api from "@food/api"
 import { API_ENDPOINTS } from "@food/api/config"
-import Brand from "@/shared/superapp/Brand"
 import { withBrand } from "@/shared/superapp/Brand"
+import { getCachedSettings, loadBusinessSettings } from "@food/utils/businessSettings"
+
+// The support address from Business Setup, if it is a real one.
+const supportEmail = () => {
+  const email = String(getCachedSettings()?.email || "").trim()
+  return /^[^s@]+@[^s@]+.[^s@]+$/.test(email) ? email : ""
+}
+
+// Account deletion is not an admin-written page: app stores (Google Play) need a
+// public page that says how to delete an account and its data, so it is here.
+// "Quick Drop" is swapped for this site's brand by withBrand, like the fallbacks.
+const accountDeletionContent = () => {
+  const email = supportEmail()
+  const ask = email
+    ? `email <a href="mailto:${email}?subject=Delete%20my%20account">${email}</a> from any device, with the subject "Delete my account" and the mobile number you signed up with, or write to us from the <a href="/support">Help &amp; Support</a> page`
+    : `write to us from the <a href="/support">Help &amp; Support</a> page with the subject "Delete my account" and the mobile number you signed up with`
+  return `
+<h1>Delete your account</h1>
+<p>You can delete your Quick Drop account and its personal data at any time. One account covers every service in the app (food, groceries, shopping, medicines, rides and parcels, home services), so deleting it removes it from all of them.</p>
+
+<h3>In the app</h3>
+<ol>
+<li>Open the Quick Drop app or website and sign in with your mobile number.</li>
+<li>Go to <strong>Profile</strong>.</li>
+<li>Tap <strong>Delete Account</strong> and confirm.</li>
+</ol>
+<p>Restaurants, sellers, delivery partners, drivers and service professionals will find <strong>Delete Account</strong> in the profile or settings menu of their partner app. Partner accounts with open orders, unpaid dues or a pending payout are closed once those are settled.</p>
+
+<h3>Without the app</h3>
+<p>If you can no longer sign in, ${ask}. We verify that the number is yours with a one-time code, then delete the account within 30 days and confirm by SMS or email.</p>
+
+<h3>What is deleted</h3>
+<ul>
+<li>Your profile: name, email, photo, date of birth and gender.</li>
+<li>Saved addresses, location history, favourites and cart.</li>
+<li>Uploaded prescriptions and support photos.</li>
+<li>Notification tokens and marketing preferences.</li>
+<li>For partners: identity and vehicle documents and bank or UPI details, once the legal retention period ends.</li>
+</ul>
+
+<h3>What we keep, and for how long</h3>
+<ul>
+<li>Invoices, payment and refund records: kept as tax and accounting laws require (generally up to 8 years), linked to an anonymised account.</li>
+<li>Records needed to resolve an open order, refund, dispute or a fraud or safety investigation: kept until it is closed.</li>
+</ul>
+<p>Use any wallet balance before deleting: wallet balance, cashback and rewards cannot be recovered after deletion.</p>
+
+<h3>Deleting only some data</h3>
+<p>You can delete saved addresses and change your profile in the app at any time, and turn off location, notifications and promotional messages in settings, without deleting your account. To ask us to delete other specific data, contact us the same way as above.</p>
+`
+}
 
 const DEFAULT_TERMS_CONTENT = `
 <h1>Terms of Service</h1>
@@ -15,7 +65,7 @@ const DEFAULT_TERMS_CONTENT = `
 <p>By downloading, installing, or using the Quick Drop mobile application or website (collectively, the "Services"), you agree to be bound by these Terms of Service. If you do not agree, please do not access or use the Services.</p>
 
 <h3>2. Description of Services</h3>
-<p><Brand /> provides a unified platform connecting users with third-party service providers, including ride-hailing drivers and food delivery partners. <Brand /> acts as a technology platform and does not itself provide transportation or food preparation services.</p>
+<p>Quick Drop provides a unified platform connecting users with third-party service providers, including ride-hailing drivers and food delivery partners. Quick Drop acts as a technology platform and does not itself provide transportation or food preparation services.</p>
 
 <h3>3. User Accounts</h3>
 <p>To use our Services, you must register using your phone number and confirm via a 4-digit verification code (OTP). You agree to provide accurate, current, and complete information during the registration process and keep your account details secure.</p>
@@ -24,10 +74,10 @@ const DEFAULT_TERMS_CONTENT = `
 <p>Fares and food orders are calculated based on distance, demand, and standard tariffs. You can pay digitally via UPI, card, net banking, or cash. All payments are securely encrypted. Refund eligibility is governed by our Refund Policy.</p>
 
 <h3>5. User Conduct and Restrictions</h3>
-<p>You agree not to use the Services for any illegal activities, harassment, or unauthorized access. <Brand /> reserves the right to terminate accounts that violate community safety guidelines or engage in fraudulent actions.</p>
+<p>You agree not to use the Services for any illegal activities, harassment, or unauthorized access. Quick Drop reserves the right to terminate accounts that violate community safety guidelines or engage in fraudulent actions.</p>
 
 <h3>6. Limitation of Liability</h3>
-<p><Brand /> is not liable for direct, indirect, incidental, or consequential damages resulting from your use of the Services or interactions with third-party providers.</p>
+<p>Quick Drop is not liable for direct, indirect, incidental, or consequential damages resulting from your use of the Services or interactions with third-party providers.</p>
 `
 
 export default function TermsPage({ defaultTab = "terms" }) {
@@ -55,7 +105,8 @@ export default function TermsPage({ defaultTab = "terms" }) {
     { id: "privacy", label: "Privacy Policy", icon: Shield, endpoint: "/food/pages/privacy" },
     { id: "refund", label: "Refund Policy", icon: Receipt, endpoint: "/food/pages/refund" },
     { id: "shipping", label: "Shipping Policy", icon: Truck, endpoint: "/food/pages/shipping" },
-    { id: "cancellation", label: "Cancellation Policy", icon: X, endpoint: "/food/pages/cancellation" }
+    { id: "cancellation", label: "Cancellation Policy", icon: X, endpoint: "/food/pages/cancellation" },
+    { id: "delete-account", label: "Account Deletion", icon: UserX, content: accountDeletionContent }
   ]
 
   useEffect(() => {
@@ -67,6 +118,12 @@ export default function TermsPage({ defaultTab = "terms" }) {
       setLoading(true)
       const currentItem = menuItems.find(item => item.id === tabId)
       if (!currentItem) return
+      if (currentItem.content) {
+        await loadBusinessSettings().catch(() => null)
+        setPageTitle(currentItem.label)
+        setPageContent(currentItem.content())
+        return
+      }
 
       let fetchEndpoint = currentItem.endpoint;
       // Append _role to endpoint if a specific role is provided (e.g., terms_restaurant)

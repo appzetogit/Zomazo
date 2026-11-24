@@ -44,3 +44,9 @@ Desktop.ini
 
 # GitHub config (kept locally, not tracked)
 .github/
+
+# Private server notes (access + status), never commit
+SERVER_ACCESS.md
+
+dist-prod/
+dist-*/

@@ -1,0 +1,40 @@
+/* Zomazo brand parts: the jointed runner and the drawn wordmark. */
+.zr { overflow: visible; }
+.zr-thigh.zr-front { transform: rotate(-82deg); }
+.zr-shin.zr-front { transform: rotate(84deg); }
+.zr-thigh.zr-back { transform: rotate(62deg); }
+.zr-shin.zr-back { transform: rotate(24deg); }
+.zr-upper.zr-front { transform: rotate(-42deg); }
+.zr-fore.zr-front { transform: rotate(-66deg); }
+.zr-upper.zr-back { transform: rotate(48deg); }
+.zr-fore.zr-back { transform: rotate(-70deg); }
+.zr-run { --zr-t: .62s; }
+.zr-run .zr-thigh { animation: zr-thigh var(--zr-t) linear infinite; }
+.zr-run .zr-shin { animation: zr-shin var(--zr-t) linear infinite; }
+.zr-run .zr-upper { animation: zr-upper var(--zr-t) ease-in-out infinite; }
+.zr-run .zr-fore { animation: zr-fore var(--zr-t) ease-in-out infinite; }
+.zr-run .zr-back { animation-delay: calc(var(--zr-t) / -2); }
+.zr-run .zr-body { animation: zr-bob calc(var(--zr-t) / 2) ease-in-out infinite; }
+.zr-run .zr-bag { animation: zr-bag calc(var(--zr-t) / 2) ease-in-out infinite; transform-origin: 330px 200px; }
+.zr-run .zr-lines path { animation: zr-line .5s ease-in-out infinite alternate; }
+.zr-run .zr-lines path:nth-child(2) { animation-delay: -.2s; }
+.zr-run .zr-lines path:nth-child(3) { animation-delay: -.35s; }
+@keyframes zr-thigh { 0%,100% { transform: rotate(-82deg); } 25% { transform: rotate(-24deg); } 50% { transform: rotate(62deg); } 75% { transform: rotate(-12deg); } }
+@keyframes zr-shin { 0%,100% { transform: rotate(84deg); } 25% { transform: rotate(16deg); } 50% { transform: rotate(24deg); } 75% { transform: rotate(112deg); } }
+@keyframes zr-upper { 0%,100% { transform: rotate(-42deg); } 50% { transform: rotate(48deg); } }
+@keyframes zr-fore { 0%,100% { transform: rotate(-66deg); } 50% { transform: rotate(-82deg); } }
+@keyframes zr-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+@keyframes zr-bag { 0%,100% { transform: rotate(0); } 50% { transform: rotate(-3deg); } }
+@keyframes zr-line { from { transform: translateX(6px); opacity: 1; } to { transform: translateX(-20px); opacity: .45; } }
+.zw-draw path { stroke-dasharray: 1.02; stroke-dashoffset: 1.02; animation: zw-draw .42s cubic-bezier(.6,0,.2,1) forwards; }
+.zw-draw g path:nth-child(2) { animation-delay: .08s; }
+.zw-draw g path:nth-child(3) { animation-delay: .16s; }
+.zw-draw g path:nth-child(4) { animation-delay: .24s; }
+.zw-draw g path:nth-child(5) { animation-delay: .32s; }
+.zw-draw g path:nth-child(6) { animation-delay: .4s; }
+.zw-draw .zw-stroke { animation-delay: .7s; }
+@keyframes zw-draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .zr-run *, .zw-draw path { animation: none !important; }
+  .zw-draw path { stroke-dashoffset: 0; }
+}

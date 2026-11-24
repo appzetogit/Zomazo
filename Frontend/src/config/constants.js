@@ -1,5 +1,5 @@
 export const APP_CONFIG = {
-  NAME: 'Quick Drop',
+  NAME: 'Zomazo',
   VERSION: '1.0.0',
 };
 

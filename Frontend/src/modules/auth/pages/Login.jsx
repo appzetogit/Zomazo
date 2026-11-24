@@ -12,7 +12,7 @@ import { getCompanyName } from "@food/utils/businessSettings"
 // Fallback only -- the logo an admin uploads in business settings wins. The
 // file path is unchanged because the asset itself still lives there; note that
 // renaming the file would not change the artwork inside it.
-const FALLBACK_LOGO = "/k9-logo.png"
+const FALLBACK_LOGO = "/zomazo-logo.jpg"
 // This deployment's name (Business Setup), not a hard-coded one.
 const COMPANY_NAME = getCompanyName()
 

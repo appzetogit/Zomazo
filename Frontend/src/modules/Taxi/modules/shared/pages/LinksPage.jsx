@@ -28,7 +28,7 @@ const LinksPage = () => {
     }
   ];
   React.useEffect(() => {
-    document.title = "Download Apps | Quick Drop";
+    document.title = "Download Apps | Zomazo";
   }, []);
 
   return (

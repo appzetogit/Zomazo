@@ -153,7 +153,7 @@ const sendOTPEmail = async (email, otp, purpose = 'verification') => {
     `;
 
     await transporter.sendMail({
-      from: emailCredentials().from || 'Quick Drop <noreply@quickdropsindia.com>',
+      from: emailCredentials().from || 'Zomazo <zomazo.in@gmail.com>',
       to: email,
       subject: `${subjectPrefix} - Homster`,
       html: emailWrapper(content, subjectPrefix, `Your verification code is ${otp}`)
@@ -201,7 +201,7 @@ const sendWelcomeEmail = async (email, name) => {
     `;
 
     await transporter.sendMail({
-      from: emailCredentials().from || 'Quick Drop <noreply@quickdropsindia.com>',
+      from: emailCredentials().from || 'Zomazo <zomazo.in@gmail.com>',
       to: email,
       subject: 'Welcome to Homster!',
       html: emailWrapper(content, 'Welcome', 'Welcome to the future of home services')
@@ -247,7 +247,7 @@ const sendBookingEmails = async (booking, user, vendor, service) => {
       `;
 
       await transporter.sendMail({
-        from: emailCredentials().from || 'Quick Drop <noreply@quickdropsindia.com>',
+        from: emailCredentials().from || 'Zomazo <zomazo.in@gmail.com>',
         to: user.email,
         subject: `Booking Confirmed #${bookingId} - Homster`,
         html: emailWrapper(content, 'Confirmed', 'Your booking is scheduled successfully')
@@ -275,7 +275,7 @@ const sendBookingEmails = async (booking, user, vendor, service) => {
       `;
 
       await transporter.sendMail({
-        from: emailCredentials().from || 'Quick Drop <noreply@quickdropsindia.com>',
+        from: emailCredentials().from || 'Zomazo <zomazo.in@gmail.com>',
         to: vendor.email,
         subject: `New Job Assigned #${bookingId} - Homster`,
         html: emailWrapper(vContent, 'New Job', 'Action Required: New job assigned')
@@ -326,7 +326,7 @@ const sendBookingCompletionEmails = async (booking) => {
       `;
 
       await transporter.sendMail({
-        from: emailCredentials().from || 'Quick Drop <noreply@quickdropsindia.com>',
+        from: emailCredentials().from || 'Zomazo <zomazo.in@gmail.com>',
         to: user.email,
         subject: `Service Invoice #${bookingId} - Homster`,
         html: emailWrapper(content, 'Invoice', 'Your service is complete. Here is the receipt.')
@@ -361,7 +361,7 @@ const sendWithdrawalApprovedEmail = async (vendor, amount, transactionId) => {
     `;
 
     await transporter.sendMail({
-      from: emailCredentials().from || 'Quick Drop <noreply@quickdropsindia.com>',
+      from: emailCredentials().from || 'Zomazo <zomazo.in@gmail.com>',
       to: vendor.email,
       subject: 'Withdrawal Success - Homster',
       html: emailWrapper(content, 'Withdrawal', 'Your funds are on the way')
@@ -394,7 +394,7 @@ const sendDuesPaymentApprovedEmail = async (vendor, amount, balanceAfter) => {
     `;
 
     await transporter.sendMail({
-      from: emailCredentials().from || 'Quick Drop <noreply@quickdropsindia.com>',
+      from: emailCredentials().from || 'Zomazo <zomazo.in@gmail.com>',
       to: vendor.email,
       subject: 'Dues Payment Verified - Homster',
       html: emailWrapper(content, 'Verified', 'We have received your payment')

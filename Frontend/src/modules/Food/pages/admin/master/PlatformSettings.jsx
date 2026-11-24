@@ -141,7 +141,7 @@ function BrandTab({ profile, onSaved }) {
       <Card title="Contact" description="Where customers and partners reach you.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Support email">
-            <input type="email" className={inputCls} value={contact.email} placeholder="support@quickdropsindia.com" onChange={setC("email")} />
+            <input type="email" className={inputCls} value={contact.email} placeholder="zomazo.in@gmail.com" onChange={setC("email")} />
           </Field>
           <Field label="Support phone">
             <div className="flex gap-2">
@@ -417,7 +417,7 @@ function IntegrationsTab({ profile, onSaved }) {
           { key: "port", label: "Port", type: "number", placeholder: "587" },
           { key: "user", label: "Username", placeholder: "you@yourdomain.com" },
           { key: "pass", label: "Password", secret: true, placeholder: "Leave as is to keep the saved one" },
-          { key: "from", label: "Send as", placeholder: "Quick Drop <noreply@quickdropsindia.com>", wide: true },
+          { key: "from", label: "Send as", placeholder: "Zomazo <zomazo.in@gmail.com>", wide: true },
         ]}
         testExtra={{ key: "sendTo", placeholder: "Email to send a test (optional)" }}
         onSaved={onSaved}

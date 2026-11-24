@@ -434,10 +434,10 @@ export default function OrderHelp() {
                       Include order {order.id} in subject
                     </p>
                     <a
-                      href={`mailto:support@quickdropsindia.com?subject=Help with Order ${order.id}`}
+                      href={`mailto:zomazo.in@gmail.com?subject=Help with Order ${order.id}`}
                       className="text-sm text-primary hover:underline font-medium"
                     >
-                      support@quickdropsindia.com
+                      zomazo.in@gmail.com
                     </a>
                   </div>
                 </div>

@@ -11,7 +11,7 @@ const SETTINGS_KEY = 'food_business_settings';
 
 // The name shown until Business Setup names the company. Each deployment can set
 // its own (VITE_BRAND_NAME); unset, it stays what these sites have always shown.
-const DEFAULT_COMPANY_NAME = String(import.meta.env.VITE_BRAND_NAME || "").trim() || "Quick Drop";
+const DEFAULT_COMPANY_NAME = String(import.meta.env.VITE_BRAND_NAME || "").trim() || "Zomazo";
 
 // Names the backend seeds into a fresh settings document, or that survive from earlier
 // vendor builds. They are placeholders, not choices, so they get replaced by the default.

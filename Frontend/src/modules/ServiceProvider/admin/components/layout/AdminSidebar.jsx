@@ -28,7 +28,7 @@ import dashboardService from "../../services/dashboardService";
 import { getSettings } from "../../services/settingsService";
 import { getCachedSettings, loadBusinessSettings, normalizeCompanyName } from "@food/utils/businessSettings";
 import { useSettings } from "../../../../Taxi/shared/context/SettingsContext";
-import quickSpicyLogo from "@food/assets/k9-logo.jpg";
+import quickSpicyLogo from "@food/assets/zomazo-logo.jpg";
 
 // Icon mapping for menu items
 const iconMap = {
@@ -142,7 +142,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
   const [isWorkerMode, setIsWorkerMode] = useState(false);
   const [businessCompanyName, setBusinessCompanyName] = useState(() => {
     const cached = getCachedSettings();
-    return normalizeCompanyName(cached?.companyName) || 'Quick Drop';
+    return normalizeCompanyName(cached?.companyName) || 'Zomazo';
   });
   const [logoUrl, setLogoUrl] = useState(() => getCachedSettings()?.logo?.url || null);
 
