@@ -8,6 +8,8 @@ temp_interactive_push.bat
 # commit dependencies by accident.
 
 # Secrets — never commit real env files (.env.example is intentionally tracked)
+.env
+.env.*
 !.env.example
 *.pem
 *.key
@@ -33,6 +35,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Editor / OS
+.vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
@@ -41,4 +44,3 @@ Desktop.ini
 
 # GitHub config (kept locally, not tracked)
 .github/
-config.bat
